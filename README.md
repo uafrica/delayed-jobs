@@ -6,7 +6,7 @@ Version: 1.0
 
 This Delayed Jobs Plugin was built for uAfrica.com
 
-A plugin that allows you to load priority tasks for async background processing. This is a scalable plugin that can be executed on multiple application servers to distribute the load.
+A plugin that allows you to load priority based tasks for async background processing. This is a scalable plugin that can be executed on multiple application servers to distribute the load.
 
 Requirements
 ------------
@@ -36,8 +36,8 @@ $payload = array("SomeVariable" => "Some Value");
 
 $data = array(
             'group' => 'test',
-            'class' => 'Product',
-            'method' => 'TestDelayedJob2',
+            'class' => 'SomeModel',
+            'method' => 'TestDelayedJobMethod',
             'options' => $options,
             'payload' => $payload,
             'priority' => 1,
@@ -45,12 +45,15 @@ $data = array(
 $this->DelayedJob->queue($data);
 ```
 
+1 is the highest priority and the higher the number the lower the priority.
+
 Starting the Job Servers
+------------------------
 
 Run
         cake DelayedJobs.watchdog 1
 
-The [1] argument instructs how many workers need to be started. The watchdog can run as many times as you want, it will just confirm that the number of required job servers is running.
+The [1] argument instructs how many workers need to be started. The watchdog can run as many times as you want, it will just confirm that the number of required job servers is running. The maximum number of workers that can bes started per server is 10.
 
 
 Changelog
