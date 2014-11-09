@@ -48,7 +48,7 @@ $this->DelayedJob->queue($data);
 Starting the Job Servers
 
 Run
-    cake DelayedJobs.watchdog 1
+        cake DelayedJobs.watchdog 1
 
 The [1] argument instructs how many workers need to be started. The watchdog can run as many times as you want, it will just confirm that the number of required job servers is running.
 
