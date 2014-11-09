@@ -8,13 +8,14 @@ This Delayed Jobs Plugin was built for uAfrica.com
 
 A plugin that allows you to load priority based tasks for async background processing. This is a scalable plugin that can be executed on multiple application servers to distribute the load.
 
-> **Please Note** The Shell Commands will only work on linux based servers because of the way that processes and PIDs is monitored and checked.
+> **Please Note** This Plugin will only work on linux based servers because of the way that processes and PIDs is monitored and checked.
  
 Requirements
 ------------
 
 * CakePHP 2.5.4+
 * PHP 5.2.8+
+* MySQL 5.3+
 * Twitter Bootstrap 3.0+ (Only needed for management interfaces)
 * jQuery 1.9+ (Only needed for management interfaces)
 
@@ -23,7 +24,7 @@ Installation
 
 * Clone the repo into /app/Plugins/DelayedJobs.
 * Run the Config/Schema/DelayedJobs.sql script to create the needed tables.
-* Enable the plugin by adding CakePlugin::load('DelayedJobs'); to your bootstrap.php
+* Enable the plugin by adding `CakePlugin::load('DelayedJobs');` to your bootstrap.php
 
 Usage
 -------------
