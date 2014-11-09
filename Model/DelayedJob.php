@@ -124,8 +124,6 @@ class DelayedJob extends DelayedJobAppModel
             ),
         );
 
-        //debug($data);
-
         $this->create();
         if ($this->save($data))
         {
@@ -182,17 +180,9 @@ class DelayedJob extends DelayedJobAppModel
         if ($retries + 1 > $job["DelayedJob"]["options"]["max_retries"])
             $status = DJ_STATUS_BURRIED;
 
-
-        //debug(time());
-        //debug($retries);
-
         $growth_factor = 5 + pow($retries + 1, 4);
 
-        //debug($growth_factor);
-
         $run_at = time() + $growth_factor;
-        //debug($run_at);
-        //debug(date('Y-m-d H:i:s', $run_at));
 
         $data = array('DelayedJob' => array(
                 "status" => $status,
@@ -296,11 +286,8 @@ class DelayedJob extends DelayedJobAppModel
             $this->id = $job["DelayedJob"]["id"];
             $this->save($data);
 
-            //sleep(1);
             usleep(250000); //## Sleep for 0.25 seconds
             
-            //CakeLog::write('jobs', $job["DelayedJob"]["id"] . " Allocated to " . $worker_id);
-
             //## check if this job is still allocated to this worker
 
             $options = array('conditions' => array('DelayedJob.id' => $job["DelayedJob"]["id"], 'DelayedJob.locked_by' => $worker_id));
@@ -310,7 +297,6 @@ class DelayedJob extends DelayedJobAppModel
                 return $job;
             else
                 usleep(250000); //## Sleep for 0.25 seconds
-              //  CakeLog::write ("jobs", $job["DelayedJob"]["id"] . " was allocated to someone else");
         }
 
         return array();

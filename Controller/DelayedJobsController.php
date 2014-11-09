@@ -32,17 +32,12 @@ class DelayedJobsController extends AppController
             throw new CakeException("Job Already Completed");
         }
         
-        debug($job);
-        
         $Object = ClassRegistry::init($job["DelayedJob"]["class"]);
         
         $method = $job["DelayedJob"]["method"];
         $payload = unserialize($job["DelayedJob"]["payload"]);
         
         $response = $Object->$method($payload);
-        
-        
-        debug($response);
         
         exit();
         
