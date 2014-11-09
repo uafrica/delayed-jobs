@@ -45,15 +45,22 @@ $data = array(
 $this->DelayedJob->queue($data);
 ```
 
-1 is the highest priority and the higher the number the lower the priority.
+> **1** is the highest priority and the higher the number the lower the
+> priority.
 
 Starting the Job Servers
 ------------------------
+The following Shell Commands are available
 
-Run
-        cake DelayedJobs.watchdog 1
+**Starting & Monitor Instances:**
 
-The [1] argument instructs how many workers need to be started. The watchdog can run as many times as you want, it will just confirm that the number of required job servers is running. The maximum number of workers that can bes started per server is 10.
+    cake DelayedJobs.Watchdog 1
+
+**Run Individual Job:**
+
+    cake DelayedJobs.Worker {job_id}
+
+The [1] argument instructs how many workers need to be started. The watchdog can run as many times as you want, it will just confirm that the number of required job servers is running. The maximum number of workers that can bes started per server is **10**.
 
 
 Changelog
