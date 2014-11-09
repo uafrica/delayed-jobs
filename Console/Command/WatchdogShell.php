@@ -24,10 +24,7 @@ class WatchdogShell extends AppShell
         if (!$this->Host->checkConfig())
             throw new CakeException("Could not load config, check your loadAll settings in bootstrap.php");
 
-        //echo "==";
-        //echo Configure::read("delayed.jobs.service.name");
         $this->out('<info>App Name: ' . Configure::read("delayed.jobs.service.name") . ' </info>');
-
 
         $workers = 1;
         if (isset($this->args[0]))
@@ -45,7 +42,6 @@ class WatchdogShell extends AppShell
             $this->out('<warning>Maintenance Mode: ' . Configure::read("delayed.jobs.service.name") . ' KILLING ALL WORKERS</warning>');
             $workers = 0;
         }
-        
 
         if ($workers > Configure::read("dj.max.hosts"))
         {
@@ -69,7 +65,6 @@ class WatchdogShell extends AppShell
                 if (!$host)
                 {
                     //## Host not found in database, start it
-                    //debug($base_path . $worker_name);
                     $p = new Process($base_path . $worker_name);
 
                     $pid = $p->getPid();
@@ -88,8 +83,6 @@ class WatchdogShell extends AppShell
                         $this->out('<error>Worker: ' . $worker_name . ' Could not be started, Trying to find process to kill it?</error>');
 
                         $check_pid = $p->getPidByName("DelayedJobs.Host " . $worker_name);
-
-                        //debug($check_pid);
 
                         if ($check_pid)
                         {
@@ -209,7 +202,6 @@ class WatchdogShell extends AppShell
             //## Check that no other or more processes are running, if they are found, kill them
             for ($i = $workers + 1; $i <= Configure::read("dj.max.hosts"); $i++)
             {
-
                 $worker_name = Configure::read("dj.service.name") . "_worker" . $i;
 
                 $host = $this->Host->findByHost($host_name, $worker_name);
@@ -222,7 +214,6 @@ class WatchdogShell extends AppShell
                     $status = $host["Host"]["status"];
                     $host_id = $host["Host"]["id"];
                     $pid = $host["Host"]["pid"];
-
 
                     $p->setPid($pid);
 
@@ -237,7 +228,6 @@ class WatchdogShell extends AppShell
                 else
                 {
                     //## No Host record found, just kill if it exists
-
                     $check_pid = $p->getPidByName("DelayedJobs.Host " . $worker_name);
 
                     if ($check_pid)
@@ -255,12 +245,7 @@ class WatchdogShell extends AppShell
             }
         } catch (Exception $exc)
         {
-            //sleep(rand(5,10));
-            //## Job Failed
-            //$this->DelayedJob->failed($job_id, $exc->getMessage());
-            //debug($exc->getMessage());
             $this->out('<fail>Failed: ' . $exc->getMessage() . '</fail>');
-            //echo $exc->getTraceAsString();
         }
         
         exit();

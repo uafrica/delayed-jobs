@@ -1,8 +1,4 @@
 <?php
-
-///ini_set('max_execution_time', 10); 
-
-
 App::import('Core', 'Controller');
 App::import('Component', 'DelayedJobs.Lock');
 
@@ -16,10 +12,6 @@ class HostShell extends AppShell
 
     public function main()
     {
-
-        //ini_set('max_execution_time', 10); 
-        //set_time_limit(10);
-
         $worker_name = "worker1";
 
         if (isset($this->args[0]))
@@ -32,15 +24,7 @@ class HostShell extends AppShell
         $this->stdout->styles('success', array('text' => 'green', 'blink' => false));
         $this->stdout->styles('info', array('text' => 'cyan', 'blink' => false));
 
-
-
-        //echo getmypid() . "\n";
-        //echo $this->args[0] . "\n";
-
         $worker_id = $worker_name . " - " . php_uname("a");
-
-
-
 
         /*
          * Get Next Job
@@ -49,7 +33,6 @@ class HostShell extends AppShell
          * Worker fires job
          * Worker monitors the exection time
          */
-
 
         $job_pids = array();
 
@@ -65,10 +48,6 @@ class HostShell extends AppShell
                 "pid" => $running_job["DelayedJob"]["pid"],
             );
         }
-
-
-        //debug($job_pids);
-        //exit();
 
         while (true)
         {
@@ -91,7 +70,6 @@ class HostShell extends AppShell
                     if (!isset($job_pids[$job["id"]]))
                     {
 
-                        //CakeLog::write('jobs', $worker_name . " Doing " . $job["id"] . " - " . time());
                         //$this->DelayedJob->lock($job["id"], $worker_id);
                         $options = $job["options"];
 
@@ -105,15 +83,12 @@ class HostShell extends AppShell
 
                         $this->DelayedJob->setPid($job["id"], $pid);
 
-                        //CakeLog::write('jobs', "Job " . $job["id"] . " Fired (pid:" . $pid . ")");
-
                         $job_pids[$job["id"]] = array(
                             "pid" => $pid,
                             "start_time" => time(),
                             "max_execution_time" => $options["max_execution_time"],
                         );
 
-                        //break;
                     }
                 }
                 else
@@ -156,12 +131,9 @@ class HostShell extends AppShell
                         $status->stop();
 
                         $this->DelayedJob->failed($index, "Job ran too long, killed");
-
-                        //CakeLog::write('jobs', "Killed");
                     }
                     else
                     {
-
                         //CakeLog::write('jobs', "Job: " . $index . " still running: " . $busy_time . " ");
                     }
                 }

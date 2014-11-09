@@ -8,6 +8,8 @@ This Delayed Jobs Plugin was built for uAfrica.com
 
 A plugin that allows you to load priority based tasks for async background processing. This is a scalable plugin that can be executed on multiple application servers to distribute the load.
 
+> **Please Note** The Shell Commands will only work on linux based servers because of the way that processes and PIDs is monitored and checked.
+ 
 Requirements
 ------------
 

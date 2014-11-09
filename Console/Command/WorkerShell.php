@@ -10,9 +10,6 @@ class WorkerShell extends AppShell
     public $uses = array(
         'DelayedJobs.DelayedJob'
     );
-    
-    
-    
 
     public function main()
     {
@@ -25,20 +22,13 @@ class WorkerShell extends AppShell
         {
             throw new Exception("No Job ID received");
         }
-        
-        
-        
-        
 
         $this->Lock = & new LockComponent();
         $this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id);
-        
+
         $this->stdout->styles('fail', array('text' => 'red', 'blink' => false));
         $this->stdout->styles('success', array('text' => 'green', 'blink' => false));
         $this->stdout->styles('info', array('text' => 'cyan', 'blink' => false));
-
-        //echo getmypid() . "\n";
-        //echo $this->args[0] . "\n";
 
         $this->out('<info>Starting Job: ' . $job_id . '</info>');
 
@@ -48,22 +38,18 @@ class WorkerShell extends AppShell
             if ($job)
             {
                 //## First check if job is not locked
-                if($job["DelayedJob"]["status"] == DJ_STATUS_SUCCESS)
+                if ($job["DelayedJob"]["status"] == DJ_STATUS_SUCCESS)
                 {
                     throw new Exception("Job previously completed, Why is is being called");
                 }
-                
-                
-                
-                if($job["DelayedJob"]["status"] == DJ_STATUS_BURRIED)
+
+                if ($job["DelayedJob"]["status"] == DJ_STATUS_BURRIED)
                 {
                     throw new Exception("Job Failed too many times, but why was it called again");
                 }
-                
-                
-                //## Execute Job'
-                //debug($job);
 
+
+                //## Execute Job'
                 $model = ClassRegistry::init($job["DelayedJob"]["class"]);
 
                 if ($model === null)
@@ -76,7 +62,7 @@ class WorkerShell extends AppShell
                     $method = $job["DelayedJob"]["method"];
                     $response = $model->$method($job["DelayedJob"]["payload"]);
 
-                    if($response)
+                    if ($response)
                     {
                         $this->DelayedJob->completed($job_id);
                         $this->out('<success>Job ' . $job_id . ' Completed</success>');
@@ -93,21 +79,13 @@ class WorkerShell extends AppShell
             }
         } catch (Exception $exc)
         {
-            //sleep(rand(5,10));
-            //## Job Failed
             $this->DelayedJob->failed($job_id, $exc->getMessage());
-            //debug($exc->getMessage());
             $this->out('<fail>Job ' . $job_id . ' Failed</fail>');
-            //echo $exc->getTraceAsString();
-           // $this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id);
         }
 
         $this->Lock->unlock('DelayedJobs.WorkerShell.main.' . $job_id);
-        
-        
     }
 
 }
-
 
 ?>
