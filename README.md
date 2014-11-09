@@ -56,12 +56,14 @@ The following Shell Commands are available
 
     cake DelayedJobs.Watchdog 1
 
+> The [1] argument instructs how many workers need to be started. The
+> watchdog can run as many times as you want, it will just confirm that
+> the number of required job servers is running. The maximum number of
+> workers that can bes started per server is **10**.
+
 **Run Individual Job:**
 
     cake DelayedJobs.Worker {job_id}
-
-The [1] argument instructs how many workers need to be started. The watchdog can run as many times as you want, it will just confirm that the number of required job servers is running. The maximum number of workers that can bes started per server is **10**.
-
 
 Changelog
 -----
