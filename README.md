@@ -1,7 +1,7 @@
 Delayed Jobs
 =================
 
-Version: 0.4
+Version: 1.0
 ------------
 
 This Delayed Jobs Plugin was built for uAfrica.com
@@ -25,6 +25,9 @@ Installation
 
 Usage
 -------------
+
+Loading new Jobs
+
 ```php
 var $uses = array('DelayedJobs.DelayedJob');
 
@@ -42,6 +45,14 @@ $data = array(
 $this->DelayedJob->queue($data);
 ```
 
+Starting the Job Servers
+
+Run
+    cake DelayedJobs.watchdog 1
+
+The [1] argument instructs how many workers need to be started. The watchdog can run as many times as you want, it will just confirm that the number of required job servers is running.
+
+
 Changelog
 -----
 
@@ -53,13 +64,9 @@ Changelog
 To Do
 -----
 
-* Need a better interface to manage lists and list items
+* Need a better interface to manage and monitor delayed jobs
 * Improved routing to views & controllers
-* Need to improve data validation
-* Complete the import & export functionality
-* Test cases
-* When editing a list item, and the name changes to an existing name within the same list, an error is thrown.
-* Checks to ensure integrity of data (List must always have at least one default option etc)
+* Implement an archiving solution
+* Unit Testing
 
-
-If you find any issues with the plugin, please create a new issue within [GitHub](https://github.com/jacoroux/cakephp-lookuplists-plugin/issues)
+If you find any issues with the plugin, please create a new issue within [GitHub](https://github.com/uafrica/delayed-jobs/issues)
