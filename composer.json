@@ -1,0 +1,17 @@
+{
+    "name": "uafrica/delayed-jobs",
+    "description": "A CakePHP Plugin to manage and process background jobs with priority and retries",
+    "require": {
+        "cakephp/cakephp": "3.0.x-dev"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~4.5"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jaco Roux",
+            "email": "jaco@uafrica.com"
+        }
+    ]
+}
