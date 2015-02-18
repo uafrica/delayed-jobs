@@ -3,11 +3,19 @@
 namespace DelayedJobs\Controller;
 
 use App\Controller\AppController;
+use Cake\Event\Event;
 
 class DelayedJobsController extends AppController
 {
 
-    public $components = array('Paginator', 'Session');
+    public $components = [
+        'Crud.Crud' => [
+            'actions' => [
+                'Crud.Index',
+                'Crud.View',
+            ]
+        ]
+    ];
 
     public function beforeFilter(Event $event)
     {
@@ -17,36 +25,11 @@ class DelayedJobsController extends AppController
 
     public function index()
     {
-        $jobs_per_second = $this->DelayedJob->jobsPerSecond();
+        $jobs_per_second = $this->DelayedJobs->jobsPerSecond();
 
         $this->set(compact('jobs_per_second'));
 
-        $this->DelayedJob->recursive = 0;
-
-        $this->Paginator->settings = array(
-            'order' => array('DelayedJob.created' => 'DESC'),
-            'limit' => 50,
-        );
-
-        $delayedJobs = $this->Paginator->paginate();
-
-        $this->set('delayedJobs', $delayedJobs);
-    }
-
-    /**
-     * view method
-     *
-     * @throws NotFoundException
-     * @param string $id
-     * @return void
-     */
-    public function view($id = null)
-    {
-        if (!$this->DelayedJob->exists($id)) {
-            throw new NotFoundException(__('Invalid webhook request'));
-        }
-        $options = array('conditions' => array('DelayedJob.' . $this->DelayedJob->primaryKey => $id));
-        $this->set('DelayedJob', $this->DelayedJob->find('first', $options));
+        return $this->Crud->execute();
     }
 
     public function run($id = null)
@@ -54,7 +37,7 @@ class DelayedJobsController extends AppController
         $this->layout = false;
         $this->autoRender = false;
 
-        $options = array('conditions' => array('DelayedJob.id' => $id));
+        $options = ['conditions' => ['DelayedJob.id' => $id]];
 
         $job = $this->DelayedJob->find('first', $options);
 

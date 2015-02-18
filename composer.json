@@ -1,29 +1,30 @@
 {
-    "name": "uafrica/delayed-jobs",
-    "description": "A CakePHP Plugin to manage and process background jobs with priority and retries",
-    "type": "cakephp-plugin",
-    "require": {
-        "cakephp/cakephp": "3.0.x-dev"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "~4.5"
-    },
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Jaco Roux",
-            "email": "jaco@uafrica.com"
-        }
-    ],
-	"autoload": {
-		"psr-4": {
-			"DelayedJobs\\": "src"
-		}
-	},
-	"autoload-dev": {
-		"psr-4": {
-			"DelayedJobs\\Test\\": "tests",
-			"Cake\\Test\\": "vendor/cakephp/cakephp/tests"
-		}
-	}    
+  "name": "uafrica/delayed-jobs",
+  "description": "A CakePHP Plugin to manage and process background jobs with priority and retries",
+  "type": "cakephp-plugin",
+  "require": {
+    "cakephp/cakephp": "3.0.x-dev",
+    "friendsofcake/crud": "dev-cake3"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "~4.5"
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Jaco Roux",
+      "email": "jaco@uafrica.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "DelayedJobs\\": "src",
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "DelayedJobs\\Test\\": "tests",
+      "Cake\\Test\\": "vendor/cakephp/cakephp/tests"
+    }
+  }
 }

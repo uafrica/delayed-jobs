@@ -2,10 +2,10 @@
 
 namespace DelayedJobs\Model\Table;
 
-use App\Utility\Time;
+use Cake\I18n\Time;
 use Cake\Core\Configure;
 use Cake\Log\Log;
-use Cale\ORM\Table;
+use Cake\ORM\Table;
 
 define("DJ_STATUS_NEW", 1);
 define("DJ_STATUS_BUSY", 2);
@@ -30,58 +30,58 @@ class DelayedJobsTable extends Table
      *
      * @var array
      */
-    public $validate = array(
-        'group' => array(
-            'notempty' => array(
-                'rule' => array('notempty'),
+    public $validate = [
+        'group' => [
+            'notempty' => [
+                'rule' => ['notempty'],
                 //'message' => 'Your custom message here',
                 'allowEmpty' => true,
                 'required' => false,
             //'last' => false, // Stop validation after this rule
             //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ),
-        ),
-        'class' => array(
-            'notempty' => array(
-                'rule' => array('notempty'),
+            ],
+        ],
+        'class' => [
+            'notempty' => [
+                'rule' => ['notempty'],
             //'message' => 'Your custom message here',
             //'allowEmpty' => false,
             //'required' => false,
             //'last' => false, // Stop validation after this rule
             //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ),
-        ),
-        'method' => array(
-            'notempty' => array(
-                'rule' => array('notempty'),
+            ],
+        ],
+        'method' => [
+            'notempty' => [
+                'rule' => ['notempty'],
             //'message' => 'Your custom message here',
             //'allowEmpty' => false,
             //'required' => false,
             //'last' => false, // Stop validation after this rule
             //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ),
-        ),
-        'status' => array(
-            'numeric' => array(
-                'rule' => array('numeric'),
+            ],
+        ],
+        'status' => [
+            'numeric' => [
+                'rule' => ['numeric'],
             //'message' => 'Your custom message here',
             //'allowEmpty' => false,
             //'required' => false,
             //'last' => false, // Stop validation after this rule
             //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ),
-        ),
-        'retries' => array(
-            'numeric' => array(
-                'rule' => array('numeric'),
+            ],
+        ],
+        'retries' => [
+            'numeric' => [
+                'rule' => ['numeric'],
             //'message' => 'Your custom message here',
             //'allowEmpty' => false,
             //'required' => false,
             //'last' => false, // Stop validation after this rule
             //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ),
-        ),
-    );
+            ],
+        ],
+    ];
 
     /*
      * $options
@@ -92,7 +92,7 @@ class DelayedJobsTable extends Table
     public function queue($data)
     {
 
-        $default_options = array();
+        $default_options = [];
 
         if (!isset($data["class"])) {
             throw new Exception("No Class Specified");
@@ -107,7 +107,7 @@ class DelayedJobsTable extends Table
         }
 
         if (!isset($data["payload"])) {
-            $data["payload"] = array();
+            $data["payload"] = [];
         }
 
         if (!isset($data["options"])) {
@@ -122,8 +122,8 @@ class DelayedJobsTable extends Table
         $data["payload"] = serialize($data["payload"]);
         $data["options"] = serialize($data["options"]);
 
-        $data = array(
-            "DelayedJob" => array(
+        $data = [
+            "DelayedJob" => [
                 'group' => $data["group"],
                 'class' => $data["class"],
                 'method' => $data["method"],
@@ -132,8 +132,8 @@ class DelayedJobsTable extends Table
                 'status' => DJ_STATUS_NEW,
                 'run_at' => date('Y-m-d H:i:s', time() + 5),
                 'priority' => $data["priority"],
-            ),
-        );
+            ],
+        ];
 
         //debug($data);
 
@@ -145,35 +145,35 @@ class DelayedJobsTable extends Table
             return false;
         }
     }
-
-    public function get($job_id)
-    {
-        $options = array('conditions' => array("DelayedJob.id" => $job_id));
-
-        $job = $this->find('first', $options);
-
-        if ($job) {
-            $job["DelayedJob"]["options"] = unserialize($job["DelayedJob"]["options"]);
-            $job["DelayedJob"]["payload"] = unserialize($job["DelayedJob"]["payload"]);
-
-            if (!isset($job["DelayedJob"]["options"]["max_retries"])) {
-                $job["DelayedJob"]["options"]["max_retries"] = Configure::read("dj.max.retries");
-            }
-
-            if (!isset($job["DelayedJob"]["options"]["max_execution_time"])) {
-                $job["DelayedJob"]["options"]["max_execution_time"] = Configure::read("dj.max.execution.time");
-            }
-        }
-
-        return $job;
-    }
+//
+//    public function get($job_id)
+//    {
+//        $options = array('conditions' => array("DelayedJob.id" => $job_id));
+//
+//        $job = $this->find('first', $options);
+//
+//        if ($job) {
+//            $job["DelayedJob"]["options"] = unserialize($job["DelayedJob"]["options"]);
+//            $job["DelayedJob"]["payload"] = unserialize($job["DelayedJob"]["payload"]);
+//
+//            if (!isset($job["DelayedJob"]["options"]["max_retries"])) {
+//                $job["DelayedJob"]["options"]["max_retries"] = Configure::read("dj.max.retries");
+//            }
+//
+//            if (!isset($job["DelayedJob"]["options"]["max_execution_time"])) {
+//                $job["DelayedJob"]["options"]["max_execution_time"] = Configure::read("dj.max.execution.time");
+//            }
+//        }
+//
+//        return $job;
+//    }
 
     public function completed($job_id)
     {
-        $data = array('DelayedJob' => array(
+        $data = ['DelayedJob' => [
                 "status" => DJ_STATUS_SUCCESS,
                 "pid" => null,
-        ));
+        ]];
         $this->id = $job_id;
         $this->save($data);
 
@@ -204,14 +204,14 @@ class DelayedJobsTable extends Table
         //debug($run_at);
         //debug(date('Y-m-d H:i:s', $run_at));
 
-        $data = array('DelayedJob' => array(
+        $data = ['DelayedJob' => [
                 "status" => $status,
                 "last_message" => $message,
                 "retries" => $retries + 1,
                 "failed_at" => date('Y-m-d H:i:s'),
                 "pid" => null,
                 "run_at" => date('Y-m-d H:i:s', $run_at),
-        ));
+        ]];
 
         $this->id = $job_id;
         $this->save($data);
@@ -221,10 +221,10 @@ class DelayedJobsTable extends Table
 
     public function lock($job_id, $locked_by = "")
     {
-        $data = array('DelayedJob' => array(
+        $data = ['DelayedJob' => [
                 "status" => DJ_STATUS_BUSY,
                 'locked_by' => $locked_by,
-        ));
+        ]];
         $this->id = $job_id;
         $this->save($data);
 
@@ -233,7 +233,7 @@ class DelayedJobsTable extends Table
 
     public function isBusy($job_id)
     {
-        $options = array('conditions' => array('DelayedJob.status' => DJ_STATUS_BUSY, 'DelayedJob.id' => $job_id));
+        $options = ['conditions' => ['DelayedJob.status' => DJ_STATUS_BUSY, 'DelayedJob.id' => $job_id]];
         $job = $this->find('first', $options);
 
         if ($job) {
@@ -245,9 +245,9 @@ class DelayedJobsTable extends Table
 
     public function setPid($job_id, $pid = 0)
     {
-        $data = array('DelayedJob' => array(
+        $data = ['DelayedJob' => [
                 'pid' => $pid,
-        ));
+        ]];
         $this->id = $job_id;
         $this->save($data);
 
@@ -256,9 +256,9 @@ class DelayedJobsTable extends Table
 
     public function setStatus($job_id, $status = DJ_STATUS_UNKNOWN)
     {
-        $data = array('DelayedJob' => array(
+        $data = ['DelayedJob' => [
                 'status' => $status,
-        ));
+        ]];
         $this->id = $job_id;
         $this->save($data);
 
@@ -275,16 +275,16 @@ class DelayedJobsTable extends Table
 //            return array();
 //        }
         
-        $allowed = array(DJ_STATUS_FAILED, DJ_STATUS_NEW, DJ_STATUS_UNKNOWN);
+        $allowed = [DJ_STATUS_FAILED, DJ_STATUS_NEW, DJ_STATUS_UNKNOWN];
 
-        $options = array(
-            'conditions' => array(
+        $options = [
+            'conditions' => [
                 "DelayedJob.status in (" . implode(",", $allowed) . ")",
                 "DelayedJob.run_at <= NOW()"
-            ),
+            ],
             //'fields' => array('DelayedJob.id'),
-            'order' => array("DelayedJob.priority" => "ASC", "DelayedJob.id" => "ASC"),
-        );
+            'order' => ["DelayedJob.priority" => "ASC", "DelayedJob.id" => "ASC"],
+        ];
 
         $job = $this->find('first', $options);
 
@@ -301,10 +301,10 @@ class DelayedJobsTable extends Table
                 $job["DelayedJob"]["options"]["max_execution_time"] = Configure::read("dj.max.execution.time");
             }
 
-            $data = array('DelayedJob' => array(
+            $data = ['DelayedJob' => [
                     "status" => DJ_STATUS_BUSY,
                     'locked_by' => $worker_id,
-            ));
+            ]];
             $this->id = $job["DelayedJob"]["id"];
             $this->save($data);
 
@@ -315,7 +315,7 @@ class DelayedJobsTable extends Table
 
             //## check if this job is still allocated to this worker
 
-            $options = array('conditions' => array('DelayedJob.id' => $job["DelayedJob"]["id"], 'DelayedJob.locked_by' => $worker_id));
+            $options = ['conditions' => ['DelayedJob.id' => $job["DelayedJob"]["id"], 'DelayedJob.locked_by' => $worker_id]];
             $t_job = $this->find('first', $options);
 
             if ($t_job) {
@@ -325,20 +325,20 @@ class DelayedJobsTable extends Table
             }              //  Log::write ("jobs", $job["DelayedJob"]["id"] . " was allocated to someone else");
         }
 
-        return array();
+        return [];
     }
 
     public function getRunningByHost($host_id)
     {
-        $options = array(
-            'conditions' => array(
+        $options = [
+            'conditions' => [
                 "DelayedJob.locked_by" => $host_id,
                 //"DelayedJob.run_at <= NOW()",
                 "DelayedJob.status" => DJ_STATUS_BUSY,
-            ),
-            'fields' => array('DelayedJob.id', 'DelayedJob.pid'),
-            'order' => array("DelayedJob.priority" => "ASC", "DelayedJob.id" => "ASC"),
-        );
+            ],
+            'fields' => ['DelayedJob.id', 'DelayedJob.pid'],
+            'order' => ["DelayedJob.priority" => "ASC", "DelayedJob.id" => "ASC"],
+        ];
 
         $jobs = $this->find('all', $options);
 
@@ -347,15 +347,17 @@ class DelayedJobsTable extends Table
     
     public function jobsPerSecond()
     {
-        $options = array(
-            'conditions' => array(
-                'DelayedJob.created > ' => date('Y-m-d H:i:s', strtotime('-1 hour')),
-            ),
-        );
+        $conditions = [
+            'DelayedJobs.created > ' => new Time('-1 hour'),
+        ];
 
-        $count = round($this->find('count', $options) / 60 / 60, 3);
-        
-        
+        $count = $this
+            ->find()
+            ->where($conditions)
+            ->count();
+        $count = round($count / 60 / 60, 3);
+
+
         return $count;
     }
 }
