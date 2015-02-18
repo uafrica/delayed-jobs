@@ -1,15 +1,17 @@
 <?php
 
-App::uses('AppController', 'Controller');
+namespace DelayedJobs\Controller;
+
+use App\Controller\AppController;
 
 class DelayedJobsController extends AppController
 {
 
     public $components = array('Paginator', 'Session');
 
-    public function beforeFilter()
+    public function beforeFilter(Event $event)
     {
-        parent::beforeFilter();
+        parent::beforeFilter($event);
         //$this->Auth->allow($this->action);
     }
 
@@ -61,7 +63,7 @@ class DelayedJobsController extends AppController
         }
 
         if ($job["DelayedJob"]["status"] == 4) {
-            throw new CakeException("Job Already Completed");
+            throw new \Exception("Job Already Completed");
         }
 
         debug($job);

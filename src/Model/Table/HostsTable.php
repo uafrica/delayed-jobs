@@ -1,6 +1,9 @@
 <?php
 
-App::uses('DelayedJobAppModel', 'DelayedJobs.Model');
+namespace DelayedJobs\Model;
+
+use Cake\Core\Configure;
+use Cale\ORM\Table;
 
 define("DJ_HOST_STATUS_IDLE", 1);
 define("DJ_HOST_STATUS_RUNNING", 2);
@@ -11,7 +14,7 @@ define("DJ_HOST_STATUS_UNKNOWN", 4);
  * DelayedJobs.Host Model
  *
  */
-class Host extends DelayedJobAppModel
+class Host extends Table
 {
 
     public $useTable = 'delayed_job_hosts';

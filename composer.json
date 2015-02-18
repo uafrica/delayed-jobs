@@ -13,5 +13,16 @@
             "name": "Jaco Roux",
             "email": "jaco@uafrica.com"
         }
-    ]
+    ],
+	"autoload": {
+		"psr-4": {
+			"DelayedJobs\\": "src"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"DelayedJobs\\Test\\": "tests",
+			"Cake\\Test\\": "vendor/cakephp/cakephp/tests"
+		}
+	}    
 }

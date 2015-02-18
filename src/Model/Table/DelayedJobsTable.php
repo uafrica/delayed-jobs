@@ -1,7 +1,11 @@
 <?php
 
-App::uses('DelayedJobAppModel', 'DelayedJobs.Model');
-App::uses('CakeTime', 'Utility');
+namespace DelayedJobs\Model\Table;
+
+use App\Utility\Time;
+use Cake\Core\Configure;
+use Cake\Log\Log;
+use Cale\ORM\Table;
 
 define("DJ_STATUS_NEW", 1);
 define("DJ_STATUS_BUSY", 2);
@@ -16,7 +20,7 @@ define("DJ_STATUS_TEST_JOB", 8);
  * DelayedJob Model
  *
  */
-class DelayedJob extends DelayedJobAppModel
+class DelayedJobsTable extends Table
 {
 
     public $useTable = 'delayed_jobs';
@@ -307,7 +311,7 @@ class DelayedJob extends DelayedJobAppModel
             //sleep(1);
             usleep(250000); //## Sleep for 0.25 seconds
             
-            //CakeLog::write('jobs', $job["DelayedJob"]["id"] . " Allocated to " . $worker_id);
+            //Log::write('jobs', $job["DelayedJob"]["id"] . " Allocated to " . $worker_id);
 
             //## check if this job is still allocated to this worker
 
@@ -318,7 +322,7 @@ class DelayedJob extends DelayedJobAppModel
                 return $job;
             } else {
                 usleep(250000); //## Sleep for 0.25 seconds
-            }              //  CakeLog::write ("jobs", $job["DelayedJob"]["id"] . " was allocated to someone else");
+            }              //  Log::write ("jobs", $job["DelayedJob"]["id"] . " was allocated to someone else");
         }
 
         return array();

@@ -1,5 +1,9 @@
 <?php
 
+namespace DelayedJobs\Controller\Component;
+
+use Cake\Core\Object;
+
 class LockComponent extends Object
 {
 
