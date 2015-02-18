@@ -13,7 +13,7 @@ class WatchdogShell extends AppShell
 
     public function main()
     {
-        $this->Lock = & new LockComponent();
+        $this->Lock = new LockComponent();
         $this->Lock->lock('DelayedJobs.WatchdogShell.main');
 
         $this->stdout->styles('fail', array('text' => 'red', 'blink' => false));
@@ -21,8 +21,9 @@ class WatchdogShell extends AppShell
         $this->stdout->styles('success', array('text' => 'green', 'blink' => false));
         $this->stdout->styles('info', array('text' => 'cyan', 'blink' => false));
 
-        if (!$this->Host->checkConfig())
-            throw new CakeException("Could not load config, check your loadAll settings in bootstrap.php");
+        if (!$this->Host->checkConfig()) {
+            throw new CakeException("Could not load config, check your load settings in bootstrap.php");
+        }
 
         //echo "==";
         //echo Configure::read("delayed.jobs.service.name");
@@ -30,45 +31,42 @@ class WatchdogShell extends AppShell
 
 
         $workers = 1;
-        if (isset($this->args[0]))
+        if (isset($this->args[0])) {
             $workers = $this->args[0];
+        }
 
-        if (!is_numeric($workers))
+        if (!is_numeric($workers)) {
             $workers = 1;
+        }
 
         $workers = $workers * 1;
         
-        $this->PlatformStatus = ClassRegistry::init('PlatformStatus');
-        $platform_status = $this->PlatformStatus->status();
-        if ($platform_status["PlatformStatus"]["status"] != "online")
-        {
-            $this->out('<warning>Maintenance Mode: ' . Configure::read("delayed.jobs.service.name") . ' KILLING ALL WORKERS</warning>');
-            $workers = 0;
-        }
+//        $this->PlatformStatus = ClassRegistry::init('PlatformStatus');
+//        $platform_status = $this->PlatformStatus->status();
+//        if ($platform_status["PlatformStatus"]["status"] != "online")
+//        {
+//            $this->out('<warning>Maintenance Mode: ' . Configure::read("delayed.jobs.service.name") . ' KILLING ALL WORKERS</warning>');
+//            $workers = 0;
+//        }
         
 
-        if ($workers > Configure::read("dj.max.hosts"))
-        {
+        if ($workers > Configure::read("dj.max.hosts")) {
             $workers = Configure::read("dj.max.hosts");
             $this->out('<error>Too many hosts (max_hosts:' . Configure::read("dj.max.hosts") . ')</error>');
         }
         $this->out('<info>Starting Watchdog: ' . $workers . ' Hosts</info>');
 
-        try
-        {
-
+        try {
             $host_name = php_uname("a");
             $base_path = APP . "Console/Command/.././cake DelayedJobs.Host ";
 
-            for ($i = 1; $i <= $workers; $i++)
-            {
+            for ($i = 1; $i <= $workers; $i++) {
                 $worker_name = Configure::read("dj.service.name") . "_worker" . $i;
 
                 $host = $this->Host->findByHost($host_name, $worker_name);
 
-                if (!$host)
-                {
-                    //## Host not found in database, start it
+                if (!$host) {
+                //## Host not found in database, start it
                     //debug($base_path . $worker_name);
                     $p = new Process($base_path . $worker_name);
 
@@ -82,8 +80,7 @@ class WatchdogShell extends AppShell
 
                     sleep(2);
 
-                    if (!$p->status())
-                    {
+                    if (!$p->status()) {
                         $this->Host->Remove($host_id);
                         $this->out('<error>Worker: ' . $worker_name . ' Could not be started, Trying to find process to kill it?</error>');
 
@@ -91,33 +88,23 @@ class WatchdogShell extends AppShell
 
                         //debug($check_pid);
 
-                        if ($check_pid)
-                        {
+                        if ($check_pid) {
                             $p->setPid($check_pid);
                             $p->stop();
 
                             $this->out('<success>Worker: ' . $worker_name . ' Found a proccess and killed it</success>');
-                        }
-                        else
-                        {
+                        } else {
                             $this->out('<error>Worker: ' . $worker_name . ' Could not find any processes to kill</error>');
                         }
-                    }
-                    else
-                    {
-                        if (!$response)
-                        {
+                    } else {
+                        if (!$response) {
                             $p->stop();
                             $this->out('<error>Worker: ' . $worker_name . ' Could not be started</error>');
-                        }
-                        else
-                        {
+                        } else {
                             $this->out('<success>Worker: ' . $worker_name . ' Started (pid:' . $pid . ')</success>');
                         }
                     }
-                }
-                else
-                {
+                } else {
                     $status = $host["Host"]["status"];
                     $host_id = $host["Host"]["id"];
                     $pid = $host["Host"]["pid"];
@@ -126,78 +113,62 @@ class WatchdogShell extends AppShell
                     $p->setPid($host["Host"]["pid"]);
 
                     $process_running = false;
-                    if ($p->status())
+                    if ($p->status()) {
                         $process_running = true;
+                    }
 
                     $details = $p->details();
 
-                    if (strpos($details, "DelayedJobs.Host " . $worker_name) !== false)
+                    if (strpos($details, "DelayedJobs.Host " . $worker_name) !== false) {
                         $process_running = true;
-                    else
+                    } else {
                         $process_running = false;
+                    }
 
-                    if ($status == DJ_HOST_STATUS_IDLE)
-                    {
-                        //## Host is idle, need to start it
+                    if ($status == DJ_HOST_STATUS_IDLE) {
+                    //## Host is idle, need to start it
 
-                        if ($process_running)
-                        {
-                            //## Process is actually running, update status
+                        if ($process_running) {
+                        //## Process is actually running, update status
                             $this->Host->setStatus($host_id, DJ_HOST_STATUS_RUNNING);
                             $this->out('<info>Worker: ' . $worker_name . ' Idle, Changing status (pid:' . $pid . ')</info>');
-                        }
-                        else
-                        {
+                        } else {
                             //## Process is not running, delete record
                             $this->Host->Remove($host_id);
                             $this->out('<error>Worker: ' . $worker_name . ' Not running but reported IDLE state, Removing database record (pid:' . $pid . ')</error>');
                         }
-                    }
-                    elseif ($status == DJ_HOST_STATUS_RUNNING)
-                    {
-                        //## Host is running, please confirm
-                        if ($process_running)
-                        {
-                            //## Process is actually running, update status
+                    } elseif ($status == DJ_HOST_STATUS_RUNNING) {
+                    //## Host is running, please confirm
+                        if ($process_running) {
+                        //## Process is actually running, update status
                             $this->Host->setStatus($host_id, DJ_HOST_STATUS_RUNNING);
                             $this->out('<success>Worker: ' . $worker_name . ' Running normally (pid:' . $pid . ')</success>');
-                        }
-                        else
-                        {
+                        } else {
                             //## Process is not running, delete record
                             $this->Host->Remove($host_id);
                             $this->out('<error>Worker: ' . $worker_name . ' DB reported running, cant find process, remove db (pid:' . $pid . ')</error>');
                         }
-                    }
-                    elseif ($status == DJ_HOST_STATUS_TO_KILL)
-                    {
-                        //## Kill it with fire
-                        if ($process_running)
-                        {
+                    } elseif ($status == DJ_HOST_STATUS_TO_KILL) {
+                    //## Kill it with fire
+                        if ($process_running) {
                             $p->stop();
 
                             sleep(2); //## Give the system time to kill the process
 
-                            if ($p->status())
-                            {
+                            if ($p->status()) {
                                 echo "Process Could not be stopped";
                             }
                         }
 
                         $this->Host->Remove($host_id);
                         $this->out('<error>Worker: ' . $worker_name . ' Killed (pid:' . $pid . ')</error>');
-                    }
-                    else
-                    {
+                    } else {
                         //## Something went wrong, horribly wrong
-                        if ($process_running)
-                        {
-                            //## Process is actually running, update status
+                        if ($process_running) {
+                        //## Process is actually running, update status
                             $this->Host->setStatus($host_id, DJ_HOST_STATUS_RUNNING);
                             $this->out('<info>Worker: ' . $worker_name . ' Unknown Status, but running, changing status (pid:' . $pid . ')</info>');
-                        }
-                        else
-                        {
+                        } else {
                             //## Process is not running, delete record
                             $this->Host->Remove($host_id);
                             $this->out('<error>Worker: ' . $worker_name . ' Unknown status and not running, removing host (pid:' . $pid . ')</error>');
@@ -207,18 +178,15 @@ class WatchdogShell extends AppShell
             }
 
             //## Check that no other or more processes are running, if they are found, kill them
-            for ($i = $workers + 1; $i <= Configure::read("dj.max.hosts"); $i++)
-            {
-
+            for ($i = $workers + 1; $i <= Configure::read("dj.max.hosts"); $i++) {
                 $worker_name = Configure::read("dj.service.name") . "_worker" . $i;
 
                 $host = $this->Host->findByHost($host_name, $worker_name);
 
                 $p = new Process();
 
-                if ($host)
-                {
-                    //## Host is in the database, need to remove it
+                if ($host) {
+                //## Host is in the database, need to remove it
                     $status = $host["Host"]["status"];
                     $host_id = $host["Host"]["id"];
                     $pid = $host["Host"]["pid"];
@@ -233,29 +201,23 @@ class WatchdogShell extends AppShell
                     $this->Host->remove($host_id);
 
                     $this->out('<error>Worker: ' . $worker_name . ' Too many hosts, killing (pid:' . $pid . ')</error>');
-                }
-                else
-                {
+                } else {
                     //## No Host record found, just kill if it exists
 
                     $check_pid = $p->getPidByName("DelayedJobs.Host " . $worker_name);
 
-                    if ($check_pid)
-                    {
+                    if ($check_pid) {
                         $p->setPid($check_pid);
                         $p->stop();
 
                         $this->out('<success>Worker: ' . $worker_name . ' Found a proccess too many and killed it</success>');
-                    }
-                    else
-                    {
+                    } else {
                         //$this->out('<error>Worker: ' . $worker_name . ' Nope</error>');
                     }
                 }
             }
-        } catch (Exception $exc)
-        {
-            //sleep(rand(5,10));
+        } catch (Exception $exc) {
+        //sleep(rand(5,10));
             //## Job Failed
             //$this->DelayedJob->failed($job_id, $exc->getMessage());
             //debug($exc->getMessage());
@@ -266,9 +228,6 @@ class WatchdogShell extends AppShell
         exit();
         
     }
-    
-    
-
 }
 
 /* An easy way to keep in track of external processes.
@@ -285,8 +244,7 @@ class Process
 
     public function __construct($cl = false)
     {
-        if ($cl != false)
-        {
+        if ($cl != false) {
             $this->command = $cl;
             $this->runCom();
         }
@@ -296,7 +254,7 @@ class Process
     {
         $command = 'nohup ' . $this->command . ' > /dev/null 2>&1 & echo $!';
         exec($command, $op);
-        $this->pid = (int) $op[0];
+        $this->pid = (int)$op[0];
     }
 
     public function setPid($pid)
@@ -314,50 +272,52 @@ class Process
         $out = array();
         exec("ps aux | grep '$name' | grep -v grep | awk '{ print $2 }' | head -1", $out);
 
-        if (isset($out[0]))
+        if (isset($out[0])) {
             return $out[0];
-        else
+        } else {
             return false;
+        }
     }
 
     public function status()
     {
         $command = 'ps -p ' . $this->pid;
         exec($command, $op);
-        if (!isset($op[1]))
+        if (!isset($op[1])) {
             return false;
-        else
+        } else {
             return true;
+        }
     }
 
     public function details()
     {
         $command = 'ps -p ' . $this->pid . " -f";
         exec($command, $op);
-        if (isset($op[1]))
+        if (isset($op[1])) {
             return $op[1];
-        else
+        } else {
             return false;
+        }
     }
 
     public function start()
     {
-        if ($this->command != '')
+        if ($this->command != '') {
             $this->runCom();
-        else
+        } else {
             return true;
+        }
     }
 
     public function stop()
     {
         $command = 'kill ' . $this->pid;
         exec($command);
-        if ($this->status() == false)
+        if ($this->status() == false) {
             return true;
-        else
+        } else {
             return false;
+        }
     }
-
 }
-
-?>

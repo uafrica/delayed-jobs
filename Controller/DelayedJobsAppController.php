@@ -1,4 +1,5 @@
 <?php
 
-class DelayedJobsAppController extends AppController {
+class DelayedJobsAppController extends AppController
+{
 }

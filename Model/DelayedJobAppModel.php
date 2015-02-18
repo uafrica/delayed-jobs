@@ -1,4 +1,5 @@
 <?php
 
-class DelayedJobAppModel extends AppModel {
+class DelayedJobAppModel extends AppModel
+{
 }

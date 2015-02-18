@@ -18,11 +18,11 @@ class WorkerShell extends AppShell
     {
         $job_id = null;
 
-        if (isset($this->args[0]))
+        if (isset($this->args[0])) {
             $job_id = $this->args[0];
+        }
 
-        if ($job_id === null)
-        {
+        if ($job_id === null) {
             throw new Exception("No Job ID received");
         }
         
@@ -30,7 +30,7 @@ class WorkerShell extends AppShell
         
         
 
-        $this->Lock = & new LockComponent();
+        $this->Lock = new LockComponent();
         $this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id);
         
         $this->stdout->styles('fail', array('text' => 'red', 'blink' => false));
@@ -42,21 +42,17 @@ class WorkerShell extends AppShell
 
         $this->out('<info>Starting Job: ' . $job_id . '</info>');
 
-        try
-        {
+        try {
             $job = $this->DelayedJob->get($job_id);
-            if ($job)
-            {
-                //## First check if job is not locked
-                if($job["DelayedJob"]["status"] == DJ_STATUS_SUCCESS)
-                {
+            if ($job) {
+            //## First check if job is not locked
+                if ($job["DelayedJob"]["status"] == DJ_STATUS_SUCCESS) {
                     throw new Exception("Job previously completed, Why is is being called");
                 }
                 
                 
                 
-                if($job["DelayedJob"]["status"] == DJ_STATUS_BURRIED)
-                {
+                if ($job["DelayedJob"]["status"] == DJ_STATUS_BURRIED) {
                     throw new Exception("Job Failed too many times, but why was it called again");
                 }
                 
@@ -66,38 +62,30 @@ class WorkerShell extends AppShell
 
                 $model = ClassRegistry::init($job["DelayedJob"]["class"]);
 
-                if ($model === null)
-                {
+                if ($model === null) {
                     throw new Exception("Model does not exists (" . $model . ")");
                 }
 
-                if (method_exists($model, $job["DelayedJob"]["method"]))
-                {
+                if (method_exists($model, $job["DelayedJob"]["method"])) {
                     $method = $job["DelayedJob"]["method"];
                     $response = $model->$method($job["DelayedJob"]["payload"]);
 
-                    if($response)
-                    {
+                    if ($response) {
                         $this->DelayedJob->completed($job_id);
                         $this->out('<success>Job ' . $job_id . ' Completed</success>');
-                    }
-                    else
-                    {
+                    } else {
                         throw new Exception("Invalid response received");
                     }
-                }
-                else
-                {
-                    throw new Exception("Method does not exists ($model:" . $job["DelayedJob"]["method"] . ")");
+                } else {
+                    throw new Exception("Method does not exists ({$model->name}::" . $job["DelayedJob"]["method"] . ")");
                 }
             }
-        } catch (Exception $exc)
-        {
-            //sleep(rand(5,10));
+        } catch (Exception $exc) {
+        //sleep(rand(5,10));
             //## Job Failed
             $this->DelayedJob->failed($job_id, $exc->getMessage());
             //debug($exc->getMessage());
-            $this->out('<fail>Job ' . $job_id . ' Failed</fail>');
+            $this->out('<fail>Job ' . $job_id . ' Failed ('. $exc->getMessage() .')</fail>');
             //echo $exc->getTraceAsString();
            // $this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id);
         }
@@ -106,8 +94,4 @@ class WorkerShell extends AppShell
         
         
     }
-
 }
-
-
-?>

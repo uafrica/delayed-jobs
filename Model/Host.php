@@ -45,16 +45,14 @@ class Host extends DelayedJobAppModel
 
         $host = $this->findByHost($host_name, $worker_name);
 
-        if (!$host)
+        if (!$host) {
             $this->create();
+        }
 
-        if ($this->save($data))
-        {
+        if ($this->save($data)) {
             $host = $this->findByHost($host_name, $worker_name);
             return $host;
-        }
-        else
-        {
+        } else {
             return false;
         }
     }
@@ -94,5 +92,4 @@ class Host extends DelayedJobAppModel
     {
         return Configure::check("dj.service.name");
     }
-
 }

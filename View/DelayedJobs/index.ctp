@@ -1,91 +1,86 @@
-<div class="row">
-    <div class="col-xs-12 col-sm-7 col-md-7 col-lg-4">
-        <h1 class="page-title txt-color-blueDark">
-            <i class="fa fa-tags fa-fw "></i> 
-            Delayed Jobs 
-        </h1>
-    </div>
-
-    <div class="clearfix pg-btn-right pull-right"><a href="/accounts/add" target="_self" class="btn btn-labeled btn-primary"> <span class="btn-label"><i class="fa fa-plus"></i></span>Add Account </a></div>
-
-    <div id="header_paginate" class="pull-right">
-        <ul class="pagination">
-            <?php
-            echo $this->Paginator->prev('<i class="fa fa-chevron-left"></i>', array('escape' => false, 'tag' => 'li', 'disabledTag' => 'a'), null, array('escape' => false, 'class' => 'disabled', 'tag' => 'li', 'disabledTag' => 'a'));
-            //echo $this->Paginator->numbers(array('separator' => '', 'class' => 'paging', 'tag' => 'li', 'currentClass' => 'active', 'currentTag' => 'a'));
-            echo $this->Paginator->next('<i class="fa fa-chevron-right"></i>', array('escape' => false, 'tag' => 'li', 'disabledTag' => 'a'), null, array('escape' => false, 'class' => 'disabled', 'tag' => 'li', 'disabledTag' => 'a'));
-            ?>
-        </ul>
-    </div>
-</div>
-
-<?php if(count($accounts) <= 0){//no products?>
-<div id="product_index">
-    <div class="well well_empty">
-        <h2>You do not have any accounts yet.</h2>
-        <h4>Start by creating your first account.</h4>
-        <div class="clearfix"><a href="/accounts/add" target="_self" class="btn btn-labeled btn-success"> <span class="btn-label"><i class="fa fa-check"></i></span>Get Started</a></div>
-    </div>
-</div>
-<?php }else{?>
-
-<div id="product_index">
-   <div class="well">
-    <table id="prod_list" class="table table-hover smart-form has-tickbox">
-        <thead>
-            <tr>
-                <th>Acc#</th>
-                
-                <th>Name</th>
-                <th>Slug</th>
-                <th width="120">Status</th>
-                <th width="130">&nbsp;</th>
-            </tr>
-        </thead>
-        <tbody>
-             <?php foreach ($accounts as $account): ?>
-                <tr>
-                                    <td><?php echo h($account['Account']['id']); ?>&nbsp;</td>
-                
-                <td><?php echo $this->Html->link($account['Account']['name'], array('action' => 'view', $account['Account']['id'])); ?>&nbsp;</td>
-                <td><?php echo $account['Account']['slug']; ?></td>
-                <td><?php echo $account['Status']['value']; ?></td>
-                    <td>
-                        <div class="btn-group">
-                            <a class="btn btn-sm btn-success" style='margin-right:5px;' href="accounts/account_set/<?php echo $account['Account']['id']; ?>">Use</a>
-                                <a class="btn btn-sm btn-primary" href="accounts/edit/<?php echo $account['Account']['id']; ?>">Edit</a>
-                                    <a class="btn btn-sm btn-primary" href="javascript:alert('under construction');"><i class="fa fa-times"></i></a>
-                            </div>
-                        
-                    </td>
-                </tr>
-                <?php endforeach;?>
-        </tbody>
-    </table>
-    
-</div>
-<!--start counts and paging-->
-    <div class="tbl-footer">
-        <div class="row">
-            <div class="col-sm-6">
-                <div class="dataTables_info" id="dt_basic_info">
-                    <div class="footer_page_counter"><?php echo $this->Paginator->counter('Showing {:start} to {:end} of {:count}'); ?></div>
-                </div>
+<div class="panel panel-inverse">
+    <div class="panel-body">
+        <div class="table-responsive">
+            <div class="alert alert-info">
+                <p><?php echo $jobs_per_second; ?> jobs per second</p>
             </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th><?php echo $this->Paginator->sort('id'); ?></th>
+                        <th><?php echo $this->Paginator->sort('group'); ?></th>
+                        <th><?php echo $this->Paginator->sort('method'); ?></th>
+                        <th><?php echo $this->Paginator->sort('status'); ?></th>
+                        <th><?php echo $this->Paginator->sort('retries'); ?></th>
+                        <th><?php echo $this->Paginator->sort('priority'); ?></th>
+                        <th><?php echo $this->Paginator->sort('run_at'); ?></th>
+                        <th><?php echo $this->Paginator->sort('last_message'); ?></th>
+                        <th><?php echo $this->Paginator->sort('created'); ?></th>
+                        <th class="actions"><?php echo __('Actions'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($delayedJobs as $delayedJob): ?>
 
-            <div id="footer_paginate" class="pull-right">
-                <ul class="pagination">
-                    <?php
-                    echo $this->Paginator->first('<i class="fa fa-chevron-left"></i><i class="fa fa-chevron-left"></i>', array('escape' => false, 'tag' => 'li', 'disabledTag' => 'a'), null, array('escape' => false, 'class' => 'disabled', 'tag' => 'li', 'disabledTag' => 'a'));
-                    echo $this->Paginator->prev('<i class="fa fa-chevron-left"></i>', array('escape' => false, 'tag' => 'li', 'disabledTag' => 'a'), null, array('escape' => false, 'class' => 'disabled', 'tag' => 'li', 'disabledTag' => 'a'));
-                    echo $this->Paginator->numbers(array('separator' => '', 'class' => 'paging', 'tag' => 'li', 'currentClass' => 'active', 'currentTag' => 'a'));
-                    echo $this->Paginator->next('<i class="fa fa-chevron-right"></i>', array('escape' => false, 'tag' => 'li', 'disabledTag' => 'a'), null, array('escape' => false, 'class' => 'disabled', 'tag' => 'li', 'disabledTag' => 'a'));
-                    echo $this->Paginator->last('<i class="fa fa-chevron-right"></i><i class="fa fa-chevron-right"></i>', array('escape' => false, 'tag' => 'li', 'disabledTag' => 'a'), null, array('escape' => false, 'class' => 'disabled', 'tag' => 'li', 'disabledTag' => 'a'));
-                    ?>
-                </ul>
-            </div>
+                        <?php
+                        switch ($delayedJob['DelayedJob']['status'])
+                        {
+                            case 1:
+                                $status_display = "New";
+                                break;
+                            case 2:
+                                $status_display = "Running";
+                                break;
+                            case 3:
+                                $status_display = "Burried";
+                                break;
+                            case 4:
+                                $status_display = "Success";
+                                break;
+                            case 5:
+                                $status_display = "Kick";
+                                break;
+                            case 6:
+                                $status_display = "Failed";
+                                break;
+                            case 7:
+                                $status_display = "Unknown";
+                                break;
+                            case 8:
+                                $status_display = "Test Job";
+                                break;
+                            default:
+                                $status_display = "Unknown";
+                        }
+                        ?>
+
+                        <tr>
+                            <td><?php echo h($delayedJob['DelayedJob']['id']); ?>&nbsp;</td>
+                            <td><?php echo h($delayedJob['DelayedJob']['group']); ?>&nbsp;</td>
+                            <td><?php echo h($delayedJob['DelayedJob']['class'] . "::" . $delayedJob['DelayedJob']['method']); ?>&nbsp;</td>
+                            <td><?php echo h($status_display); ?>&nbsp;</td>
+                            <td><?php echo h($delayedJob['DelayedJob']['retries']); ?>&nbsp;</td>
+                            <td><?php echo h($delayedJob['DelayedJob']['priority']); ?>&nbsp;</td>
+                            <td><?php echo h($this->Time->format($this->Time->convert(strtotime($delayedJob['DelayedJob']['run_at']), 'Africa/Johannesburg'), '%e %b %Y %H:%M')); ?>&nbsp;</td>
+                            <td><?php echo h($delayedJob['DelayedJob']['last_message']); ?>&nbsp;</td>
+                            <td><?php echo h($delayedJob['DelayedJob']['created']); ?>&nbsp;</td>
+                            <td class="actions">
+                                <?php echo $this->Html->link('<i class="fa fa-info"></i>', array('action' => 'view', $delayedJob['DelayedJob']['id']), array('title'=>'View Job','escape' => false, 'class' => 'btn btn-default btn-icon btn-circle btn-sm')); ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php echo $this->Element('paging'); ?>
+
+
+
         </div>
-     </div>
-    <!--end counts and paging-->
+    </div>
 </div>
-<?php } ?>
+
+
+
+
+
+

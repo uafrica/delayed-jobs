@@ -17,15 +17,16 @@ class HostShell extends AppShell
     public function main()
     {
 
-        //ini_set('max_execution_time', 10); 
+        //ini_set('max_execution_time', 10);
         //set_time_limit(10);
 
         $worker_name = "worker1";
 
-        if (isset($this->args[0]))
+        if (isset($this->args[0])) {
             $worker_name = $this->args[0];
+        }
 
-        $this->Lock = & new LockComponent();
+        $this->Lock = new LockComponent();
         $this->Lock->lock('DelayedJobs.HostShell.main.' . $worker_name);
 
         $this->stdout->styles('fail', array('text' => 'red', 'blink' => false));
@@ -59,8 +60,7 @@ class HostShell extends AppShell
 
         $running_jobs = $this->DelayedJob->getRunningByHost($worker_id);
 
-        foreach ($running_jobs as $running_job)
-        {
+        foreach ($running_jobs as $running_job) {
             $job_pids[$running_job["DelayedJob"]["id"]] = array(
                 "pid" => $running_job["DelayedJob"]["pid"],
             );
@@ -70,33 +70,25 @@ class HostShell extends AppShell
         //debug($job_pids);
         //exit();
 
-        while (true)
-        {
-
-            if (count($job_pids) >= $max_allowed_jobs)
-            {
-                //CakeLog::write('jobs', "Max Number of Jobs running");
-            }
-            else
-            {
+        while (true) {
+            if (count($job_pids) >= $max_allowed_jobs) {
+            //CakeLog::write('jobs', "Max Number of Jobs running");
+            } else {
                 $getOpenJob = $this->DelayedJob->getOpenJob($worker_id);
 
-                if ($getOpenJob)
-                {
-
+                if ($getOpenJob) {
                     $job = $getOpenJob["DelayedJob"];
                     //## Get Next Job to run
                     //## Lock the job
 
-                    if (!isset($job_pids[$job["id"]]))
-                    {
-
-                        //CakeLog::write('jobs', $worker_name . " Doing " . $job["id"] . " - " . time());
+                    if (!isset($job_pids[$job["id"]])) {
+                    //CakeLog::write('jobs', $worker_name . " Doing " . $job["id"] . " - " . time());
                         //$this->DelayedJob->lock($job["id"], $worker_id);
                         $options = $job["options"];
 
-                        if (!isset($options["max_execution_time"]))
+                        if (!isset($options["max_execution_time"])) {
                             $options["max_execution_time"] = 25 * 60;
+                        }
 
                         $path = APP . "Console/Command/.././cake DelayedJobs.Worker " . $job["id"];
                         $p = new Process($path);
@@ -115,9 +107,7 @@ class HostShell extends AppShell
 
                         //break;
                     }
-                }
-                else
-                {
+                } else {
                     //CakeLog::write('jobs', "No Jobs");
                 }
             }
@@ -126,42 +116,33 @@ class HostShell extends AppShell
 
 
             //## Check Status of Fired Jobs
-            foreach ($job_pids as $index => $running_jobs)
-            {
+            foreach ($job_pids as $index => $running_jobs) {
                 $status = new Process();
                 $status->setPid($running_jobs["pid"]);
-                if (!$status->status())
-                {
+                if (!$status->status()) {
                     //## Make sure that this job is not marked as running
 
                     $t_job = $this->DelayedJob->get($index);
 
-                    if ($t_job["DelayedJob"]["status"] == DJ_STATUS_BUSY)
-                    {
+                    if ($t_job["DelayedJob"]["status"] == DJ_STATUS_BUSY) {
                         $this->DelayedJob->failed($index, "Job not running, but db said it is, could be a runtime error");
                         //$this->DelayedJob->setStatus($index, DJ_STATUS_UNKNOWN);
                     }
                     unset($job_pids[$index]);
                     //CakeLog::write('jobs', "Job: " . $index . " No longer running");
-                }
-                else
-                {
+                } else {
                     //## Check if job has not reached it max exec time
 
                     $busy_time = time() - $running_jobs["start_time"];
 
-                    if ($busy_time > $running_jobs["max_execution_time"])
-                    {
+                    if ($busy_time > $running_jobs["max_execution_time"]) {
                         echo "Job " . $index . " Running too long, need to kill it\n";
                         $status->stop();
 
                         $this->DelayedJob->failed($index, "Job ran too long, killed");
 
                         //CakeLog::write('jobs', "Killed");
-                    }
-                    else
-                    {
-
+                    } else {
                         //CakeLog::write('jobs', "Job: " . $index . " still running: " . $busy_time . " ");
                     }
                 }
@@ -172,7 +153,6 @@ class HostShell extends AppShell
             sleep(2);
         }
     }
-
 }
 
 /* An easy way to keep in track of external processes.
@@ -189,8 +169,7 @@ class Process
 
     public function __construct($cl = false)
     {
-        if ($cl != false)
-        {
+        if ($cl != false) {
             $this->command = $cl;
             $this->runCom();
         }
@@ -200,7 +179,7 @@ class Process
     {
         $command = 'nohup ' . $this->command . ' > /dev/null 2>&1 & echo $!';
         exec($command, $op);
-        $this->pid = (int) $op[0];
+        $this->pid = (int)$op[0];
     }
 
     public function setPid($pid)
@@ -217,30 +196,30 @@ class Process
     {
         $command = 'ps -p ' . $this->pid;
         exec($command, $op);
-        if (!isset($op[1]))
+        if (!isset($op[1])) {
             return false;
-        else
+        } else {
             return true;
+        }
     }
 
     public function start()
     {
-        if ($this->command != '')
+        if ($this->command != '') {
             $this->runCom();
-        else
+        } else {
             return true;
+        }
     }
 
     public function stop()
     {
         $command = 'kill ' . $this->pid;
         exec($command);
-        if ($this->status() == false)
+        if ($this->status() == false) {
             return true;
-        else
+        } else {
             return false;
+        }
     }
-
 }
-
-?>

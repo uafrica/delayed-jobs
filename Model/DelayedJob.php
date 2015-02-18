@@ -1,6 +1,7 @@
 <?php
 
 App::uses('DelayedJobAppModel', 'DelayedJobs.Model');
+App::uses('CakeTime', 'Utility');
 
 define("DJ_STATUS_NEW", 1);
 define("DJ_STATUS_BUSY", 2);
@@ -89,23 +90,29 @@ class DelayedJob extends DelayedJobAppModel
 
         $default_options = array();
 
-        if (!isset($data["class"]))
+        if (!isset($data["class"])) {
             throw new Exception("No Class Specified");
+        }
 
-        if (!isset($data["method"]))
+        if (!isset($data["method"])) {
             throw new Exception("No Method Specified");
+        }
 
-        if (!isset($data["group"]))
+        if (!isset($data["group"])) {
             $data["group"] = null;
+        }
 
-        if (!isset($data["payload"]))
+        if (!isset($data["payload"])) {
             $data["payload"] = array();
+        }
 
-        if (!isset($data["options"]))
+        if (!isset($data["options"])) {
             $data["options"] = $default_options;
+        }
 
-        if (!isset($data["priority"]))
+        if (!isset($data["priority"])) {
             $data["priority"] = 100;
+        }
 
 
         $data["payload"] = serialize($data["payload"]);
@@ -127,12 +134,9 @@ class DelayedJob extends DelayedJobAppModel
         //debug($data);
 
         $this->create();
-        if ($this->save($data))
-        {
+        if ($this->save($data)) {
             return $this->id;
-        }
-        else
-        {
+        } else {
             throw new Exception("Could not create job");
             return false;
         }
@@ -144,16 +148,17 @@ class DelayedJob extends DelayedJobAppModel
 
         $job = $this->find('first', $options);
 
-        if ($job)
-        {
+        if ($job) {
             $job["DelayedJob"]["options"] = unserialize($job["DelayedJob"]["options"]);
             $job["DelayedJob"]["payload"] = unserialize($job["DelayedJob"]["payload"]);
 
-            if (!isset($job["DelayedJob"]["options"]["max_retries"]))
+            if (!isset($job["DelayedJob"]["options"]["max_retries"])) {
                 $job["DelayedJob"]["options"]["max_retries"] = Configure::read("dj.max.retries");
+            }
 
-            if (!isset($job["DelayedJob"]["options"]["max_execution_time"]))
+            if (!isset($job["DelayedJob"]["options"]["max_execution_time"])) {
                 $job["DelayedJob"]["options"]["max_execution_time"] = Configure::read("dj.max.execution.time");
+            }
         }
 
         return $job;
@@ -179,8 +184,9 @@ class DelayedJob extends DelayedJobAppModel
         $retries = $job["DelayedJob"]["retries"];
 
         $status = DJ_STATUS_FAILED;
-        if ($retries + 1 > $job["DelayedJob"]["options"]["max_retries"])
+        if ($retries + 1 > $job["DelayedJob"]["options"]["max_retries"]) {
             $status = DJ_STATUS_BURRIED;
+        }
 
 
         //debug(time());
@@ -226,8 +232,9 @@ class DelayedJob extends DelayedJobAppModel
         $options = array('conditions' => array('DelayedJob.status' => DJ_STATUS_BUSY, 'DelayedJob.id' => $job_id));
         $job = $this->find('first', $options);
 
-        if ($job)
+        if ($job) {
             return true;
+        }
 
         return false;
     }
@@ -257,12 +264,12 @@ class DelayedJob extends DelayedJobAppModel
     public function getOpenJob($worker_id = "")
     {
 
-        $this->PlatformStatus = ClassRegistry::init('PlatformStatus');
-        $platform_status = $this->PlatformStatus->status();
-        if ($platform_status["PlatformStatus"]["status"] != "online")
-        {
-            return array();
-        }
+//        $this->PlatformStatus = ClassRegistry::init('PlatformStatus');
+//        $platform_status = $this->PlatformStatus->status();
+//        if ($platform_status["PlatformStatus"]["status"] != "online")
+//        {
+//            return array();
+//        }
         
         $allowed = array(DJ_STATUS_FAILED, DJ_STATUS_NEW, DJ_STATUS_UNKNOWN);
 
@@ -277,17 +284,18 @@ class DelayedJob extends DelayedJobAppModel
 
         $job = $this->find('first', $options);
 
-        if ($job)
-        {
-            //$job = $this->get($job["DelayedJob"]["id"]);
+        if ($job) {
+        //$job = $this->get($job["DelayedJob"]["id"]);
             $job["DelayedJob"]["options"] = unserialize($job["DelayedJob"]["options"]);
             $job["DelayedJob"]["payload"] = unserialize($job["DelayedJob"]["payload"]);
 
-            if (!isset($job["DelayedJob"]["options"]["max_retries"]))
+            if (!isset($job["DelayedJob"]["options"]["max_retries"])) {
                 $job["DelayedJob"]["options"]["max_retries"] = Configure::read("dj.max.retries");
+            }
 
-            if (!isset($job["DelayedJob"]["options"]["max_execution_time"]))
+            if (!isset($job["DelayedJob"]["options"]["max_execution_time"])) {
                 $job["DelayedJob"]["options"]["max_execution_time"] = Configure::read("dj.max.execution.time");
+            }
 
             $data = array('DelayedJob' => array(
                     "status" => DJ_STATUS_BUSY,
@@ -306,11 +314,11 @@ class DelayedJob extends DelayedJobAppModel
             $options = array('conditions' => array('DelayedJob.id' => $job["DelayedJob"]["id"], 'DelayedJob.locked_by' => $worker_id));
             $t_job = $this->find('first', $options);
 
-            if ($t_job)
+            if ($t_job) {
                 return $job;
-            else
+            } else {
                 usleep(250000); //## Sleep for 0.25 seconds
-              //  CakeLog::write ("jobs", $job["DelayedJob"]["id"] . " was allocated to someone else");
+            }              //  CakeLog::write ("jobs", $job["DelayedJob"]["id"] . " was allocated to someone else");
         }
 
         return array();
@@ -332,5 +340,18 @@ class DelayedJob extends DelayedJobAppModel
 
         return $jobs;
     }
+    
+    public function jobsPerSecond()
+    {
+        $options = array(
+            'conditions' => array(
+                'DelayedJob.created > ' => date('Y-m-d H:i:s', strtotime('-1 hour')),
+            ),
+        );
 
+        $count = round($this->find('count', $options) / 60 / 60, 3);
+        
+        
+        return $count;
+    }
 }
