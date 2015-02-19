@@ -138,7 +138,7 @@ class DelayedJobsTable extends Table
 
             $conditions = [
                 'DelayedJobs.id' => $job->id,
-                'DelayedJob.locked_by' => $worker_id
+                'DelayedJobs.locked_by' => $worker_id
             ];
             if ($this->exists($conditions)) {
                 return $job;
@@ -154,7 +154,7 @@ class DelayedJobsTable extends Table
     {
         $conditions = [
             'DelayedJobs.locked_by' => $host_id,
-            'DelayedJobs.status' => DJ_STATUS_BUSY,
+            'DelayedJobs.status' => self::STATUS_BUSY,
         ];
 
         $jobs = $this
