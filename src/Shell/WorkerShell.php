@@ -108,6 +108,3 @@ class WorkerShell extends AppShell
     }
 
 }
-
-
-?>

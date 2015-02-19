@@ -108,7 +108,7 @@ class HostShell extends Shell
                     $options['max_execution_time'] = 25 * 60;
                 }
 
-                $path = ROOT . '/bin/cake DelayedJobs.Worker ' . $job->id;
+                $path = ROOT . '/bin/cake DelayedJobs.worker ' . $job->id;
                 $p = new Process($path);
 
                 $pid = $p->getPid();
