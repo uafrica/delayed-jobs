@@ -6,15 +6,7 @@ use Cake\I18n\Time;
 use Cake\Core\Configure;
 use Cake\Log\Log;
 use Cake\ORM\Table;
-
-define("DJ_STATUS_NEW", 1);
-define("DJ_STATUS_BUSY", 2);
-define("DJ_STATUS_BURRIED", 3);
-define("DJ_STATUS_SUCCESS", 4);
-define("DJ_STATUS_KICK", 5);
-define("DJ_STATUS_FAILED", 6);
-define("DJ_STATUS_UNKNOWN", 7);
-define("DJ_STATUS_TEST_JOB", 8);
+use Cake\Validation\Validator;
 
 /**
  * DelayedJob Model
@@ -22,129 +14,32 @@ define("DJ_STATUS_TEST_JOB", 8);
  */
 class DelayedJobsTable extends Table
 {
+    const STATUS_NEW = 1;
+    const STATUS_BUSY = 2;
+    const STATUS_BURRIED = 3;
+    const STATUS_SUCCESS = 4;
+    const STATUS_KICK = 5;
+    const STATUS_FAILED = 6;
+    const STATUS_UNKNOWN = 7;
+    const STATUS_TEST_JOB = 8;
 
-    public $useTable = 'delayed_jobs';
-
-    /**
-     * Validation rules
-     *
-     * @var array
-     */
-    public $validate = [
-        'group' => [
-            'notempty' => [
-                'rule' => ['notempty'],
-                //'message' => 'Your custom message here',
-                'allowEmpty' => true,
-                'required' => false,
-            //'last' => false, // Stop validation after this rule
-            //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ],
-        ],
-        'class' => [
-            'notempty' => [
-                'rule' => ['notempty'],
-            //'message' => 'Your custom message here',
-            //'allowEmpty' => false,
-            //'required' => false,
-            //'last' => false, // Stop validation after this rule
-            //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ],
-        ],
-        'method' => [
-            'notempty' => [
-                'rule' => ['notempty'],
-            //'message' => 'Your custom message here',
-            //'allowEmpty' => false,
-            //'required' => false,
-            //'last' => false, // Stop validation after this rule
-            //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ],
-        ],
-        'status' => [
-            'numeric' => [
-                'rule' => ['numeric'],
-            //'message' => 'Your custom message here',
-            //'allowEmpty' => false,
-            //'required' => false,
-            //'last' => false, // Stop validation after this rule
-            //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ],
-        ],
-        'retries' => [
-            'numeric' => [
-                'rule' => ['numeric'],
-            //'message' => 'Your custom message here',
-            //'allowEmpty' => false,
-            //'required' => false,
-            //'last' => false, // Stop validation after this rule
-            //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ],
-        ],
-    ];
-
-    /*
-     * $options
-     * delay
-     * priority
-     */
-
-    public function queue($data)
+    public function initialize(array $config)
     {
+        $this->addBehavior('Timestamp');
 
-        $default_options = [];
-
-        if (!isset($data["class"])) {
-            throw new Exception("No Class Specified");
-        }
-
-        if (!isset($data["method"])) {
-            throw new Exception("No Method Specified");
-        }
-
-        if (!isset($data["group"])) {
-            $data["group"] = null;
-        }
-
-        if (!isset($data["payload"])) {
-            $data["payload"] = [];
-        }
-
-        if (!isset($data["options"])) {
-            $data["options"] = $default_options;
-        }
-
-        if (!isset($data["priority"])) {
-            $data["priority"] = 100;
-        }
-
-
-        $data["payload"] = serialize($data["payload"]);
-        $data["options"] = serialize($data["options"]);
-
-        $data = [
-            "DelayedJob" => [
-                'group' => $data["group"],
-                'class' => $data["class"],
-                'method' => $data["method"],
-                'payload' => $data["payload"],
-                'options' => $data["options"],
-                'status' => DJ_STATUS_NEW,
-                'run_at' => date('Y-m-d H:i:s', time() + 5),
-                'priority' => $data["priority"],
-            ],
-        ];
-
-        //debug($data);
-
-        $this->create();
-        if ($this->save($data)) {
-            return $this->id;
-        } else {
-            throw new Exception("Could not create job");
-            return false;
-        }
+        parent::initialize($config);
     }
+
+
+    public function validationDefault(Validator $validator)
+    {
+        $validator
+            ->notEmpty('group')
+            ->notEmpty('class')
+            ->notEmpty('method');
+        return $validator;
+    }
+
 //
 //    public function get($job_id)
 //    {

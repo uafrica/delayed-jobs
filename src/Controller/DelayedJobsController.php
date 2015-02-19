@@ -4,6 +4,7 @@ namespace DelayedJobs\Controller;
 
 use App\Controller\AppController;
 use Cake\Event\Event;
+use DelayedJobs\Model\Table\DelayedJobsTable;
 
 class DelayedJobsController extends AppController
 {
