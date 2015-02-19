@@ -33,32 +33,28 @@ class DelayedJobsController extends AppController
         return $this->Crud->execute();
     }
 
+    public function view($id)
+    {
+        return $this->Crud->execute();
+    }
+
     public function run($id = null)
     {
         $this->layout = false;
         $this->autoRender = false;
 
-        $options = ['conditions' => ['DelayedJob.id' => $id]];
+        $job = $this->DelayedJobs->get($id);
 
-        $job = $this->DelayedJob->find('first', $options);
-
-        if (!$job) {
-            throw new NotFoundException("Could not find job");
-        }
-
-        if ($job["DelayedJob"]["status"] == 4) {
+        if ($job->status === DelayedJobsTable::STATUS_SUCCESS) {
             throw new \Exception("Job Already Completed");
         }
 
-        debug($job);
+        $job_worker = new $job->class();
 
-        $Object = ClassRegistry::init($job["DelayedJob"]["class"]);
+        $method = $job->method;
+        $payload = unserialize($job->payload);
 
-        $method = $job["DelayedJob"]["method"];
-        $payload = unserialize($job["DelayedJob"]["payload"]);
-
-        $response = $Object->$method($payload);
-
+        $response = $job_worker->{$method}($payload);
 
         debug($response);
 

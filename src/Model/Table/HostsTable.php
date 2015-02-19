@@ -1,70 +1,68 @@
 <?php
 
-namespace DelayedJobs\Model;
+namespace DelayedJobs\Model\Table;
 
 use Cake\Core\Configure;
 use Cale\ORM\Table;
-
-define("DJ_HOST_STATUS_IDLE", 1);
-define("DJ_HOST_STATUS_RUNNING", 2);
-define("DJ_HOST_STATUS_TO_KILL", 3);
-define("DJ_HOST_STATUS_UNKNOWN", 4);
 
 /**
  * DelayedJobs.Host Model
  *
  */
-class Host extends Table
+class HostsTable extends Table
 {
+    const STATUS_IDLE = 1;
+    const STATUS_RUNNING = 2;
+    const STATUS_TO_KILL = 3;
+    const STATUS_UNKNOWN = 4;
 
-    public $useTable = 'delayed_job_hosts';
-
-    /**
-     * Validation rules
-     *
-     * @var array
-     */
-    public $validate = array(
-        'host_name' => array(
-            'notempty' => array(
-                'rule' => array('notempty'),
-                //'message' => 'Your custom message here',
-                //'allowEmpty' => false,
-                'required' => false,
-            //'last' => false, // Stop validation after this rule
-            //'on' => 'create', // Limit validation to 'create' or 'update' operations
-            ),
-        ),
-    );
-
-    public function Started($host_name, $worker_name, $pid)
+    public function initialize(array $config)
     {
-        $data = array("Host" => array(
-                "host_name" => $host_name,
-                "worker_name" => $worker_name,
-                "pid" => $pid,
-                "status" => DJ_HOST_STATUS_RUNNING,
-        ));
+        $this->addBehavior('Timestamp');
+        $this->table('delayed_job_hosts');
+
+        parent::initialize($config);
+    }
+
+
+    public function validationDefault(Validator $validator)
+    {
+        $validator
+            ->notEmpty('host_name');
+        return $validator;
+    }
+
+    public function started($host_name, $worker_name, $pid)
+    {
+        $data = [
+            'host_name' => $host_name,
+            'worker_name' => $worker_name,
+            'pid' => $pid,
+            'status' => DJ_HOST_STATUS_RUNNING,
+        ];
 
         $host = $this->findByHost($host_name, $worker_name);
 
-        if (!$host) {
-            $this->create();
-        }
+        $this->patchEntity($host, $data);
 
-        if ($this->save($data)) {
-            $host = $this->findByHost($host_name, $worker_name);
-            return $host;
-        } else {
-            return false;
-        }
+        return $this->save($host);
     }
 
     public function findByHost($host_name, $worker_name)
     {
-        $options = array("conditions" => array("Host.host_name" => $host_name, "Host.worker_name" => $worker_name));
+        $conditions = [
+            'Hosts.host_name' => $host_name,
+            'Hosts.worker_name' => $worker_name
+        ];
 
-        $host = $this->find('first', $options);
+        $host = $this
+            ->find()
+            ->where($conditions)
+            ->first();
+
+        if (!$host) {
+            $host = $this->newEntity();
+        }
 
         return $host;
     }
@@ -74,25 +72,20 @@ class Host extends Table
         
     }
 
-    public function setStatus($host_id, $status)
+    public function setStatus($host, $status)
     {
-        $this->id = $host_id;
+        $host->status = $status;
 
-        $data = array("Host" => array(
-                "status" => $status,
-        ));
-
-        return $this->save($data);
+        return $this->save($host);
     }
 
-    public function Remove($host_id)
+    public function remove($host)
     {
-        $this->id = $host_id;
-        return $this->delete();
+        return $this->delete($host);
     }
 
     public function checkConfig()
     {
-        return Configure::check("dj.service.name");
+        return Configure::check('dj.service.name');
     }
 }

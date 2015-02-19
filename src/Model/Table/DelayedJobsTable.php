@@ -5,8 +5,10 @@ namespace DelayedJobs\Model\Table;
 use Cake\I18n\Time;
 use Cake\Core\Configure;
 use Cake\Log\Log;
+use Cake\ORM\Query;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use DelayedJobs\Model\Entity\DelayedJob;
 
 /**
  * DelayedJob Model
@@ -30,7 +32,6 @@ class DelayedJobsTable extends Table
         parent::initialize($config);
     }
 
-
     public function validationDefault(Validator $validator)
     {
         $validator
@@ -40,202 +41,133 @@ class DelayedJobsTable extends Table
         return $validator;
     }
 
-//
-//    public function get($job_id)
-//    {
-//        $options = array('conditions' => array("DelayedJob.id" => $job_id));
-//
-//        $job = $this->find('first', $options);
-//
-//        if ($job) {
-//            $job["DelayedJob"]["options"] = unserialize($job["DelayedJob"]["options"]);
-//            $job["DelayedJob"]["payload"] = unserialize($job["DelayedJob"]["payload"]);
-//
-//            if (!isset($job["DelayedJob"]["options"]["max_retries"])) {
-//                $job["DelayedJob"]["options"]["max_retries"] = Configure::read("dj.max.retries");
-//            }
-//
-//            if (!isset($job["DelayedJob"]["options"]["max_execution_time"])) {
-//                $job["DelayedJob"]["options"]["max_execution_time"] = Configure::read("dj.max.execution.time");
-//            }
-//        }
-//
-//        return $job;
-//    }
-
-    public function completed($job_id)
+    public function completed(DelayedJob $job)
     {
-        $data = ['DelayedJob' => [
-                "status" => DJ_STATUS_SUCCESS,
-                "pid" => null,
-        ]];
-        $this->id = $job_id;
-        $this->save($data);
-
-        return true;
+        $job->status = self::STATUS_SUCCESS;
+        $job->pid = null;
+        return $this->save($job);
     }
 
-    public function failed($job_id, $message = "")
+    public function failed(DelayedJob $job, $message = '')
     {
+        $max_retries = isset($job->options['max_retries']) ? $job->options['max_retries'] : Configure::read('dj.max.retries');
 
-        $job = $this->get($job_id);
-
-        $retries = $job["DelayedJob"]["retries"];
-
-        $status = DJ_STATUS_FAILED;
-        if ($retries + 1 > $job["DelayedJob"]["options"]["max_retries"]) {
-            $status = DJ_STATUS_BURRIED;
+        $job->status = self::STATUS_FAILED;
+        if ($job->retries + 1 > $max_retries) {
+            $job->status = self::STATUS_BURRIED;
         }
 
+        $growth_factor = 5 + pow($job->retries + 1, 4);
 
-        //debug(time());
-        //debug($retries);
+        $job->run_at = new Time('+{$growth_factor} seconds');
+        $job->message = $message;
+        $job->retries = $job->retries + 1;
+        $job->failed_at = new Time();
+        $job->pid = null;
 
-        $growth_factor = 5 + pow($retries + 1, 4);
-
-        //debug($growth_factor);
-
-        $run_at = time() + $growth_factor;
-        //debug($run_at);
-        //debug(date('Y-m-d H:i:s', $run_at));
-
-        $data = ['DelayedJob' => [
-                "status" => $status,
-                "last_message" => $message,
-                "retries" => $retries + 1,
-                "failed_at" => date('Y-m-d H:i:s'),
-                "pid" => null,
-                "run_at" => date('Y-m-d H:i:s', $run_at),
-        ]];
-
-        $this->id = $job_id;
-        $this->save($data);
-
-        return true;
+        return $this->save($job);
     }
 
-    public function lock($job_id, $locked_by = "")
+    public function lock(DelayedJob $job, $locked_by = '')
     {
-        $data = ['DelayedJob' => [
-                "status" => DJ_STATUS_BUSY,
-                'locked_by' => $locked_by,
-        ]];
-        $this->id = $job_id;
-        $this->save($data);
-
-        return true;
+        $job->status = self::STATUS_BUSY;
+        $job->locked_by = $locked_by;
+        $this->save($job);
     }
 
     public function isBusy($job_id)
     {
-        $options = ['conditions' => ['DelayedJob.status' => DJ_STATUS_BUSY, 'DelayedJob.id' => $job_id]];
-        $job = $this->find('first', $options);
+        $conditions = [
+            'DelayedJobs.status' => self::STATUS_BUSY,
+            'DelayedJobs.id' => $job_id
+        ];
+
+        return $this->exists($conditions);
+    }
+
+    public function setPid(DelayedJob $job, $pid = 0)
+    {
+        $job->pid = $pid;
+        return $this->save($job);
+    }
+
+    public function setStatus(DelayedJob $job, $status = self::STATUS_UNKNOWN)
+    {
+        $job->status = $status;
+        return $this->save($job);
+    }
+
+    public function getOpenJob($worker_id = '')
+    {
+
+//        $this->PlatformStatus = ClassRegistry::init('PlatformStatus');
+//        $platform_status = $this->PlatformStatus->status();
+//        if ($platform_status['PlatformStatus']['status'] != 'online')
+//        {
+//            return array();
+//        }
+        
+        $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
+
+        $job = $this
+            ->find()
+            ->where([
+                'DelayedJobs.status in' => $allowed,
+                'DelayedJobs.run_at <=' => new Time()
+            ])
+            ->order([
+                'DelayedJobs.priority' => 'ASC',
+                'DelayedJobs.id' => 'ASC'
+            ])
+            ->first();
 
         if ($job) {
-            return true;
+            if (!isset($job->options['max_retries'])) {
+                $job->options['max_retries'] = Configure::read('dj.max.retries');
+            }
+
+            if (!isset($job->options['max_execution_time'])) {
+                $job->options['max_execution_time'] = Configure::read('dj.max.execution.time');
+            }
+
+            $this->lock($job, $worker_id);
+
+            usleep(250000); //## Sleep for 0.25 seconds
+            
+            //## check if this job is still allocated to this worker
+
+            $conditions = [
+                'DelayedJobs.id' => $job->id,
+                'DelayedJob.locked_by' => $worker_id
+            ];
+            if ($this->exists($conditions)) {
+                return $job;
+            } else {
+                usleep(250000); //## Sleep for 0.25 seconds
+            }              //  Log::write ('jobs', $job['DelayedJob']['id'] . ' was allocated to someone else');
         }
 
         return false;
     }
 
-    public function setPid($job_id, $pid = 0)
-    {
-        $data = ['DelayedJob' => [
-                'pid' => $pid,
-        ]];
-        $this->id = $job_id;
-        $this->save($data);
-
-        return true;
-    }
-
-    public function setStatus($job_id, $status = DJ_STATUS_UNKNOWN)
-    {
-        $data = ['DelayedJob' => [
-                'status' => $status,
-        ]];
-        $this->id = $job_id;
-        $this->save($data);
-
-        return true;
-    }
-
-    public function getOpenJob($worker_id = "")
-    {
-
-//        $this->PlatformStatus = ClassRegistry::init('PlatformStatus');
-//        $platform_status = $this->PlatformStatus->status();
-//        if ($platform_status["PlatformStatus"]["status"] != "online")
-//        {
-//            return array();
-//        }
-        
-        $allowed = [DJ_STATUS_FAILED, DJ_STATUS_NEW, DJ_STATUS_UNKNOWN];
-
-        $options = [
-            'conditions' => [
-                "DelayedJob.status in (" . implode(",", $allowed) . ")",
-                "DelayedJob.run_at <= NOW()"
-            ],
-            //'fields' => array('DelayedJob.id'),
-            'order' => ["DelayedJob.priority" => "ASC", "DelayedJob.id" => "ASC"],
-        ];
-
-        $job = $this->find('first', $options);
-
-        if ($job) {
-        //$job = $this->get($job["DelayedJob"]["id"]);
-            $job["DelayedJob"]["options"] = unserialize($job["DelayedJob"]["options"]);
-            $job["DelayedJob"]["payload"] = unserialize($job["DelayedJob"]["payload"]);
-
-            if (!isset($job["DelayedJob"]["options"]["max_retries"])) {
-                $job["DelayedJob"]["options"]["max_retries"] = Configure::read("dj.max.retries");
-            }
-
-            if (!isset($job["DelayedJob"]["options"]["max_execution_time"])) {
-                $job["DelayedJob"]["options"]["max_execution_time"] = Configure::read("dj.max.execution.time");
-            }
-
-            $data = ['DelayedJob' => [
-                    "status" => DJ_STATUS_BUSY,
-                    'locked_by' => $worker_id,
-            ]];
-            $this->id = $job["DelayedJob"]["id"];
-            $this->save($data);
-
-            //sleep(1);
-            usleep(250000); //## Sleep for 0.25 seconds
-            
-            //Log::write('jobs', $job["DelayedJob"]["id"] . " Allocated to " . $worker_id);
-
-            //## check if this job is still allocated to this worker
-
-            $options = ['conditions' => ['DelayedJob.id' => $job["DelayedJob"]["id"], 'DelayedJob.locked_by' => $worker_id]];
-            $t_job = $this->find('first', $options);
-
-            if ($t_job) {
-                return $job;
-            } else {
-                usleep(250000); //## Sleep for 0.25 seconds
-            }              //  Log::write ("jobs", $job["DelayedJob"]["id"] . " was allocated to someone else");
-        }
-
-        return [];
-    }
-
     public function getRunningByHost($host_id)
     {
-        $options = [
-            'conditions' => [
-                "DelayedJob.locked_by" => $host_id,
-                //"DelayedJob.run_at <= NOW()",
-                "DelayedJob.status" => DJ_STATUS_BUSY,
-            ],
-            'fields' => ['DelayedJob.id', 'DelayedJob.pid'],
-            'order' => ["DelayedJob.priority" => "ASC", "DelayedJob.id" => "ASC"],
+        $conditions = [
+            'DelayedJobs.locked_by' => $host_id,
+            'DelayedJobs.status' => DJ_STATUS_BUSY,
         ];
 
-        $jobs = $this->find('all', $options);
+        $jobs = $this
+            ->find()
+            ->select([
+                'DelayedJobs.id',
+                'DelayedJobs.pid'
+            ])
+            ->where($conditions)
+            ->order([
+                'DelayedJobs.priority' => 'ASC',
+                'DelayedJobs.id' => 'ASC'
+            ]);
 
         return $jobs;
     }
