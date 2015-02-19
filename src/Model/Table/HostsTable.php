@@ -3,7 +3,8 @@
 namespace DelayedJobs\Model\Table;
 
 use Cake\Core\Configure;
-use Cale\ORM\Table;
+use Cake\ORM\Table;
+use Cake\Validation\Validator;
 
 /**
  * DelayedJobs.Host Model
@@ -38,11 +39,13 @@ class HostsTable extends Table
             'host_name' => $host_name,
             'worker_name' => $worker_name,
             'pid' => $pid,
-            'status' => DJ_HOST_STATUS_RUNNING,
+            'status' => self::STATUS_RUNNING,
         ];
 
         $host = $this->findByHost($host_name, $worker_name);
-
+        if (!$host) {
+            $host = $this->newEntity();
+        }
         $this->patchEntity($host, $data);
 
         return $this->save($host);
@@ -59,10 +62,6 @@ class HostsTable extends Table
             ->find()
             ->where($conditions)
             ->first();
-
-        if (!$host) {
-            $host = $this->newEntity();
-        }
 
         return $host;
     }

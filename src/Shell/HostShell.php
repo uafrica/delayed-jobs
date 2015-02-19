@@ -100,9 +100,9 @@ class HostShell extends Shell
         $job = $this->DelayedJobs->getOpenJob($this->_worker_id);
 
         if ($job) {
-            $this->out('<info>Got a new job</info>', 1, Shell::VERBOSE);
+            $this->out('<info>Got a new job: ' . $job->id . '</info>', 1, Shell::VERBOSE);
             if (!isset($job_pids[$job->id])) {
-                $options = $job->options;
+                $options = unserialize($job->options);
 
                 if (!isset($options['max_execution_time'])) {
                     $options['max_execution_time'] = 25 * 60;

@@ -3,6 +3,7 @@
 namespace DelayedJobs\Shell;
 
 use Cake\Console\Shell;
+use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
 use DelayedJobs\Model\Table\HostsTable;
 use DelayedJobs\Process;
@@ -25,7 +26,7 @@ class WatchdogShell extends Shell
             throw new Exception('Could not load config, check your load settings in bootstrap.php');
         }
 
-        $this->out('<info>App Name: ' . Configure::read('delayed.jobs.service.name') . ' </info>');
+        $this->out('<info>App Name: ' . Configure::read('dj.service.name') . ' </info>');
 
         $this->_workers = $this->param('worker');
         if (!is_numeric($this->_workers)) {
@@ -43,13 +44,14 @@ class WatchdogShell extends Shell
 //        }
 
 
-        if ($workers > Configure::read('dj.max.hosts')) {
-            $workers = Configure::read('dj.max.hosts');
+        if ($this->_workers > Configure::read('dj.max.hosts')) {
+            $this->_workers = Configure::read('dj.max.hosts');
             $this->out('<error>Too many hosts (max_hosts:' . Configure::read('dj.max.hosts') . ')</error>');
         }
         $this->out('<info>Starting Watchdog: ' . $this->_workers . ' Hosts</info>');
 
         try {
+            $host_name = php_uname('a');
             for ($i = 1; $i <= $this->_workers; $i++) {
                 $this->_startWorker($i);
             }
@@ -64,7 +66,7 @@ class WatchdogShell extends Shell
 
                 if ($host) {
                     //## Host is in the database, need to remove it
-                    $process->setPid($pid);
+                    $process->setPid($host->pid);
 
                     $process->stop();
 
@@ -73,7 +75,7 @@ class WatchdogShell extends Shell
                     $this->Hosts->remove($host);
 
                     $this->out(
-                        '<error>Worker: ' . $worker_name . ' Too many hosts, killing (pid:' . $pid . ')</error>'
+                        '<error>Worker: ' . $worker_name . ' Too many hosts, killing (pid:' . $host->pid . ')</error>'
                     );
                 } else {
                     //## No Host record found, just kill if it exists
@@ -100,6 +102,8 @@ class WatchdogShell extends Shell
             $this->out('<fail>Failed: ' . $exc->getMessage() . '</fail>');
             //echo $exc->getTraceAsString();
         }
+
+        //$this->Lock->unlock('DelayedJobs.WorkerShell.main');
     }
 
     protected function _startHost($host_name, $worker_name)
@@ -121,7 +125,7 @@ class WatchdogShell extends Shell
                 '<error>Worker: ' . $worker_name . ' Could not be started, Trying to find process to kill it?</error>'
             );
 
-            $check_pid = $p->getPidByName('DelayedJobs.Hosts ' . $worker_name);
+            $check_pid = $process->getPidByName('DelayedJobs.Hosts ' . $worker_name);
 
             if ($check_pid) {
                 $process->setPid($check_pid);
@@ -136,11 +140,11 @@ class WatchdogShell extends Shell
                 );
             }
         } else {
-            if (!$response) {
+            if (!$host) {
                 $process->stop();
                 $this->out('<error>Worker: ' . $worker_name . ' Could not be started</error>');
             } else {
-                $this->out('<success>Worker: ' . $worker_name . ' Started (pid:' . $pid . ')</success>');
+                $this->out('<success>Worker: ' . $worker_name . ' Started (pid:' . $host->pid . ')</success>');
             }
         }
 
@@ -172,28 +176,28 @@ class WatchdogShell extends Shell
                 //## Process is actually running, update status
                 $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
                 $this->out(
-                    '<info>Worker: ' . $host->worker_name . ' Idle, Changing status (pid:' . $pid . ')</info>'
+                    '<info>Worker: ' . $host->worker_name . ' Idle, Changing status (pid:' . $host->pid . ')</info>'
                 );
             } else {
                 //## Process is not running, delete record
                 $this->Hosts->remove($host);
                 $this->out(
-                    '<error>Worker: ' . $host->worker_name . ' Not running but reported IDLE state, Removing database record (pid:' . $pid . ')</error>'
+                    '<error>Worker: ' . $host->worker_name . ' Not running but reported IDLE state, Removing database record (pid:' . $host->pid . ')</error>'
                 );
             }
         } elseif ($host->status == HostsTable::STATUS_RUNNING) {
             //## Host is running, please confirm
             if ($process_running) {
                 //## Process is actually running, update status
-                $this->Host->setStatus($host, HostsTable::STATUS_RUNNING);
+                $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
                 $this->out(
-                    '<success>Worker: ' . $host->worker_name . ' Running normally (pid:' . $pid . ')</success>'
+                    '<success>Worker: ' . $host->worker_name . ' Running normally (pid:' . $host->pid . ')</success>'
                 );
             } else {
                 //## Process is not running, delete record
-                $this->Host->remove($host);
+                $this->Hosts->remove($host);
                 $this->out(
-                    '<error>Worker: ' . $host->worker_name . ' DB reported running, cant find process, remove db (pid:' . $pid . ')</error>'
+                    '<error>Worker: ' . $host->worker_name . ' DB reported running, cant find process, remove db (pid:' . $host->pid . ')</error>'
                 );
             }
         } elseif ($host->status == HostsTable::STATUS_TO_KILL) {
@@ -209,20 +213,20 @@ class WatchdogShell extends Shell
             }
 
             $this->Hosts->remove($host);
-            $this->out('<error>Worker: ' . $host->worker_name . ' Killed (pid:' . $pid . ')</error>');
+            $this->out('<error>Worker: ' . $host->worker_name . ' Killed (pid:' . $host->pid . ')</error>');
         } else {
             //## Something went wrong, horribly wrong
             if ($process_running) {
                 //## Process is actually running, update status
                 $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
                 $this->out(
-                    '<info>Worker: ' . $host->worker_name . ' Unknown Status, but running, changing status (pid:' . $pid . ')</info>'
+                    '<info>Worker: ' . $host->worker_name . ' Unknown Status, but running, changing status (pid:' . $host->pid . ')</info>'
                 );
             } else {
                 //## Process is not running, delete record
                 $this->Hosts->remove($host);
                 $this->out(
-                    '<error>Worker: ' . $host->worker_name . ' Unknown status and not running, removing host (pid:' . $pid . ')</error>'
+                    '<error>Worker: ' . $host->worker_name . ' Unknown status and not running, removing host (pid:' . $host->pid . ')</error>'
                 );
             }
         }

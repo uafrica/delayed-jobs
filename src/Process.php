@@ -39,6 +39,17 @@ class Process
         return $this->pid;
     }
 
+    public function getPidByName($name)
+    {
+        $out = [];
+        exec("ps aux | grep '$name' | grep -v grep | awk '{ print $2 }' | head -1", $out);
+        if (isset($out[0])) {
+            return $out[0];
+        } else {
+            return false;
+        }
+    }
+
     public function status()
     {
         $command = 'ps -p ' . $this->pid;
@@ -65,6 +76,17 @@ class Process
         exec($command);
         if ($this->status() == false) {
             return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function details()
+    {
+        $command = 'ps -p ' . $this->pid . " -f";
+        exec($command, $op);
+        if (isset($op[1])) {
+            return $op[1];
         } else {
             return false;
         }

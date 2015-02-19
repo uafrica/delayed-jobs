@@ -49,12 +49,7 @@ class DelayedJobsController extends AppController
             throw new \Exception("Job Already Completed");
         }
 
-        $job_worker = new $job->class();
-
-        $method = $job->method;
-        $payload = unserialize($job->payload);
-
-        $response = $job_worker->{$method}($payload);
+        $response = $job->execute();
 
         debug($response);
 
