@@ -5,22 +5,24 @@ namespace DelayedJobs\Shell;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
+use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\HostsTable;
 use DelayedJobs\Process;
 
 class WatchdogShell extends Shell
 {
 
-    const BASEPATH = ROOT . '/bin/cake DelayedJobs.Host ';
+    const BASEPATH = ROOT . '/bin/cake DelayedJobs.host ';
     public $Lock;
     public $modelClass = 'DelayedJobs.Hosts';
     protected $_workers;
 
     public function main()
     {
-        //TODO: Lock component
-        //$this->Lock = new LockComponent();
-        //$this->Lock->lock('DelayedJobs.WatchdogShell.main');
+        $this->Lock = new Lock();
+        if (!$this->Lock->lock('DelayedJobs.WatchdogShell.main')) {
+            $this->_stop(1);
+        }
 
         if (!$this->Hosts->checkConfig()) {
             throw new Exception('Could not load config, check your load settings in bootstrap.php');
@@ -28,7 +30,7 @@ class WatchdogShell extends Shell
 
         $this->out('<info>App Name: ' . Configure::read('dj.service.name') . ' </info>');
 
-        $this->_workers = $this->param('worker');
+        $this->_workers = $this->param('workers');
         if (!is_numeric($this->_workers)) {
             $this->_workers = 1;
         }
@@ -125,7 +127,7 @@ class WatchdogShell extends Shell
                 '<error>Worker: ' . $worker_name . ' Could not be started, Trying to find process to kill it?</error>'
             );
 
-            $check_pid = $process->getPidByName('DelayedJobs.Hosts ' . $worker_name);
+            $check_pid = $process->getPidByName('DelayedJobs.host ' . $worker_name);
 
             if ($check_pid) {
                 $process->setPid($check_pid);
@@ -163,7 +165,7 @@ class WatchdogShell extends Shell
 
         $details = $process->details();
 
-        if (strpos($details, 'DelayedJobs.Hosts ' . $host->worker_name) !== false) {
+        if (strpos($details, 'DelayedJobs.host ' . $host->worker_name) !== false) {
             $process_running = true;
         } else {
             $process_running = false;
@@ -253,7 +255,7 @@ class WatchdogShell extends Shell
 
         $options
             ->addOption(
-                'worker',
+                'workers',
                 [
                     'help' => 'Number of workers to run',
                     'default' => 1

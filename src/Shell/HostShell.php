@@ -2,6 +2,7 @@
 namespace DelayedJobs\Shell;
 
 use Cake\Console\Shell;
+use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Process;
 
@@ -20,9 +21,10 @@ class HostShell extends Shell
             $this->_worker_name = $this->args[0];
         }
 
-        //TODO: Migrate lock component into simple library
-//        $this->Lock = new LockComponent();
-//        $this->Lock->lock('DelayedJobs.HostShell.main.' . $worker_name);
+        $this->Lock = new Lock();
+        if (!$this->Lock->lock('DelayedJobs.HostShell.main.' . $this->_worker_name)) {
+            $this->_stop(1);
+        }
 
         $this->_worker_id = $this->_worker_name . ' - ' . php_uname('a');
 

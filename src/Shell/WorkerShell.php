@@ -3,6 +3,7 @@ namespace DelayedJobs\Shell;
 
 use Cake\Console\Shell;
 use Cake\Core\Exception\Exception;
+use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 class WorkerShell extends Shell
@@ -22,8 +23,10 @@ class WorkerShell extends Shell
             throw new Exception("No Job ID received");
         }
 
-//        $this->Lock = new LockComponent();
-//        $this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id);
+        $this->Lock = new Lock();
+        if (!$this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id)) {
+            $this->_stop(1);
+        }
 
         $this->out('<info>Starting Job: ' . $job_id . '</info>');
 
@@ -58,10 +61,10 @@ class WorkerShell extends Shell
             //## Job Failed
             $this->DelayedJobs->failed($job, $exc->getMessage());
             $this->out('<fail>Job ' . $job_id . ' Failed (' . $exc->getMessage() . ')</fail>');
-            // $this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id);
+            $this->Lock->unlock('DelayedJobs.WorkerShell.main.' . $job_id);
         }
 
-        //$this->Lock->unlock('DelayedJobs.WorkerShell.main.' . $job_id);
+        $this->Lock->unlock('DelayedJobs.WorkerShell.main.' . $job_id);
     }
 
     public function getOptionParser()
