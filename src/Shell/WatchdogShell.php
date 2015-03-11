@@ -9,6 +9,12 @@ use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\HostsTable;
 use DelayedJobs\Process;
 
+/**
+ * Class WatchdogShell
+ * @package DelayedJobs\Shell
+ * @property \DelayedJobs\Model\Table\HostsTable $Hosts
+ *
+ */
 class WatchdogShell extends Shell
 {
 
@@ -17,6 +23,9 @@ class WatchdogShell extends Shell
     public $modelClass = 'DelayedJobs.Hosts';
     protected $_workers;
 
+    /**
+     *
+     */
     public function main()
     {
         $this->Lock = new Lock();
@@ -108,6 +117,11 @@ class WatchdogShell extends Shell
         //$this->Lock->unlock('DelayedJobs.WorkerShell.main');
     }
 
+    /**
+     * @param $host_name
+     * @param $worker_name
+     * @return mixed
+     */
     protected function _startHost($host_name, $worker_name)
     {
         $base_path = self::BASEPATH;

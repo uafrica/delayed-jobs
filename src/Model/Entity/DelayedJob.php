@@ -18,7 +18,7 @@ class DelayedJob extends Entity
     }
 
     /**
-     * @param $options
+     * @param $options Options.
      * @return string
      */
     protected function _getOptions($options) {
