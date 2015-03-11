@@ -22,12 +22,18 @@ class DelayedJobsController extends AppController
         ]
     ];
 
+    /**
+     * @param Event $event
+     */
     public function beforeFilter(Event $event)
     {
         parent::beforeFilter($event);
         //$this->Auth->allow($this->action);
     }
 
+    /**
+     * @return mixed
+     */
     public function index()
     {
         $jobs_per_second = $this->DelayedJobs->jobsPerSecond();

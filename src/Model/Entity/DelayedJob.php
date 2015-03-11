@@ -17,6 +17,10 @@ class DelayedJob extends Entity
         return $stream;
     }
 
+    /**
+     * @param $options
+     * @return string
+     */
     protected function _getOptions($options) {
         return $this->_getStream($options, 'options');
     }
