@@ -6,6 +6,10 @@ use App\Controller\AppController;
 use Cake\Event\Event;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
+/**
+ * Class DelayedJobsController
+ * @package DelayedJobs\Controller
+ */
 class DelayedJobsController extends AppController
 {
 
