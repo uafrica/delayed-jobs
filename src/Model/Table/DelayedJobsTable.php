@@ -5,8 +5,7 @@ namespace DelayedJobs\Model\Table;
 use Cake\Event\Event;
 use Cake\I18n\Time;
 use Cake\Core\Configure;
-use Cake\Log\Log;
-use Cake\ORM\Query;
+use Cake\ORM\Entity;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 use DelayedJobs\Model\Entity\DelayedJob;
@@ -26,6 +25,11 @@ class DelayedJobsTable extends Table
     const STATUS_UNKNOWN = 7;
     const STATUS_TEST_JOB = 8;
 
+    /**
+     * @param array $config Config array.
+     * @return void
+     * @codeCoverageIgnore
+     */
     public function initialize(array $config)
     {
         $this->addBehavior('Timestamp');
@@ -33,6 +37,11 @@ class DelayedJobsTable extends Table
         parent::initialize($config);
     }
 
+    /**
+     * @param \Cake\Validation\Validator $validator
+     * @return \Cake\Validation\Validator
+     * @codeCoverageIgnore
+     */
     public function validationDefault(Validator $validator)
     {
         $validator
@@ -42,7 +51,7 @@ class DelayedJobsTable extends Table
         return $validator;
     }
 
-    public function beforeSave(Event $event, DelayedJob $entity)
+    public function beforeSave(Event $event, Entity $entity)
     {
         if (!is_string($entity->options)) {
             $entity->options = serialize($entity->options);
@@ -52,14 +61,14 @@ class DelayedJobsTable extends Table
         }
     }
 
-    public function completed(DelayedJob $job)
+    public function completed(Entity $job)
     {
         $job->status = self::STATUS_SUCCESS;
         $job->pid = null;
         return $this->save($job);
     }
 
-    public function failed(DelayedJob $job, $message = '')
+    public function failed(Entity $job, $message = '')
     {
         $max_retries = isset($job->options['max_retries']) ? $job->options['max_retries'] : Configure::read('dj.max.retries');
 
@@ -80,7 +89,7 @@ class DelayedJobsTable extends Table
         return $this->save($job);
     }
 
-    public function lock(DelayedJob $job, $locked_by = '')
+    public function lock(Entity $job, $locked_by = '')
     {
         $job->status = self::STATUS_BUSY;
         $job->locked_by = $locked_by;
@@ -97,13 +106,13 @@ class DelayedJobsTable extends Table
         return $this->exists($conditions);
     }
 
-    public function setPid(DelayedJob $job, $pid = 0)
+    public function setPid(Entity $job, $pid = 0)
     {
         $job->pid = $pid;
         return $this->save($job);
     }
 
-    public function setStatus(DelayedJob $job, $status = self::STATUS_UNKNOWN)
+    public function setStatus(Entity $job, $status = self::STATUS_UNKNOWN)
     {
         $job->status = $status;
         return $this->save($job);
@@ -164,6 +173,10 @@ class DelayedJobsTable extends Table
         return false;
     }
 
+    /**
+     * @param $host_id
+     * @return \Cake\ORM\Query
+     */
     public function getRunningByHost($host_id)
     {
         $conditions = [
@@ -197,7 +210,6 @@ class DelayedJobsTable extends Table
             ->where($conditions)
             ->count();
         $count = round($count / 60 / 60, 3);
-
 
         return $count;
     }

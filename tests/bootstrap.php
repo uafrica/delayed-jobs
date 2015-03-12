@@ -12,6 +12,11 @@
 use Cake\Core\Configure;
 use Cake\Core\Plugin;
 use Cake\Datasource\ConnectionManager;
+use CakeFabricate\Adaptor\CakeFabricateAdaptor;
+use Fabricate\Fabricate;
+
+date_default_timezone_set('UTC');
+
 $findRoot = function ($root) {
     do {
         $lastRoot = $root;
@@ -53,7 +58,7 @@ Cake\Cache\Cache::config([
     ]
 ]);
 if (!getenv('db_dsn')) {
-    putenv('db_dsn=sqlite:///:memory:');
+    putenv('db_dsn=sqlite:///:memory:?quoteIdentifiers=1');
 }
 if (!getenv('DB')) {
     putenv('DB=sqlite');
@@ -62,3 +67,7 @@ ConnectionManager::config('test', ['url' => getenv('db_dsn')]);
 Plugin::load('DelayedJobs', [
     'path' => dirname(dirname(__FILE__)) . DS,
 ]);
+
+Fabricate::config(function ($config) {
+    $config->adaptor = new CakeFabricateAdaptor();
+});

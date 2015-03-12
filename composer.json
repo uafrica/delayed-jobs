@@ -8,7 +8,9 @@
     "cakephp/migrations": "dev-master"
   },
   "require-dev": {
-    "phpunit/phpunit": "~4.5"
+    "phpunit/phpunit": "~4.5",
+    "sizuhiko/fabricate": "v2.x-dev",
+    "sizuhiko/cake_fabricate": "dev-develop"
   },
   "license": "MIT",
   "authors": [

@@ -7,7 +7,8 @@ use Cake\Core\Exception\Exception;
 class DelayedJob extends Entity
 {
 
-    protected function _getStream($stream, $property = null) {
+    protected function _getStream($stream, $property = null)
+    {
         if (is_resource($stream)) {
             $stream = stream_get_contents($stream);
             if ($property) {
@@ -21,7 +22,8 @@ class DelayedJob extends Entity
      * @param $options Options.
      * @return string
      */
-    protected function _getOptions($options) {
+    protected function _getOptions($options)
+    {
         return $this->_getStream($options, 'options');
     }
 
@@ -30,7 +32,8 @@ class DelayedJob extends Entity
         return $this->_getStream($payload, 'payload');
     }
 
-    public function execute() {
+    public function execute()
+    {
         $class_name = $this->class;
         if (!class_exists($class_name)) {
             throw new Exception("Worker class does not exists (" . $class_name . ")");
