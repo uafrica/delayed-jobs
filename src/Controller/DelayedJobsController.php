@@ -56,13 +56,13 @@ class DelayedJobsController extends AppController
         $job = $this->DelayedJobs->get($id);
 
         if ($job->status === DelayedJobsTable::STATUS_SUCCESS) {
-            throw new \Exception("Job Already Completed");
+            $this->Flash->error("Job Already Completed");
+             return $this->redirect(['action' => 'index']);
         }
 
         $response = $job->execute();
 
-        debug($response);
-
-        exit();
+        $this->Flash->message("Job Completed: " . $response);
+        return $this->redirect(['action' => 'index']);
     }
 }

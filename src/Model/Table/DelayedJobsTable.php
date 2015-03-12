@@ -201,4 +201,23 @@ class DelayedJobsTable extends Table
 
         return $count;
     }
+
+    /**
+     * @param array $payload Payload.
+     * @return bool
+     */
+    public function tester($payload = [])
+    {
+
+        if($payload["success"] == true)
+        {
+            return true;
+        }
+        else
+        {
+            throw new \Exception("Job Was failed by tester");
+        }
+
+    }
+
 }
