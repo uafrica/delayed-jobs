@@ -13,6 +13,10 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
 class DelayedJobsController extends AppController
 {
 
+    /**
+     * @return void
+     * @codeCoverageIgnore
+     */
     public function initialize()
     {
         parent::initialize();

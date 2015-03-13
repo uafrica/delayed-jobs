@@ -1,14 +1,15 @@
 <?php
-
-
 namespace DelayedJobs\Test\TestCase\Controller;
 
-use Cake\ORM\Table;
 use Cake\ORM\TableRegistry;
 use Crud\TestSuite\IntegrationTestCase;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use Fabricate\Fabricate;
 
+/**
+ * Class DelayedJobsControllerTest
+ * @coversDefaultClass \DelayedJobs\Controller\DelayedJobsController
+ */
 class DelayedJobsControllerTest extends IntegrationTestCase
 {
 
@@ -19,6 +20,10 @@ class DelayedJobsControllerTest extends IntegrationTestCase
         TableRegistry::clear();
     }
 
+    /**
+     * @return void
+     * @covers ::index
+     */
     public function testIndex() {
         $count = 10;
         $jobs = Fabricate::create('DelayedJobs.DelayedJobs', $count);
@@ -29,6 +34,10 @@ class DelayedJobsControllerTest extends IntegrationTestCase
         $this->assertResponseContains(round($count / 60 / 60, 3) . ' jobs per second');
     }
 
+    /**
+     * @return void
+     * @covers ::view
+     */
     public function testView()
     {
         $jobs = Fabricate::create('DelayedJobs.DelayedJobs', 1);
@@ -38,6 +47,10 @@ class DelayedJobsControllerTest extends IntegrationTestCase
         $this->assertResponseContains(h($jobs[0]->method));
     }
 
+    /**
+     * @return void
+     * @covers ::run
+     */
     public function testRunCompletedJob()
     {
         $jobs = Fabricate::create('DelayedJobs.DelayedJobs', 1, function () {
@@ -50,6 +63,10 @@ class DelayedJobsControllerTest extends IntegrationTestCase
         $this->assertRedirect(['action' => 'index']);
     }
 
+    /**
+     * @return void
+     * @covers ::run
+     */
     public function testRunExecuteJob()
     {
         $table = $this->getModel('\\DelayedJobs\\Model\\Table\\DelayedJobsTable', ['get'], 'DelayedJobs', 'delayed_jobs');
