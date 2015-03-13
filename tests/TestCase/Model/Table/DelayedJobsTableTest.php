@@ -39,7 +39,7 @@ class DelayedJobsTableTest extends TestCase
     {
         $options_array = ['test' => 1];
         $payload_array = ['test' => 2];
-        $entity = Fabricate::build('DelayedJobs', function () use ($options_array, $payload_array) {
+        $entity = Fabricate::build('DelayedJobs.DelayedJobs', function () use ($options_array, $payload_array) {
            return ['options' => $options_array, 'payload' => $payload_array];
         });
 
@@ -56,7 +56,7 @@ class DelayedJobsTableTest extends TestCase
      */
     public function testCompleted()
     {
-        $entity = Fabricate::create('DelayedJobs', 1, function () {
+        $entity = Fabricate::create('DelayedJobs.DelayedJobs', 1, function () {
             return ['status' => 1];
         })[0];
 
@@ -72,13 +72,13 @@ class DelayedJobsTableTest extends TestCase
      * @covers ::getRunningByHost
      */
     public function testGetRunningByHost() {
-        Fabricate::create('DelayedJobs', 3, function ($data, $world) {
+        Fabricate::create('DelayedJobs.DelayedJobs', 3, function ($data, $world) {
             return ['id' => $world->sequence('id'), 'status' => DelayedJobsTable::STATUS_BUSY, 'locked_by' => '1'];
         });
-        Fabricate::create('DelayedJobs', 2, function ($data, $world) {
+        Fabricate::create('DelayedJobs.DelayedJobs', 2, function ($data, $world) {
             return ['id' => $world->sequence('id', 4),'status' => DelayedJobsTable::STATUS_NEW, 'locked_by' => '1'];
         });
-        Fabricate::create('DelayedJobs', 3, function ($data, $world) {
+        Fabricate::create('DelayedJobs.DelayedJobs', 3, function ($data, $world) {
             return ['id' => $world->sequence('id', 6),'status' => DelayedJobsTable::STATUS_BUSY, 'locked_by' => '2'];
         });
 

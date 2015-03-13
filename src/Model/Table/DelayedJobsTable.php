@@ -2,10 +2,9 @@
 
 namespace DelayedJobs\Model\Table;
 
+use Cake\Core\Configure;
 use Cake\Event\Event;
 use Cake\I18n\Time;
-use Cake\Core\Configure;
-use Cake\ORM\Entity;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 use DelayedJobs\Model\Entity\DelayedJob;
@@ -48,10 +47,11 @@ class DelayedJobsTable extends Table
             ->notEmpty('group')
             ->notEmpty('class')
             ->notEmpty('method');
+
         return $validator;
     }
 
-    public function beforeSave(Event $event, Entity $entity)
+    public function beforeSave(Event $event, DelayedJob $entity)
     {
         if (!is_string($entity->options)) {
             $entity->options = serialize($entity->options);
@@ -61,14 +61,15 @@ class DelayedJobsTable extends Table
         }
     }
 
-    public function completed(Entity $job)
+    public function completed(DelayedJob $job)
     {
         $job->status = self::STATUS_SUCCESS;
         $job->pid = null;
+
         return $this->save($job);
     }
 
-    public function failed(Entity $job, $message = '')
+    public function failed(DelayedJob $job, $message = '')
     {
         $max_retries = isset($job->options['max_retries']) ? $job->options['max_retries'] : Configure::read('dj.max.retries');
 
@@ -89,7 +90,7 @@ class DelayedJobsTable extends Table
         return $this->save($job);
     }
 
-    public function lock(Entity $job, $locked_by = '')
+    public function lock(DelayedJob $job, $locked_by = '')
     {
         $job->status = self::STATUS_BUSY;
         $job->locked_by = $locked_by;
@@ -106,15 +107,17 @@ class DelayedJobsTable extends Table
         return $this->exists($conditions);
     }
 
-    public function setPid(Entity $job, $pid = 0)
+    public function setPid(DelayedJob $job, $pid = 0)
     {
         $job->pid = $pid;
+
         return $this->save($job);
     }
 
-    public function setStatus(Entity $job, $status = self::STATUS_UNKNOWN)
+    public function setStatus(DelayedJob $job, $status = self::STATUS_UNKNOWN)
     {
         $job->status = $status;
+
         return $this->save($job);
     }
 
@@ -127,7 +130,7 @@ class DelayedJobsTable extends Table
 //        {
 //            return array();
 //        }
-        
+
         $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
 
         $job = $this
@@ -156,7 +159,7 @@ class DelayedJobsTable extends Table
             $this->lock($job, $worker_id);
 
             usleep(250000); //## Sleep for 0.25 seconds
-            
+
             //## check if this job is still allocated to this worker
 
             $conditions = [
@@ -198,7 +201,7 @@ class DelayedJobsTable extends Table
 
         return $jobs;
     }
-    
+
     public function jobsPerSecond()
     {
         $conditions = [
