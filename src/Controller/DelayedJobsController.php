@@ -9,6 +9,7 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
 /**
  * Class DelayedJobsController
  * @package DelayedJobs\Controller
+ * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  */
 class DelayedJobsController extends AppController
 {
@@ -48,6 +49,10 @@ class DelayedJobsController extends AppController
         return $this->Crud->execute();
     }
 
+    /**
+     * @param null $id Job ID.
+     * @return \Cake\Network\Response|void
+     */
     public function run($id = null)
     {
         $this->layout = false;
@@ -56,13 +61,13 @@ class DelayedJobsController extends AppController
         $job = $this->DelayedJobs->get($id);
 
         if ($job->status === DelayedJobsTable::STATUS_SUCCESS) {
-            throw new \Exception("Job Already Completed");
+            $this->Flash->error("Job Already Completed");
+            return $this->redirect(['action' => 'index']);
         }
 
         $response = $job->execute();
 
-        debug($response);
-
-        exit();
+        $this->Flash->message("Job Completed: " . $response);
+        return $this->redirect(['action' => 'index']);
     }
 }
