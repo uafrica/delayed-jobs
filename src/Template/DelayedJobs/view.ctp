@@ -1,5 +1,5 @@
-<div class="webhookRequests view">
-    <h2><?php echo __('Webhook Request'); ?></h2>
+<div class="view">
+    <h2><?php echo __('Delayed job'); ?></h2>
     <dl>
         <dt><?php echo __('Id'); ?></dt>
         <dd>
@@ -68,12 +68,12 @@
         </dd>
         <dt><?php echo __('Options'); ?></dt>
         <dd>
-            <pre><?php echo json_encode(unserialize($delayedJob->options), JSON_PRETTY_PRINT); ?></pre>
+            <pre><?php echo json_encode(@unserialize($delayedJob->options), JSON_PRETTY_PRINT); ?></pre>
             &nbsp;
         </dd>
         <dt><?php echo __('Payload'); ?></dt>
         <dd>
-            <pre><?php echo json_encode(unserialize($delayedJob->payload), JSON_PRETTY_PRINT); ?></pre>
+            <pre><?php echo json_encode(@unserialize($delayedJob->payload), JSON_PRETTY_PRINT); ?></pre>
             &nbsp;
         </dd>
 

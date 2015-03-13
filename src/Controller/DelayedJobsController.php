@@ -3,7 +3,6 @@
 namespace DelayedJobs\Controller;
 
 use App\Controller\AppController;
-use Cake\Event\Event;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
@@ -14,22 +13,19 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
 class DelayedJobsController extends AppController
 {
 
-    public $components = [
-        'Crud.Crud' => [
+    public function initialize()
+    {
+        parent::initialize();
+        $this->loadComponent('Crud.Crud', [
             'actions' => [
                 'Crud.Index',
                 'Crud.View',
             ]
-        ]
-    ];
+        ]);
 
-    /**
-     * @param Event $event
-     */
-    public function beforeFilter(Event $event)
-    {
-        parent::beforeFilter($event);
-        //$this->Auth->allow($this->action);
+        if (!$this->components()->has('Flash')) {
+            $this->loadComponent('Flash');
+        }
     }
 
     /**
@@ -44,16 +40,18 @@ class DelayedJobsController extends AppController
         return $this->Crud->execute();
     }
 
-    public function view($id)
+    public function view()
     {
         return $this->Crud->execute();
     }
 
     /**
-     * @param null $id Job ID.
+     * Runs a delayed job
+     *
+     * @param int $id Job ID.
      * @return \Cake\Network\Response|void
      */
-    public function run($id = null)
+    public function run($id)
     {
         $this->layout = false;
         $this->autoRender = false;

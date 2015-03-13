@@ -5,9 +5,11 @@
   "require": {
     "cakephp/cakephp": "3.0.x-dev",
     "friendsofcake/crud": "dev-cake3",
-    "cakephp/migrations": "dev-master"
+    "cakephp/migrations": "dev-master",
+    "friendsofcake/cakephp-test-utilities": "dev-master"
   },
   "require-dev": {
+    "cakephp/app": "dev-master",
     "phpunit/phpunit": "~4.5",
     "sizuhiko/fabricate": "v2.x-dev",
     "sizuhiko/cake_fabricate": "dev-develop"

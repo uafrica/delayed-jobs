@@ -1,5 +1,7 @@
 <?php
 
-\Cake\Routing\Router::scope('/delayed_jobs', ['plugin' => 'DelayedJobs', 'controller' => 'DelayedJobs'], function (\Cake\Routing\RouteBuilder $routes) {
-    $routes->connect('/:action/*');
+\Cake\Routing\Router::plugin('DelayedJobs', ['path' => '/delayed_jobs'], function (\Cake\Routing\RouteBuilder $routes) {
+    $routes->routeClass('InflectedRoute');
+    $routes->connect('/', ['controller' => 'DelayedJobs', 'action' => 'index']);
+    $routes->connect('/:action/*', ['controller' => 'DelayedJobs']);
 });

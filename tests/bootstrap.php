@@ -12,6 +12,7 @@
 use Cake\Core\Configure;
 use Cake\Core\Plugin;
 use Cake\Datasource\ConnectionManager;
+use Cake\Routing\DispatcherFactory;
 use CakeFabricate\Adaptor\CakeFabricateAdaptor;
 use Fabricate\Fabricate;
 
@@ -34,6 +35,7 @@ require_once 'vendor/cakephp/cakephp/src/basics.php';
 require_once 'vendor/autoload.php';
 define('ROOT', $root . DS . 'tests' . DS . 'test_app' . DS);
 define('APP', ROOT . 'App' . DS);
+define('CONFIG', $root . DS . 'config' . DS);
 define('TMP', sys_get_temp_dir() . DS);
 Configure::write('debug', true);
 Configure::write('App', [
@@ -67,6 +69,13 @@ ConnectionManager::config('test', ['url' => getenv('db_dsn')]);
 Plugin::load('DelayedJobs', [
     'path' => dirname(dirname(__FILE__)) . DS,
 ]);
+Plugin::load('Crud', [
+    'path' => dirname(dirname(__FILE__)) . DS . 'vendor' . DS . 'friendsofcake' . DS . 'crud' . DS
+]);
+
+DispatcherFactory::add('Asset');
+DispatcherFactory::add('Routing');
+DispatcherFactory::add('ControllerFactory');
 
 Fabricate::config(function ($config) {
     $config->adaptor = new CakeFabricateAdaptor();

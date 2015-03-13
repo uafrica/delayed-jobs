@@ -2,6 +2,7 @@
 
 namespace DelayedJobs\Event;
 
+use Cake\Core\Exception\Exception;
 use Cake\Datasource\ModelAwareTrait;
 use Cake\Event\Event;
 use Cake\Event\EventListenerInterface;
@@ -36,6 +37,10 @@ class DelayedJobsListener implements EventListenerInterface
         ];
     }
 
+    /**
+     * @param \Cake\Event\Event $event Event object.
+     * @return \Cake\Datasource\EntityInterface|\Cake\ORM\Entity
+     */
     public function queueJob(Event $event)
     {
         $this->loadModel('DelayedJobs.DelayedJobs');
@@ -47,6 +52,9 @@ class DelayedJobsListener implements EventListenerInterface
             'priority' => 100,
             'run_at' => new Time('+5 seconds')
         ];
+        /**
+         * @var array $data
+         */
         $data = $event->subject();
         $data = $data + $default;
 
@@ -78,7 +86,6 @@ class DelayedJobsListener implements EventListenerInterface
         } else {
             $event->stopPropagation();
             throw new Exception("Could not create job");
-            return false;
         }
     }
 }
