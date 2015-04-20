@@ -4,8 +4,8 @@
   "type": "cakephp-plugin",
   "require": {
     "cakephp/cakephp": "~3.0.0",
-    "friendsofcake/crud": "dev-cake3",
-    "cakephp/migrations": "~1.0.0",
+    "friendsofcake/crud": "~4.0",
+    "cakephp/migrations": "~1.0",
     "friendsofcake/cakephp-test-utilities": "dev-master"
   },
   "require-dev": {
