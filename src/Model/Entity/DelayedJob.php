@@ -50,6 +50,6 @@ class DelayedJob extends Entity
 
         $payload = unserialize($this->payload);
 
-        return $job_worker->{$method}($payload);
+        return $job_worker->{$method}($payload, $this);
     }
 }

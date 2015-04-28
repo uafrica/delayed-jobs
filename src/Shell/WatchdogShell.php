@@ -5,6 +5,8 @@ namespace DelayedJobs\Shell;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
+use Cake\Event\Event;
+use Cake\Event\EventManager;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\HostsTable;
 use DelayedJobs\Process;
@@ -114,7 +116,14 @@ class WatchdogShell extends Shell
             //echo $exc->getTraceAsString();
         }
 
-        //$this->Lock->unlock('DelayedJobs.WorkerShell.main');
+        $this->out('<success>' . $this->_workers . ' started.</success> Firing watchdog event.');
+
+        $this->loadModel('DelayedJobs.DelayedJobs');
+        $event = new Event('DelayedJobs.watchdog', $this->DelayedJobs);
+        EventManager::instance()->dispatch($event);
+
+        $this->out('<success>!! All done !!</success>');
+        $this->Lock->unlock('DelayedJobs.WorkerShell.main');
     }
 
     /**
