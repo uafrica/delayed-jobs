@@ -4,6 +4,36 @@
             <div class="alert alert-info">
                 <p><?php echo $jobs_per_second; ?> jobs per second</p>
             </div>
+            <div class="pull-right btn-group">
+                <?=
+                $this->Html->link('Inject success job',
+                    [
+                        'plugin' => 'DelayedJobs',
+                        'controller' => 'DelayedJobs',
+                        'action' => 'inject',
+                        '?' => [
+                            'type' => 'success'
+                        ]
+                    ],
+                    [
+                        'class' => 'btn btn-success'
+                    ]);
+                ?>
+                <?=
+                $this->Html->link('Inject failing job',
+                    [
+                        'plugin' => 'DelayedJobs',
+                        'controller' => 'DelayedJobs',
+                        'action' => 'inject',
+                        '?' => [
+                            'type' => 'failing'
+                        ]
+                    ],
+                    [
+                        'class' => 'btn btn-danger'
+                    ]);
+                ?>
+            </div>
             <table class="table">
                 <thead>
                 <tr>

@@ -71,6 +71,9 @@ class DelayedJobsListener implements EventListenerInterface
         $entity->payload = serialize($entity->payload);
         $entity->options = serialize($entity->options);
 
+        $quote = $this->DelayedJobs->connection()
+            ->driver()
+            ->autoQuoting();
         $this->DelayedJobs
             ->connection()
             ->driver()
@@ -79,7 +82,7 @@ class DelayedJobsListener implements EventListenerInterface
         $this->DelayedJobs
             ->connection()
             ->driver()
-            ->autoQuoting(false);
+            ->autoQuoting($quote);
 
         if ($result) {
             return $entity;

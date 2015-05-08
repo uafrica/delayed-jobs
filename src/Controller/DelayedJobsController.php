@@ -3,6 +3,7 @@
 namespace DelayedJobs\Controller;
 
 use App\Controller\AppController;
+use Cake\I18n\Time;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
@@ -71,5 +72,34 @@ class DelayedJobsController extends AppController
 
         $this->Flash->message("Job Completed: " . $response);
         return $this->redirect(['action' => 'index']);
+    }
+
+    /**
+     * @return \Cake\Network\Response|void
+     */
+    public function inject()
+    {
+        $number_jobs = $this->request->query('count') ?: 1;
+
+        for ($i = 0; $i < $number_jobs; $i++) {
+            $delayed_job = $this->DelayedJobs->newEntity([
+                'group' => 'test',
+                'class' => 'DelayedJobs\\Worker\\TestWorker',
+                'method' => 'test',
+                'payload' => serialize([
+                    'type' => $this->request->query('type') ?: 'success'
+                ]),
+                'run_at' => new Time(sprintf('+%s seconds', rand(5, 60))),
+                'status' => DelayedJobsTable::STATUS_NEW
+            ]);
+            $this->DelayedJobs->connection()
+                ->driver()
+                ->autoQuoting(true);
+            $this->DelayedJobs->save($delayed_job);
+        }
+
+        return $this->redirect([
+            'action' => 'index'
+        ]);
     }
 }
