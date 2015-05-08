@@ -249,15 +249,16 @@ class WatchdogShell extends Shell
                     )
                 );
             } else {
-                //## Process is not running, delete record
+                //## Process is not running, delete record and try to start it
                 $this->Hosts->delete($host);
                 $this->out(
                     sprintf(
-                        '<error>Not running:</error> %s (pid: %s)',
+                        '<error>Not running, restarting:</error> %s (pid: %s)',
                         $host->worker_name,
                         $host->pid
                     )
                 );
+                $this->_startHost($host->host_name, $host->worker_name);
             }
         } elseif ($host->status == HostsTable::STATUS_TO_KILL) {
             //## Kill it with fire
