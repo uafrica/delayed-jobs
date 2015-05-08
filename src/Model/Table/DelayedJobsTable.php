@@ -221,21 +221,13 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * @param array $payload Payload.
-     * @return bool
+     * @return int
      */
-    public function tester($payload = [])
+    public function clean()
     {
-
-        if($payload["success"] == true)
-        {
-            return true;
-        }
-        else
-        {
-            throw new \Exception("Job Was failed by tester");
-        }
-
+        return $this->deleteAll([
+            'status' => self::STATUS_SUCCESS,
+            'modified <=' => new Time('-4 weeks')
+        ]);
     }
-
 }

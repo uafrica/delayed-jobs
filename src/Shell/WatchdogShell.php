@@ -91,6 +91,11 @@ class WatchdogShell extends Shell
         $event = new Event('DelayedJobs.watchdog', $this->DelayedJobs);
         EventManager::instance()->dispatch($event);
 
+        $this->out('Cleaning jobs.');
+        $this->loadModel('DelayedJobs.DelayedJobs');
+        $cleaned = $this->DelayedJobs->clean();
+        $this->out(sprintf('<success>Cleaned:</success> %d jobs', $cleaned));
+
         $this->out('<success>!! All done !!</success>');
         $this->Lock->unlock('DelayedJobs.WorkerShell.main');
     }
