@@ -69,7 +69,7 @@ class WorkerShell extends Shell
             $response = $job->execute();
 
             if ($response) {
-                $this->DelayedJobs->completed($job);
+                $this->DelayedJobs->completed($job, is_string($response) ? $response : null);
                 $this->out('<success>Job ' . $job->id . ' Completed</success>');
             } else {
                 throw new Exception("Invalid response received");

@@ -61,8 +61,11 @@ class DelayedJobsTable extends Table
         }
     }
 
-    public function completed(DelayedJob $job)
+    public function completed(DelayedJob $job, $message = null)
     {
+        if ($message) {
+            $job->last_message = $message;
+        }
         $job->status = self::STATUS_SUCCESS;
         $job->pid = null;
 
