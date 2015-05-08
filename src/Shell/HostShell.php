@@ -10,23 +10,23 @@ class HostShell extends Shell
 {
     public $Lock;
     public $modelClass = 'DelayedJobs.DelayedJobs';
-    protected $_worker_id;
-    protected $_worker_name;
+    protected $_workerId;
+    protected $_workerName;
 
     public function main()
     {
-        $this->_worker_name = 'worker1';
+        $this->_workerName = 'worker1';
 
         if (isset($this->args[0])) {
-            $this->_worker_name = $this->args[0];
+            $this->_workerName = $this->args[0];
         }
 
         $this->Lock = new Lock();
-        if (!$this->Lock->lock('DelayedJobs.HostShell.main.' . $this->_worker_name)) {
+        if (!$this->Lock->lock('DelayedJobs.HostShell.main.' . $this->_workerName)) {
             $this->_stop(1);
         }
 
-        $this->_worker_id = $this->_worker_name . ' - ' . php_uname('a');
+        $this->_workerId = $this->_workerName . ' - ' . php_uname('a');
 
         /*
          * Get Next Job
@@ -42,7 +42,7 @@ class HostShell extends Shell
 
         //## Need to make sure that any running jobs for this host is in the array job_pids
 
-        $running_jobs = $this->DelayedJobs->getRunningByHost($this->_worker_id);
+        $running_jobs = $this->DelayedJobs->getRunningByHost($this->_workerId);
 
         foreach ($running_jobs as $running_job) {
             $job_pids[$running_job->id] = [
@@ -99,7 +99,7 @@ class HostShell extends Shell
     }
 
     protected function _executeJob() {
-        $job = $this->DelayedJobs->getOpenJob($this->_worker_id);
+        $job = $this->DelayedJobs->getOpenJob($this->_workerId);
 
         if ($job) {
             $this->out('<info>Got a new job: ' . $job->id . '</info>', 1, Shell::VERBOSE);

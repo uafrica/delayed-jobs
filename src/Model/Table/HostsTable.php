@@ -78,11 +78,6 @@ class HostsTable extends Table
         return $this->save($host);
     }
 
-    public function remove($host)
-    {
-        return $this->delete($host);
-    }
-
     public function checkConfig()
     {
         return Configure::check('dj.service.name');

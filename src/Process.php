@@ -70,15 +70,13 @@ class Process
         }
     }
 
-    public function stop()
+    public function stop($timeout = 5)
     {
         $command = 'kill ' . $this->pid;
         exec($command);
-        if ($this->status() == false) {
-            return true;
-        } else {
-            return false;
-        }
+        $start_time = time();
+        do {
+        } while ($this->status() !== false && (time() - $start_time <= $timeout));
     }
 
     public function details()
