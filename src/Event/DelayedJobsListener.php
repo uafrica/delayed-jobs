@@ -20,6 +20,9 @@ class DelayedJobsListener implements EventListenerInterface
 
     use ModelAwareTrait;
 
+    /**
+     * Constructor for class
+     */
     public function __construct()
     {
         $this->modelFactory('Table', ['Cake\ORM\TableRegistry', 'get']);
@@ -52,10 +55,11 @@ class DelayedJobsListener implements EventListenerInterface
             'priority' => 100,
             'run_at' => new Time('+5 seconds')
         ];
-        /**
-         * @var array $data
-         */
         $data = $event->subject();
+
+        if (!is_array($data)) {
+            $data = $event->data();
+        }
         $data = $data + $default;
 
         if (!isset($data["class"])) {
