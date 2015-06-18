@@ -26,13 +26,13 @@ class WatchdogShell extends Shell
     protected $_workers;
 
     /**
-     * Creates 2 * (cpu-count - 1) worker processes (Minimum of 2 workers)
+     * Creates (cpu-count - 1) worker processes (Minimum of 1 worker)
      * @return int
      */
     protected function _autoWorker()
     {
         $worker_count = (int)exec('nproc') - 1;
-        return ($worker_count >= 1 ? $worker_count : 1) * 2;
+        return $worker_count >= 1 ? $worker_count : 1;
     }
 
     /**
@@ -58,7 +58,7 @@ class WatchdogShell extends Shell
             $this->_workers = 1;
         }
 
-        $this->_workers *= 1;
+        $this->_workers *= (int)$this->param('parallel');
 
         if ($this->_workers > Configure::read('dj.max.hosts')) {
             $this->_workers = Configure::read('dj.max.hosts');
@@ -337,6 +337,13 @@ class WatchdogShell extends Shell
         $options = parent::getOptionParser();
 
         $options
+            ->addOption(
+                'parallel',
+                [
+                    'help' => 'Number of parallel workers (worker count is multiplied by this)',
+                    'default' => 2
+                ]
+            )
             ->addOption(
                 'workers',
                 [
