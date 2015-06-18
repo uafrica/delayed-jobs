@@ -36,7 +36,7 @@ class WatchdogShell extends Shell
     }
 
     /**
-     *
+     * @return void
      */
     public function main()
     {
@@ -306,6 +306,29 @@ class WatchdogShell extends Shell
             $this->_startHost($host_name, $worker_name);
         } else {
             $this->_checkHost($host);
+        }
+    }
+
+    /**
+     * Reloads all running hosts
+     * @return void
+     */
+    public function reload()
+    {
+        $hostname = php_uname('n');
+
+        $hosts = $this->Hosts->findByHostName($hostname);
+        $host_count = $hosts->count();
+
+        $this->out('Killing ' . $host_count . ' running hosts.', 1, Shell::VERBOSE);
+        foreach ($hosts as $host) {
+            $this->_kill($host->pid, $host->worker_name);
+            $this->Hosts->delete($host);
+        }
+
+        $this->out('Restarting ' . $host_count . ' hosts.', 1, Shell::VERBOSE);
+        for ($i = 1; $i <= $host_count; $i++) {
+            $this->_startWorker($i);
         }
     }
 
