@@ -26,6 +26,16 @@ class WatchdogShell extends Shell
     protected $_workers;
 
     /**
+     * Creates 2 * (cpu-count - 1) worker processes (Minimum of 2 workers)
+     * @return int
+     */
+    protected function _autoWorker()
+    {
+        $worker_count = (int)exec('nproc') - 1;
+        return ($worker_count >= 1 ? $worker_count : 1) * 2;
+    }
+
+    /**
      *
      */
     public function main()
@@ -43,8 +53,8 @@ class WatchdogShell extends Shell
         $this->out('App Name: <info>' . Configure::read('dj.service.name') . '</info>');
         $this->out('Hostname: <info>' . $hostname . '</info>');
 
-        $this->_workers = $this->param('workers');
-        if (!is_numeric($this->_workers)) {
+        $this->_workers = (int)$this->param('workers');
+        if ($this->_workers <= 0) {
             $this->_workers = 1;
         }
 
@@ -308,7 +318,7 @@ class WatchdogShell extends Shell
                 'workers',
                 [
                     'help' => 'Number of workers to run',
-                    'default' => 1
+                    'default' => $this->_autoWorker()
                 ]
             );
 
