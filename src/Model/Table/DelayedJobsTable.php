@@ -239,17 +239,18 @@ class DelayedJobsTable extends Table
         return $jobs;
     }
 
-    public function jobsPerSecond()
+    public function jobsPerSecond($conditions = [], $field = 'created', $time_range = '-1 hour')
     {
-        $conditions = [
-            'DelayedJobs.created > ' => new Time('-1 hour'),
-        ];
+        $start_time = new Time($time_range);
+        $current_time = new Time();
+        $second_count = $current_time->diffInSeconds($start_time);
+        $conditions[$this->aliasField($field) . ' > '] = $start_time;
 
         $count = $this
             ->find()
             ->where($conditions)
             ->count();
-        $count = round($count / 60 / 60, 3);
+        $count = round($count / $second_count, 3);
 
         return $count;
     }

@@ -8,6 +8,7 @@ use Cake\Core\Exception\Exception;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
 use DelayedJobs\Lock;
+use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\HostsTable;
 use DelayedJobs\Process;
 
@@ -54,7 +55,7 @@ class WatchdogShell extends Shell
         $this->out('Hostname: <info>' . $hostname . '</info>');
 
         $this->_workers = (int)$this->param('workers');
-        if ($this->_workers <= 0) {
+        if ($this->_workers < 0) {
             $this->_workers = 1;
         }
 
@@ -329,6 +330,47 @@ class WatchdogShell extends Shell
         $this->out('Restarting ' . $host_count . ' hosts.', 1, Shell::VERBOSE);
         for ($i = 1; $i <= $host_count; $i++) {
             $this->_startWorker($i);
+        }
+    }
+
+    public function monitor()
+    {
+        $status_map = [
+            DelayedJobsTable::STATUS_NEW => 'New',
+            DelayedJobsTable::STATUS_BUSY => 'Busy',
+            DelayedJobsTable::STATUS_BURRIED => 'Buried',
+            DelayedJobsTable::STATUS_SUCCESS => 'Success',
+            DelayedJobsTable::STATUS_KICK => 'Kicked',
+            DelayedJobsTable::STATUS_FAILED => 'Failed',
+            DelayedJobsTable::STATUS_UNKNOWN => 'Unknown',
+        ];
+        $this->loadModel('DelayedJobs.DelayedJobs');
+        $hostname = php_uname('n');
+
+        while (true) {
+            $hosts = $this->Hosts->findByHostName($hostname);
+
+            $this->clear();
+            $this->out('Delayed Jobs monitor for ' . $hostname);
+            $this->hr();
+            $this->out(__('Hosts on server: <info>{0}</info>', $hosts->count()));
+            $this->out(__('Created per second (over last hour): <info>{0}</info>', $this->DelayedJobs->jobsPerSecond()));
+            $this->out(__('Completed per second (over last hour): <info>{0}</info>', $this->DelayedJobs->jobsPerSecond([
+                    'status' => DelayedJobsTable::STATUS_SUCCESS
+                ], 'modified')));
+            $this->out(__('Completed per second (over last hour) - by host: <info>{0}</info>', $this->DelayedJobs->jobsPerSecond([
+                'status' => DelayedJobsTable::STATUS_SUCCESS,
+                'locked_by LIKE' => '%' . $hostname
+            ], 'modified')));
+            $this->hr();
+
+            $this->out('Total job count');
+            $this->out('');
+            foreach ($status_map as $status => $name) {
+                $this->out(__('{0}: <info>{1}</info>', $name, $this->DelayedJobs->find()
+                    ->where(['status' => $status])->count()));
+            }
+            sleep(1);
         }
     }
 
