@@ -124,6 +124,51 @@ class DelayedJobsTable extends Table
         return $this->save($job);
     }
 
+    public function nextSequence(DelayedJob $job)
+    {
+        $conditions = [
+            'id !=' => $job->id,
+            'sequence' => $job->sequence,
+            'status in' => [self::STATUS_BUSY, self::STATUS_FAILED]
+        ];
+        return $this->exists($conditions);
+    }
+
+    /**
+     * @param array $conditions
+     * @param int $recursive_count
+     * @return mixed
+     */
+    public function nextJob($conditions = [], $recursive_count = 0)
+    {
+        //We try twice, otherwise fail it
+        if ($recursive_count > 2) {
+            return false;
+        }
+
+        $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
+
+        $job = $this->find()
+            ->where($conditions + [
+                    'DelayedJobs.status in' => $allowed,
+                    'DelayedJobs.run_at <=' => new Time()
+                ])
+            ->order([
+                'DelayedJobs.priority' => 'ASC',
+                'DelayedJobs.id' => 'ASC'
+            ])
+            ->first();
+
+        //If this is a sequenced job, and there is already a job in that sequence running, try again
+        if ($job && $job->sequence && $this->nextSequence($job)) {
+            return $this->nextJob([
+                'DelayedJobs.sequence is' => null
+            ], $recursive_count + 1);
+        }
+
+        return $job;
+    }
+
     public function getOpenJob($worker_id = '')
     {
 
@@ -134,49 +179,38 @@ class DelayedJobsTable extends Table
 //            return array();
 //        }
 
-        $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
+        $job = $this->nextJob();
 
-        $job = $this
-            ->find()
-            ->where([
-                'DelayedJobs.status in' => $allowed,
-                'DelayedJobs.run_at <=' => new Time()
-            ])
-            ->order([
-                'DelayedJobs.priority' => 'ASC',
-                'DelayedJobs.id' => 'ASC'
-            ])
-            ->first();
-
-        if ($job) {
-            $options = (array)unserialize($job->options);
-            if (!isset($options['max_retries'])) {
-                $options['max_retries'] = Configure::read('dj.max.retries');
-            }
-
-            if (!isset($options['max_execution_time'])) {
-                $options['max_execution_time'] = Configure::read('dj.max.execution.time');
-            }
-            $job->options = $options;
-
-            $this->lock($job, $worker_id);
-
-            usleep(250000); //## Sleep for 0.25 seconds
-
-            //## check if this job is still allocated to this worker
-
-            $conditions = [
-                'DelayedJobs.id' => $job->id,
-                'DelayedJobs.locked_by' => $worker_id
-            ];
-            if ($this->exists($conditions)) {
-                return $job;
-            } else {
-                usleep(250000); //## Sleep for 0.25 seconds
-            }              //  Log::write ('jobs', $job['DelayedJob']['id'] . ' was allocated to someone else');
+        if (!$job) {
+            return false;
         }
 
-        return false;
+        $options = (array)unserialize($job->options);
+        if (!isset($options['max_retries'])) {
+            $options['max_retries'] = Configure::read('dj.max.retries');
+        }
+
+        if (!isset($options['max_execution_time'])) {
+            $options['max_execution_time'] = Configure::read('dj.max.execution.time');
+        }
+        $job->options = $options;
+
+        $this->lock($job, $worker_id);
+
+        usleep(250000); //## Sleep for 0.25 seconds
+
+        //## check if this job is still allocated to this worker
+
+        $conditions = [
+            'DelayedJobs.id' => $job->id,
+            'DelayedJobs.locked_by' => $worker_id
+        ];
+        if ($this->exists($conditions)) {
+            return $job;
+        } else {
+            usleep(250000); //## Sleep for 0.25 seconds
+        }
+        //  Log::write ('jobs', $job['DelayedJob']['id'] . ' was allocated to someone else');
     }
 
     /**
