@@ -379,11 +379,17 @@ class WatchdogShell extends Shell
         $options = parent::getOptionParser();
 
         $options
+            ->addSubcommand('monitor', [
+                'help' => 'Allows monitoring of the delayed job service'
+            ])
+            ->addSubcommand('reload', [
+                'help' => 'Restarts all running worker hosts'
+            ])
             ->addOption(
                 'parallel',
                 [
                     'help' => 'Number of parallel workers (worker count is multiplied by this)',
-                    'default' => 2
+                    'default' => 1
                 ]
             )
             ->addOption(
