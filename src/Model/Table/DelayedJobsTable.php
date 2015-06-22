@@ -161,7 +161,10 @@ class DelayedJobsTable extends Table
         if ($job && $job->sequence && $this->nextSequence($job)) {
             $sequences[] = $job->sequence;
             return $this->nextJob([
-                'not' => ['DelayedJobs.sequence in' => $sequences]
+                'OR' => [
+                    'DelayedJobs.sequence not in' => $sequences,
+                    'DelayedJobs.sequence IS' => null
+                ]
             ], $sequences);
         }
 
