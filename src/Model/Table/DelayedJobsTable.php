@@ -165,7 +165,7 @@ class DelayedJobsTable extends Table
         //If this is a sequenced job, and there is already a job in that sequence running, try again
         if ($job && $job->sequence && $this->nextSequence($job)) {
             return $this->nextJob([
-                'DelayedJobs.sequence is' => null
+                'not' => ['DelayedJobs.sequence' => $job->sequence]
             ], $recursive_count + 1);
         }
 
