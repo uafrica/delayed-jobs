@@ -18,10 +18,11 @@ trait QueueJobTrait
      * @param string $method Method
      * @param mixed $payload Payload for job
      * @param int $priority Priority
+     * @param string $sequence Sequence for the job
      * @param array $options Options for job
      * @return void
      */
-    protected function _queueJob($group, $class, $method, $payload, $priority = 40, array $options = [])
+    protected function _queueJob($group, $class, $method, $payload, $priority = 40, $sequence = null, array $options = [])
     {
         $default = ['max_retries' => 10];
         $options = $options + $default;
@@ -32,6 +33,7 @@ trait QueueJobTrait
             'method' => $method,
             'payload' => $payload,
             'priority' => $priority,
+            'sequence' => $sequence,
             'options' => $options,
         ];
 
