@@ -144,11 +144,6 @@ class DelayedJobsTable extends Table
      */
     public function nextJob($conditions = [], $sequences = [])
     {
-        //We try five times, otherwise fail it
-        if (count($sequences) > 5) {
-            return false;
-        }
-
         $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
 
         $job = $this->find()
