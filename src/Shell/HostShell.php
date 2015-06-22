@@ -50,7 +50,8 @@ class HostShell extends Shell
             ];
         }
 
-        $this->out(sprintf('<info>Started up:</info> %s', $this->_workerId), 1, Shell::VERBOSE);
+        $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
+        $this->hr();
         while (true) {
             $number_jobs = count($this->_runningJobs);
             if ($number_jobs < $max_allowed_jobs) {
@@ -59,6 +60,7 @@ class HostShell extends Shell
 
             //## Check Status of Fired Jobs
             foreach ($this->_runningJobs as $job_id => $running_job) {
+                $this->out(__('Job status: {0}', $job_id), 1, Shell::VERBOSE);
                 $job = $this->DelayedJobs->get($job_id);
 
                 $status = new Process();
@@ -70,57 +72,71 @@ class HostShell extends Shell
                             $job,
                             'Job not running, but db said it is, could be a runtime error'
                         );
+                        $this->out(__(' - <error>Job not running, but should be</error>'), 1, Shell::VERBOSE);
+                    } else {
+                        $time = time() - $running_job['start_time'];
+                        unset($this->_runningJobs[$job_id]);
+                        $this->out(__(' - <success>Job\'s done:</success> {0}, took {1} seconds', $job_id, $time), 1, Shell::VERBOSE);
                     }
-                    $time = time() - $running_job['start_time'];
-                    unset($this->_runningJobs[$job_id]);
-                    $this->out(sprintf('<success>Job\'s done:</success> %s, took %d seconds', $job_id, $time), 2, Shell::VERBOSE);
                 } else {
                     //## Check if job has not reached it max exec time
                     $busy_time = time() - $running_job['start_time'];
 
                     if ($busy_time > $running_job['max_execution_time']) {
-                        $this->out(sprintf('<error>Job timeout:</error> %s', $job_id), 2, Shell::VERBOSE);
+                        $this->out(__(' - <error>Job timeout:</error> {0}', $job_id), 1, Shell::VERBOSE);
                         $status->stop();
 
                         $this->DelayedJobs->failed($job, 'Job ran too long, killed');
                     } else {
-                        $this->out(sprintf('<info>Still running:</info> %s, %d seconds', $job_id, $busy_time), 1, Shell::VERBOSE);
+                        $this->out(__(' - <comment>Still running:</comment> {0}, {1} seconds', $job_id, $busy_time), 1, Shell::VERBOSE);
                     }
                 }
+                $this->hr(1);
             }
 
             //## Sleep so that the system can rest
-            sleep(2);
+            usleep(500000);
         }
     }
 
     protected function _executeJob() {
         $job = $this->DelayedJobs->getOpenJob($this->_workerId);
 
-        if ($job) {
-            $this->out(sprintf('<success>Starting job:</success> %s', $job->id), 1, Shell::VERBOSE);
-            if (!isset($this->_runningJobs[$job->id])) {
-                $options = unserialize($job->options);
+        if (!$job) {
+            $this->out(__('<comment>No open job</comment>'), 1, Shell::VERBOSE);
+            return;
+        }
 
-                if (!isset($options['max_execution_time'])) {
-                    $options['max_execution_time'] = 25 * 60;
-                }
-
-                $path = ROOT . '/bin/cake DelayedJobs.worker ' . $job->id;
-                $p = new Process($path);
+        $this->out(__('<success>Starting job:</success> {0}', $job->id), 1, Shell::VERBOSE);
+        if (isset($this->_runningJobs[$job->id])) {
+            $this->out(__(' - <error>Job already running</error>'), 1, Shell::VERBOSE);
+            return;
+        }
 
         $options = (array)$job->options;
 
-                $this->DelayedJobs->setPid($job, $pid);
+        $this->out(__('  <comment>Job details</comment>'), 1, Shell::VERBOSE);
+        $this->out(__('    <info>Runner: </info> {0}::{1}', $job->class, $job->method), 1, Shell::VERBOSE);
+        $this->out(json_encode($options, JSON_PRETTY_PRINT), 1, Shell::VERBOSE);
 
-                $this->_runningJobs[$job->id] = [
-                    'pid' => $pid,
-                    'start_time' => time(),
-                    'max_execution_time' => $options['max_execution_time'],
-                ];
-                $this->out(' - <info>Runner started</info>', 1, Shell::VERBOSE);
-            }
+        if (!isset($options['max_execution_time'])) {
+            $options['max_execution_time'] = 25 * 60;
         }
+
+        $path = ROOT . '/bin/cake DelayedJobs.worker ' . $job->id;
+        $p = new Process($path);
+
+        $pid = $p->getPid();
+
+        $this->DelayedJobs->setPid($job, $pid);
+
+        $this->_runningJobs[$job->id] = [
+            'pid' => $pid,
+            'start_time' => time(),
+            'max_execution_time' => $options['max_execution_time'],
+        ];
+        $this->out(' - <info>Runner started</info>', 1, Shell::VERBOSE);
+        $this->hr(1);
     }
 
     public function getOptionParser()
