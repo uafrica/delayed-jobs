@@ -142,10 +142,10 @@ class DelayedJobsTable extends Table
      * @param int $recursive_count
      * @return mixed
      */
-    public function nextJob($conditions = [], $recursive_count = 0)
+    public function nextJob($conditions = [], $sequences = [])
     {
-        //We try twice, otherwise fail it
-        if ($recursive_count > 2) {
+        //We try five times, otherwise fail it
+        if (count($sequences) > 5) {
             return false;
         }
 
@@ -164,9 +164,10 @@ class DelayedJobsTable extends Table
 
         //If this is a sequenced job, and there is already a job in that sequence running, try again
         if ($job && $job->sequence && $this->nextSequence($job)) {
+            $sequences[] = $job->sequence;
             return $this->nextJob([
-                'not' => ['DelayedJobs.sequence' => $job->sequence]
-            ], $recursive_count + 1);
+                'not' => ['DelayedJobs.sequence in' => $sequences]
+            ], $sequences);
         }
 
         return $job;
