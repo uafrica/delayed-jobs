@@ -73,8 +73,6 @@ class DelayedJobsListener implements EventListenerInterface
 
         $entity = $this->DelayedJobs->newEntity($data);
         $entity->status = DelayedJobsTable::STATUS_NEW;
-        $entity->payload = serialize($entity->payload);
-        $entity->options = serialize($entity->options);
 
         $quote = $this->DelayedJobs->connection()
             ->driver()

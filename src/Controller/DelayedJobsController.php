@@ -86,9 +86,9 @@ class DelayedJobsController extends AppController
                 'group' => 'test',
                 'class' => 'DelayedJobs\\Worker\\TestWorker',
                 'method' => 'test',
-                'payload' => serialize([
+                'payload' => [
                     'type' => $this->request->query('type') ?: 'success'
-                ]),
+                ],
                 'run_at' => new Time(sprintf('+%s seconds', rand(5, 60))),
                 'status' => DelayedJobsTable::STATUS_NEW
             ]);

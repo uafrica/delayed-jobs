@@ -109,7 +109,7 @@ class HostShell extends Shell
                 $path = ROOT . '/bin/cake DelayedJobs.worker ' . $job->id;
                 $p = new Process($path);
 
-                $pid = $p->getPid();
+        $options = (array)$job->options;
 
                 $this->DelayedJobs->setPid($job, $pid);
 

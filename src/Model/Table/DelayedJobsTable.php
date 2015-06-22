@@ -3,6 +3,7 @@
 namespace DelayedJobs\Model\Table;
 
 use Cake\Core\Configure;
+use Cake\Database\Schema\Table as Schema;
 use Cake\Event\Event;
 use Cake\I18n\Time;
 use Cake\ORM\Table;
@@ -51,14 +52,16 @@ class DelayedJobsTable extends Table
         return $validator;
     }
 
-    public function beforeSave(Event $event, DelayedJob $entity)
+    /**
+     * @param \Cake\Database\Schema\Table $table Table schema
+     * @return \Cake\Database\Schema\Table
+     */
+    protected function _initializeSchema(Schema $table)
     {
-        if (!is_string($entity->options)) {
-            $entity->options = serialize($entity->options);
-        }
-        if (!is_string($entity->payload)) {
-            $entity->payload = serialize($entity->payload);
-        }
+        $table->columnType('payload', 'serialize');
+        $table->columnType('options', 'serialize');
+
+        return parent::_initializeSchema($table);
     }
 
     public function completed(DelayedJob $job, $message = null)
@@ -185,7 +188,7 @@ class DelayedJobsTable extends Table
             return false;
         }
 
-        $options = (array)unserialize($job->options);
+        $options = (array)$job->options;
         if (!isset($options['max_retries'])) {
             $options['max_retries'] = Configure::read('dj.max.retries');
         }

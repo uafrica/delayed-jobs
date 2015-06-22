@@ -68,12 +68,12 @@
         </dd>
         <dt><?php echo __('Options'); ?></dt>
         <dd>
-            <pre><?php echo json_encode(@unserialize($delayedJob->options), JSON_PRETTY_PRINT); ?></pre>
+            <pre><?php echo json_encode($delayedJob->options, JSON_PRETTY_PRINT); ?></pre>
             &nbsp;
         </dd>
         <dt><?php echo __('Payload'); ?></dt>
         <dd>
-            <pre><?php echo json_encode(@unserialize($delayedJob->payload), JSON_PRETTY_PRINT); ?></pre>
+            <pre><?php echo json_encode($delayedJob->payload, JSON_PRETTY_PRINT); ?></pre>
             &nbsp;
         </dd>
 
