@@ -96,19 +96,46 @@ class WatchdogShell extends Shell
             $this->out('<fail>Failed: ' . $exc->getMessage() . '</fail>');
         }
 
-        $this->out('<success>' . $this->_workers . ' started.</success> Firing watchdog event.');
+        $this->out('<success>' . $this->_workers . ' started.</success>.');
 
-        $this->loadModel('DelayedJobs.DelayedJobs');
-        $event = new Event('DelayedJobs.watchdog', $this->DelayedJobs);
+        $this->recuring();
+        $this->clean();
+
+        $this->out('<success>!! All done !!</success>');
+        $this->Lock->unlock('DelayedJobs.WorkerShell.main');
+    }
+
+    public function recuring()
+    {
+        $this->out('Firing recuring event.');
+        $event = new Event('DelayedJobs.recuring');
+        $event->result = [];
         EventManager::instance()->dispatch($event);
 
+        $this->loadModel('DelayedJobs.DelayedJobs');
+        $this->out(__('{0} jobs to queue', count($event->result)), 1, Shell::VERBOSE);
+        foreach ($event->result as $job) {
+            if ($this->DelayedJobs->jobExists($job)) {
+                $this->out(__('  <error>Already queued:</error> {0}::{1}', $job['class'], $job['method']), 1, Shell::VERBOSE);
+                continue;
+            }
+
+            $dj_data = $job + [
+                'priority' => 100,
+                'options' => ['max_retries' => 5],
+            ];
+            $job_event = new Event('DelayedJob.queue', $dj_data);
+            EventManager::instance()->dispatch($job_event);
+            $this->out(__('  <success>Queued:</success> {0}::{1}', $job['class'], $job['method']), 1, Shell::VERBOSE);
+        }
+    }
+
+    public function clean()
+    {
         $this->out('Cleaning jobs.');
         $this->loadModel('DelayedJobs.DelayedJobs');
         $cleaned = $this->DelayedJobs->clean();
         $this->out(sprintf('<success>Cleaned:</success> %d jobs', $cleaned));
-
-        $this->out('<success>!! All done !!</success>');
-        $this->Lock->unlock('DelayedJobs.WorkerShell.main');
     }
 
     /**
@@ -379,6 +406,12 @@ class WatchdogShell extends Shell
         $options = parent::getOptionParser();
 
         $options
+            ->addSubcommand('clean', [
+                'help' => 'Cleans out jobs that are completed and older than 4 weeks'
+            ])
+            ->addSubcommand('recuring', [
+                'help' => 'Fires the recuring event and creates the initial recuring job instance'
+            ])
             ->addSubcommand('monitor', [
                 'help' => 'Allows monitoring of the delayed job service'
             ])

@@ -267,4 +267,34 @@ class DelayedJobsTable extends Table
             'modified <=' => new Time('-4 weeks')
         ]);
     }
+
+    public function jobExists($job_details)
+    {
+        $quoting = $this->connection()
+            ->driver()
+            ->autoQuoting();
+        $this->connection()
+            ->driver()
+            ->autoQuoting(true);
+
+        $conditions = [
+            'group' => $job_details['group'],
+            'class' => $job_details['class'],
+            'method' => $job_details['method'],
+            'status IN' => [
+                self::STATUS_BUSY,
+                self::STATUS_NEW,
+                self::STATUS_FAILED,
+                self::STATUS_UNKNOWN
+            ]
+        ];
+
+        $exists = $this->exists($conditions);
+
+        $this->connection()
+            ->driver()
+            ->autoQuoting($quoting);
+
+        return $exists;
+    }
 }
