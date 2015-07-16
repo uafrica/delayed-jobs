@@ -70,11 +70,14 @@ class WorkerShell extends Shell
             $response = $job->execute();
             $this->out(' - Execution complete', 1, Shell::VERBOSE);
 
-            if ($response) {
-                $this->DelayedJobs->completed($job, is_string($response) ? $response : null);
-                $this->out('<success>Job ' . $job->id . ' Completed</success>');
-            } else {
-                throw new Exception("Invalid response received");
+            $this->DelayedJobs->completed($job, is_string($response) ? $response : null);
+            $this->out('<success>Job ' . $job->id . ' Completed</success>');
+
+            //Recuring job
+            if ($response instanceof \DateTime) {
+                $recuring_job = clone $job;
+                $recuring_job->run_at = $response;
+                $this->DelayedJobs->save($recuring_job);
             }
         } catch (\Exception $exc) {
             //## Job Failed

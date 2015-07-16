@@ -7,6 +7,7 @@ use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
+use Cake\I18n\Time;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\HostsTable;
@@ -123,7 +124,9 @@ class WatchdogShell extends Shell
             $dj_data = $job + [
                 'priority' => 100,
                 'options' => ['max_retries' => 5],
+                'run_at' => new Time('+30 seconds')
             ];
+
             $job_event = new Event('DelayedJob.queue', $dj_data);
             EventManager::instance()->dispatch($job_event);
             $this->out(__('  <success>Queued:</success> {0}::{1}', $job['class'], $job['method']), 1, Shell::VERBOSE);

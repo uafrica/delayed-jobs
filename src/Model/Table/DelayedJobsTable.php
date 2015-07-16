@@ -297,4 +297,27 @@ class DelayedJobsTable extends Table
 
         return $exists;
     }
+
+    /**
+     * @return void
+     */
+    public function beforeSave()
+    {
+        $this->quote = $this->connection()
+            ->driver()
+            ->autoQuoting();
+        $this->connection()
+            ->driver()
+            ->autoQuoting(true);
+    }
+
+    /**
+     * @return void
+     */
+    public function afterSave()
+    {
+        $this->connection()
+            ->driver()
+            ->autoQuoting($this->quote);
+    }
 }

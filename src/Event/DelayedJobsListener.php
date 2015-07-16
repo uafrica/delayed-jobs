@@ -74,18 +74,7 @@ class DelayedJobsListener implements EventListenerInterface
         $entity = $this->DelayedJobs->newEntity($data);
         $entity->status = DelayedJobsTable::STATUS_NEW;
 
-        $quote = $this->DelayedJobs->connection()
-            ->driver()
-            ->autoQuoting();
-        $this->DelayedJobs
-            ->connection()
-            ->driver()
-            ->autoQuoting(true);
         $result = $this->DelayedJobs->save($entity);
-        $this->DelayedJobs
-            ->connection()
-            ->driver()
-            ->autoQuoting($quote);
 
         if ($result) {
             return $entity;
