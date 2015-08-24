@@ -255,7 +255,7 @@ class DelayedJobsTable extends Table
             ->find()
             ->where($conditions)
             ->count();
-        $count = round($count / $second_count, 3);
+        $count = number_format($count / $second_count, 3);
 
         return $count;
     }

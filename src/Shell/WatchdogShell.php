@@ -378,29 +378,64 @@ class WatchdogShell extends Shell
         $hostname = php_uname('n');
 
         while (true) {
-            $hosts = $this->Hosts->findByHostName($hostname);
+            $statuses = $this->DelayedJobs->find('list', [
+                    'keyField' => 'status',
+                    'valueField' => 'counter'
+                ])
+                ->select([
+                    'status',
+                    'counter' => $this->DelayedJobs->find()
+                        ->func()
+                        ->count('id')
+                ])
+                ->group(['status'])
+                ->toArray();
+            $created_per_second = $this->DelayedJobs->jobsPerSecond();
+            $completed_per_second = $this->DelayedJobs->jobsPerSecond([
+                'status' => DelayedJobsTable::STATUS_SUCCESS
+            ], 'modified');
+            $last_failed = $this->DelayedJobs->find()
+                ->select(['last_message'])
+                ->where([
+                    'status' => DelayedJobsTable::STATUS_FAILED
+                ])
+                ->order([
+                    'failed_at' => 'DESC'
+                ])
+                ->first();
+            $last_burried = $this->DelayedJobs->find()
+                ->select(['last_message'])
+                ->where([
+                    'status' => DelayedJobsTable::STATUS_BURRIED
+                ])
+                ->order([
+                    'failed_at' => 'DESC'
+                ])
+                ->first();
+            $host_count = $this->Hosts->find()->count();
 
             $this->clear();
-            $this->out('Delayed Jobs monitor for ' . $hostname);
+            $this->out(__('Delayed Jobs monitor <info>{0} - {1}</info>', $hostname, date('H:i:s')));
             $this->hr();
-            $this->out(__('Hosts on server: <info>{0}</info>', $hosts->count()));
-            $this->out(__('Created per second (over last hour): <info>{0}</info>', $this->DelayedJobs->jobsPerSecond()));
-            $this->out(__('Completed per second (over last hour): <info>{0}</info>', $this->DelayedJobs->jobsPerSecond([
-                    'status' => DelayedJobsTable::STATUS_SUCCESS
-                ], 'modified')));
-            $this->out(__('Completed per second (over last hour) - by host: <info>{0}</info>', $this->DelayedJobs->jobsPerSecond([
-                'status' => DelayedJobsTable::STATUS_SUCCESS,
-                'locked_by LIKE' => '%' . $hostname
-            ], 'modified')));
+            $this->out(__('Running hosts: <info>{0}</info>', $host_count));
+            $this->out(__('Created per second (over last hour): <info>{0}</info>', $created_per_second));
+            $this->out(__('Completed per second (over last hour): <info>{0}</info>', $completed_per_second));
             $this->hr();
 
             $this->out('Total job count');
             $this->out('');
             foreach ($status_map as $status => $name) {
-                $this->out(__('{0}: <info>{1}</info>', $name, $this->DelayedJobs->find()
-                    ->where(['status' => $status])->count()));
+                $this->out(__('{0}: <info>{1}</info>', $name, (isset($statuses[$status]) ? $statuses[$status] : 0)));
             }
-            sleep(1);
+
+            $this->hr();
+            if ($last_failed) {
+                $this->out(__('Last failed reason: <info>{0}</info>', $last_failed->last_message));
+            }
+            if ($last_burried) {
+                $this->out(__('Last burried reason: <info>{0}</info>', $last_burried->last_message));
+            }
+            usleep(250000);
         }
     }
 
