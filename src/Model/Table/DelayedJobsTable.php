@@ -4,8 +4,10 @@ namespace DelayedJobs\Model\Table;
 
 use Cake\Core\Configure;
 use Cake\Database\Schema\Table as Schema;
+use Cake\Datasource\ConnectionManager;
 use Cake\Event\Event;
 use Cake\I18n\Time;
+use Cake\ORM\ResultSet;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 use DelayedJobs\Model\Entity\DelayedJob;
@@ -134,7 +136,11 @@ class DelayedJobsTable extends Table
             'sequence' => $job->sequence,
             'status in' => [self::STATUS_BUSY, self::STATUS_FAILED]
         ];
-        return $this->exists($conditions);
+        $this->connection(ConnectionManager::get('buffered'));
+        $result = $this->exists($conditions);
+        $this->connection(ConnectionManager::get('default'));
+
+        return $result;
     }
 
     /**
@@ -146,7 +152,8 @@ class DelayedJobsTable extends Table
     {
         $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
 
-        $job = $this->find()
+        $job_query = $this
+            ->find()
             ->where($conditions + [
                     'DelayedJobs.status in' => $allowed,
                     'DelayedJobs.run_at <=' => new Time()
@@ -155,21 +162,17 @@ class DelayedJobsTable extends Table
                 'DelayedJobs.priority' => 'ASC',
                 'DelayedJobs.id' => 'ASC'
             ])
-            ->first();
+            ->bufferResults(false);
+        $statement = $job_query->execute();
+        $result_set = new ResultSet($job_query, $statement);
 
-        //If this is a sequenced job, and there is already a job in that sequence running, try again
-        if ($job && $job->sequence && $this->nextSequence($job)) {
-            $sequences[] = $job->sequence;
-
-            //Wait a little bit to let the database breath before bombarding it with another request
-            usleep(rand(50, 250) * 100000);
-            return $this->nextJob([
-                'OR' => [
-                    'DelayedJobs.sequence not in' => $sequences,
-                    'DelayedJobs.sequence IS' => null
-                ]
-            ], $sequences);
+        foreach ($result_set as $job) {
+            if (!$job || !$job->sequence || !$this->nextSequence($job)) {
+                break;
+            }
         }
+
+        $statement->closeCursor();
 
         return $job;
     }
