@@ -160,6 +160,9 @@ class DelayedJobsTable extends Table
         //If this is a sequenced job, and there is already a job in that sequence running, try again
         if ($job && $job->sequence && $this->nextSequence($job)) {
             $sequences[] = $job->sequence;
+
+            //Wait a little bit to let the database breath before bombarding it with another request
+            usleep(rand(50, 250) * 100000);
             return $this->nextJob([
                 'OR' => [
                     'DelayedJobs.sequence not in' => $sequences,
