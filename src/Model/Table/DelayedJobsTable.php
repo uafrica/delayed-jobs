@@ -7,6 +7,7 @@ use Cake\Database\Schema\Table as Schema;
 use Cake\Datasource\ConnectionManager;
 use Cake\Event\Event;
 use Cake\I18n\Time;
+use Cake\Log\Log;
 use Cake\ORM\ResultSet;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -102,6 +103,13 @@ class DelayedJobsTable extends Table
     {
         $job->status = self::STATUS_BUSY;
         $job->locked_by = $locked_by;
+        $this->save($job);
+    }
+
+    public function release(DelayedJob $job)
+    {
+        $job->status = self::STATUS_NEW;
+        $job->locked_by = null;
         $this->save($job);
     }
 
@@ -201,7 +209,7 @@ class DelayedJobsTable extends Table
     {
         $job = $this->nextJob();
 
-        if (!$job) {
+        if (!$job || !in_array($job->status, [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN])) {
             return false;
         }
 
@@ -220,18 +228,27 @@ class DelayedJobsTable extends Table
         usleep(250000); //## Sleep for 0.25 seconds
 
         //## check if this job is still allocated to this worker
+        $job = $this->get($job->id);
+        $next_sequence = $this->nextSequence($job);
 
-        $conditions = [
-            'DelayedJobs.id' => $job->id,
-            'DelayedJobs.locked_by' => $worker_id,
-            'DelayedJobs.status' => self::STATUS_BUSY
-        ];
-        if ($this->exists($conditions) && !$this->nextSequence($job)) {
+        /*
+         * If this job is locked by us, and another same sequence isn't running we carry on
+         * Otherwise, we release this job back into the pool
+         */
+        if ($job->locked_by === $worker_id && !$next_sequence) {
             return $job;
+        } elseif ($job->locked_by === $worker_id && $next_sequence) {
+            Log::debug($job->sequence . ' was grabbed by someone else', [
+                'scope' => 'delayed_jobs'
+            ]);
+            $this->release($job);
         } else {
-            usleep(250000); //## Sleep for 0.25 seconds
+            Log::debug($job->id . ' was allocated to someone else', [
+                'scope' => 'delayed_jobs'
+            ]);
         }
-        //  Log::write ('jobs', $job['DelayedJob']['id'] . ' was allocated to someone else');
+
+        usleep(250000); //## Sleep for 0.25 seconds
     }
 
     /**
