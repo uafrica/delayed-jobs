@@ -63,6 +63,11 @@ class HostShell extends Shell
                 $this->out(__('Job status: {0}', $job_id), 1, Shell::VERBOSE);
                 $job = $this->DelayedJobs->get($job_id);
 
+                if ($job->locked_by !== $this->_workerId) {
+                    //Not our job, why are we looking at it?
+                    continue;
+                }
+
                 $status = new Process();
                 $status->setPid($running_job['pid']);
                 if (!$status->status()) {

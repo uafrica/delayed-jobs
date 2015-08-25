@@ -390,10 +390,18 @@ class WatchdogShell extends Shell
                 ])
                 ->group(['status'])
                 ->toArray();
-            $created_per_second = $this->DelayedJobs->jobsPerSecond();
-            $completed_per_second = $this->DelayedJobs->jobsPerSecond([
+            $created_per_second_hour = $this->DelayedJobs->jobsPerSecond();
+            $created_per_second_15 = $this->DelayedJobs->jobsPerSecond([], 'created', '+15 minutes');
+            $created_per_second_5 = $this->DelayedJobs->jobsPerSecond([], 'created', '+5 minutes');
+            $completed_per_second_hour = $this->DelayedJobs->jobsPerSecond([
                 'status' => DelayedJobsTable::STATUS_SUCCESS
             ], 'modified');
+            $completed_per_second_15 = $this->DelayedJobs->jobsPerSecond([
+                'status' => DelayedJobsTable::STATUS_SUCCESS
+            ], 'modified', '+15 minutes');
+            $completed_per_second_5 = $this->DelayedJobs->jobsPerSecond([
+                'status' => DelayedJobsTable::STATUS_SUCCESS
+            ], 'modified', '+5 minutes');
             $last_failed = $this->DelayedJobs->find()
                 ->select(['id', 'last_message', 'failed_at'])
                 ->where([
@@ -413,13 +421,20 @@ class WatchdogShell extends Shell
                 ])
                 ->first();
             $host_count = $this->Hosts->find()->count();
+            $running_jobs = $this->DelayedJobs
+                ->find()
+                ->where([
+                    'status' => DelayedJobsTable::STATUS_BUSY
+                ])
+                ->all();
 
             $this->clear();
             $this->out(__('Delayed Jobs monitor <info>{0} - {1}</info>', $hostname, date('H:i:s')));
             $this->hr();
             $this->out(__('Running hosts: <info>{0}</info>', $host_count));
-            $this->out(__('Created per second (over last hour): <info>{0}</info>', $created_per_second));
-            $this->out(__('Completed per second (over last hour): <info>{0}</info>', $completed_per_second));
+            $this->out(__('Created / s: <info>{0}</info> <info>{1}</info> <info>{2}</info>', $created_per_second_5, $completed_per_second_15, $completed_per_second_hour));
+            $this->out(__('Completed /s : <info>{0}</info> <info>{1}</info> <info>{2}</info>', $completed_per_second_5,
+                $completed_per_second_15, $completed_per_second_hour));
             $this->hr();
 
             $this->out('Total job count');
@@ -428,6 +443,15 @@ class WatchdogShell extends Shell
                 $this->out(__('{0}: <info>{1}</info>', $name, (isset($statuses[$status]) ? $statuses[$status] : 0)));
             }
 
+            if (count($running_jobs) > 0) {
+                $this->hr();
+                $this->out('Running jobs:');
+                $running_job_text = [];
+                foreach ($running_jobs as $running_job) {
+                    $running_job_text[] = __('{0} :: {1}', $running_job->id, $running_job->locked_by);
+                }
+                $this->out(implode(' | ', $running_job_text));
+            }
             $this->hr();
             if ($last_failed) {
                 $this->out(__('<info>{0}</info> failed because <info>{1}</info> at <info>{2}</info>', $last_failed->id, $last_failed->last_message, $last_failed->failed_at->i18nFormat()));
