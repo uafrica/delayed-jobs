@@ -74,7 +74,7 @@ class HostShell extends Shell
                         );
                         $this->out(__(' - <error>Job not running, but should be</error>'), 1, Shell::VERBOSE);
                     } else {
-                        $time = time() - $running_job['start_time'];
+                        $time = time() - (isset($running_job['start_time']) ? $running_job['start_time'] : time());
                         unset($this->_runningJobs[$job_id]);
                         $this->out(__(' - <success>Job\'s done:</success> {0}, took {1} seconds', $job_id, $time), 1, Shell::VERBOSE);
                     }

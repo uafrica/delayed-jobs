@@ -129,11 +129,15 @@ class DelayedJobsTable extends Table
         return $this->save($job);
     }
 
-    public function nextSequence(DelayedJob $job)
+    /**
+     * @param array $job
+     * @return bool
+     */
+    public function nextSequence(array $job)
     {
         $conditions = [
-            'id !=' => $job->id,
-            'sequence' => $job->sequence,
+            'id !=' => $job['id'],
+            'sequence' => $job['sequence'],
             'status in' => [self::STATUS_BUSY, self::STATUS_FAILED]
         ];
         $this->connection(ConnectionManager::get('buffered'));
@@ -144,49 +148,48 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * @param array $conditions
-     * @param int $recursive_count
      * @return mixed
      */
-    public function nextJob($conditions = [], $sequences = [])
+    public function nextJob()
     {
         $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
 
         $job_query = $this
             ->find()
-            ->where($conditions + [
-                    'DelayedJobs.status in' => $allowed,
-                    'DelayedJobs.run_at <=' => new Time()
-                ])
+            ->select([
+                'id',
+                'sequence'
+            ])
+            ->where([
+                'DelayedJobs.status in' => $allowed,
+                'DelayedJobs.run_at <=' => new Time()
+            ])
             ->order([
                 'DelayedJobs.priority' => 'ASC',
                 'DelayedJobs.id' => 'ASC'
             ])
+            ->limit(1000) //We don't want to sit here for a million possible jobs, so we limit it to a reasonable limit
+            ->hydrate(false)
             ->bufferResults(false);
         $statement = $job_query->execute();
         $result_set = new ResultSet($job_query, $statement);
 
         foreach ($result_set as $job) {
-            if (!$job || !$job->sequence || !$this->nextSequence($job)) {
+            if (!$job || !$job['sequence'] || !$this->nextSequence($job)) {
                 break;
             }
         }
-
         $statement->closeCursor();
 
-        return $job;
+        if (empty($job)) {
+            return null;
+        }
+
+        return $this->get($job['id']);
     }
 
     public function getOpenJob($worker_id = '')
     {
-
-//        $this->PlatformStatus = ClassRegistry::init('PlatformStatus');
-//        $platform_status = $this->PlatformStatus->status();
-//        if ($platform_status['PlatformStatus']['status'] != 'online')
-//        {
-//            return array();
-//        }
-
         $job = $this->nextJob();
 
         if (!$job) {
@@ -211,7 +214,8 @@ class DelayedJobsTable extends Table
 
         $conditions = [
             'DelayedJobs.id' => $job->id,
-            'DelayedJobs.locked_by' => $worker_id
+            'DelayedJobs.locked_by' => $worker_id,
+            'DelayedJobs.status' => self::STATUS_BUSY
         ];
         if ($this->exists($conditions)) {
             return $job;
