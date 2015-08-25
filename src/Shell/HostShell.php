@@ -60,13 +60,14 @@ class HostShell extends Shell
 
             //## Check Status of Fired Jobs
             foreach ($this->_runningJobs as $job_id => $running_job) {
-                $this->out(__('Job status: {0}', $job_id), 1, Shell::VERBOSE);
                 $job = $this->DelayedJobs->get($job_id);
-
                 if ($job->locked_by !== $this->_workerId) {
                     //Not our job, why are we looking at it?
+                    unset($this->_runningJobs[$job_id]);
                     continue;
                 }
+
+                $this->out(__('Job status: {0}', $job_id), 1, Shell::VERBOSE);
 
                 $status = new Process();
                 $status->setPid($running_job['pid']);

@@ -191,18 +191,13 @@ class DelayedJobsTable extends Table
         $count = 1;
         foreach ($result_set as $job) {
             if ($job && !$this->nextSequence($job)) {
-                break;
+                return $this->get($job['id']);
             }
             $count++;
         }
         $statement->closeCursor();
 
-        //If no job was found, or we've looked through everything already then do not return a job.
-        if (empty($job) || $count >= 1000) {
-            return null;
-        }
-
-        return $this->get($job['id']);
+        return null;
     }
 
     public function getOpenJob($worker_id = '')
