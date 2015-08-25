@@ -395,7 +395,7 @@ class WatchdogShell extends Shell
                 'status' => DelayedJobsTable::STATUS_SUCCESS
             ], 'modified');
             $last_failed = $this->DelayedJobs->find()
-                ->select(['last_message'])
+                ->select(['id', 'last_message', 'failed_at'])
                 ->where([
                     'status' => DelayedJobsTable::STATUS_FAILED
                 ])
@@ -404,7 +404,7 @@ class WatchdogShell extends Shell
                 ])
                 ->first();
             $last_burried = $this->DelayedJobs->find()
-                ->select(['last_message'])
+                ->select(['id', 'last_message', 'failed_at'])
                 ->where([
                     'status' => DelayedJobsTable::STATUS_BURRIED
                 ])
@@ -430,10 +430,11 @@ class WatchdogShell extends Shell
 
             $this->hr();
             if ($last_failed) {
-                $this->out(__('Last failed reason: <info>{0}</info>', $last_failed->last_message));
+                $this->out(__('<info>{0}</info> failed because <info>{1}</info> at <info>{2}</info>', $last_failed->id, $last_failed->last_message, $last_failed->failed_at->i18nFormat()));
             }
             if ($last_burried) {
-                $this->out(__('Last burried reason: <info>{0}</info>', $last_burried->last_message));
+                $this->out(__('<info>{0}</info> was burried because <info>{1}</info> at <info>{2}</info>', $last_burried->id,
+                    $last_burried->last_message, $last_burried->failed_at->i18nFormat()));
             }
             usleep(250000);
         }

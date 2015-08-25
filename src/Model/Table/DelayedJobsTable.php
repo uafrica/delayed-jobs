@@ -174,14 +174,17 @@ class DelayedJobsTable extends Table
         $statement = $job_query->execute();
         $result_set = new ResultSet($job_query, $statement);
 
+        $count = 1;
         foreach ($result_set as $job) {
             if (!$job || !$job['sequence'] || !$this->nextSequence($job)) {
                 break;
             }
+            $count++;
         }
         $statement->closeCursor();
 
-        if (empty($job)) {
+        //If no job was found, or we've looked through everything already then do not return a job.
+        if (empty($job) || $count >= 1000) {
             return null;
         }
 
@@ -217,7 +220,7 @@ class DelayedJobsTable extends Table
             'DelayedJobs.locked_by' => $worker_id,
             'DelayedJobs.status' => self::STATUS_BUSY
         ];
-        if ($this->exists($conditions)) {
+        if ($this->exists($conditions) && !$this->nextSequence($job)) {
             return $job;
         } else {
             usleep(250000); //## Sleep for 0.25 seconds
