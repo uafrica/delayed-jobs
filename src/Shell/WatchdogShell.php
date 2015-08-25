@@ -391,17 +391,17 @@ class WatchdogShell extends Shell
                 ->group(['status'])
                 ->toArray();
             $created_per_second_hour = $this->DelayedJobs->jobsPerSecond();
-            $created_per_second_15 = $this->DelayedJobs->jobsPerSecond([], 'created', '+15 minutes');
-            $created_per_second_5 = $this->DelayedJobs->jobsPerSecond([], 'created', '+5 minutes');
+            $created_per_second_15 = $this->DelayedJobs->jobsPerSecond([], 'created', '-15 minutes');
+            $created_per_second_5 = $this->DelayedJobs->jobsPerSecond([], 'created', '-5 minutes');
             $completed_per_second_hour = $this->DelayedJobs->jobsPerSecond([
                 'status' => DelayedJobsTable::STATUS_SUCCESS
             ], 'modified');
             $completed_per_second_15 = $this->DelayedJobs->jobsPerSecond([
                 'status' => DelayedJobsTable::STATUS_SUCCESS
-            ], 'modified', '+15 minutes');
+            ], 'modified', '-15 minutes');
             $completed_per_second_5 = $this->DelayedJobs->jobsPerSecond([
                 'status' => DelayedJobsTable::STATUS_SUCCESS
-            ], 'modified', '+5 minutes');
+            ], 'modified', '-5 minutes');
             $last_failed = $this->DelayedJobs->find()
                 ->select(['id', 'last_message', 'failed_at'])
                 ->where([
