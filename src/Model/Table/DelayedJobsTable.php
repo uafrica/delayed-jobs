@@ -191,6 +191,7 @@ class DelayedJobsTable extends Table
         $count = 1;
         foreach ($result_set as $job) {
             if ($job && !$this->nextSequence($job)) {
+                $statement->closeCursor();
                 return $this->get($job['id']);
             }
             $count++;
