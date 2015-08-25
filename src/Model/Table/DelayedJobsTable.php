@@ -130,11 +130,17 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * @param array $job
+     * Returns true if another job with the same sequence number is already busy
+     *
+     * @param array|\Cake\ORM\Entity $job
      * @return bool
      */
-    public function nextSequence(array $job)
+    public function nextSequence($job)
     {
+        if (empty($job['sequence'])) {
+            return false;
+        }
+
         $conditions = [
             'id !=' => $job['id'],
             'sequence' => $job['sequence'],
@@ -176,7 +182,7 @@ class DelayedJobsTable extends Table
 
         $count = 1;
         foreach ($result_set as $job) {
-            if (!$job || !$job['sequence'] || !$this->nextSequence($job)) {
+            if ($job && !$this->nextSequence($job)) {
                 break;
             }
             $count++;
