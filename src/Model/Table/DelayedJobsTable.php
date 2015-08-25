@@ -145,6 +145,8 @@ class DelayedJobsTable extends Table
      */
     public function nextSequence($job)
     {
+        return false;
+
         if (empty($job['sequence'])) {
             return false;
         }
