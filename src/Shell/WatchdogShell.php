@@ -320,6 +320,12 @@ class WatchdogShell extends Shell
                 $this->_kill($host->pid, $host->worker_name);
             }
             $this->Hosts->delete($host);
+        } elseif ($host->status == HostsTable::STATUS_SHUTDOWN) {
+            $this->out('<info>Worker: ' .
+                $host->worker_name .
+                ' has been told to shutdown. It will do so in due course. (pid:' .
+                $host->pid .
+                ')</info>');
         } else {
             //## Something went wrong, horribly wrong
             if ($process_running) {
