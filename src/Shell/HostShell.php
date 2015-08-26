@@ -18,6 +18,15 @@ class HostShell extends Shell
     protected $_runningJobs = [];
     protected $_host;
 
+    protected function _welcome()
+    {
+        $hostname = php_uname('n');
+
+        $this->clear();
+        $this->out('Hostname: <info>' . $hostname . '</info>');
+        $this->hr();
+    }
+
     public function main()
     {
         $this->loadModel('DelayedJobs.Hosts');
@@ -56,14 +65,14 @@ class HostShell extends Shell
         $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
         $counter = 0;
         while (true) {
-            usleep(250000);
+            usleep(100000);
 
             $this->_startWorker();
             $this->_checkRunning();
 
             //Every 10 seconds we update our host entry to catch changes to worker count, or self shutdown
             $counter++;
-            if ($counter === self::UPDATETIMER * 4) {
+            if ($counter === self::UPDATETIMER * 10) {
                 $this->_host = $this->Hosts->find()
                     ->where([
                         'host_name' => $host_name,
@@ -149,7 +158,6 @@ class HostShell extends Shell
             $this->_host->status === HostsTable::STATUS_TO_KILL)) {
             return;
         }
-
 
         $worker_count = $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1);
         if (count($this->_runningJobs) >= $worker_count) {

@@ -46,13 +46,13 @@ class WorkerShell extends Shell
             return;
         }
 
-        $this->out('<info>Starting Job: ' . $job_id . '</info>');
+        $this->out('<info>Starting Job: ' . $job_id . '</info>', 1, Shell::VERBOSE);
 
         try {
             $job = $this->DelayedJobs->get($job_id);
             $this->out(' - Got job from DB', 1, Shell::VERBOSE);
         } catch (RecordNotFoundException $e) {
-            $this->out('<fail>Job ' . $job_id . ' not found (' . $e->getMessage() . ')</fail>');
+            $this->out('<fail>Job ' . $job_id . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
             $this->_stop(1);
             return;
         }
@@ -71,7 +71,7 @@ class WorkerShell extends Shell
             $this->out(' - Execution complete', 1, Shell::VERBOSE);
 
             $this->DelayedJobs->completed($job, is_string($response) ? $response : null);
-            $this->out('<success>Job ' . $job->id . ' Completed</success>');
+            $this->out('<success>Job ' . $job->id . ' Completed</success>', 1, Shell::VERBOSE);
 
             //Recuring job
             if ($response instanceof \DateTime) {
@@ -82,7 +82,7 @@ class WorkerShell extends Shell
         } catch (\Exception $exc) {
             //## Job Failed
             $this->DelayedJobs->failed($job, $exc->getMessage());
-            $this->out('<fail>Job ' . $job_id . ' Failed (' . $exc->getMessage() . ')</fail>');
+            $this->out('<fail>Job ' . $job_id . ' Failed (' . $exc->getMessage() . ')</fail>', 1, Shell::VERBOSE);
         }
 
         $this->Lock->unlock('DelayedJobs.WorkerShell.main.' . $job_id);

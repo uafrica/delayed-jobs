@@ -19,6 +19,7 @@ use DelayedJobs\Model\Entity\DelayedJob;
  */
 class DelayedJobsTable extends Table
 {
+    const SEARCH_LIMIT = 10000;
     const STATUS_NEW = 1;
     const STATUS_BUSY = 2;
     const STATUS_BURRIED = 3;
@@ -94,7 +95,6 @@ class DelayedJobsTable extends Table
         $job->retries = $job->retries + 1;
         $job->failed_at = new Time();
         $job->pid = null;
-        $job->locked_by = null;
 
         return $this->save($job);
     }
@@ -182,19 +182,17 @@ class DelayedJobsTable extends Table
                 'DelayedJobs.priority' => 'ASC',
                 'DelayedJobs.id' => 'ASC'
             ])
-            ->limit(1000) //We don't want to sit here for a million possible jobs, so we limit it to a reasonable limit
+            ->limit(self::SEARCH_LIMIT) //We don't want to sit here for a million possible jobs, so we limit it to a reasonable limit
             ->hydrate(false)
             ->bufferResults(false);
         $statement = $job_query->execute();
         $result_set = new ResultSet($job_query, $statement);
 
-        $count = 1;
         foreach ($result_set as $job) {
             if ($job && !$this->nextSequence($job)) {
                 $statement->closeCursor();
                 return $this->get($job['id']);
             }
-            $count++;
         }
         $statement->closeCursor();
 
@@ -221,7 +219,7 @@ class DelayedJobsTable extends Table
 
         $this->lock($job, $worker_id);
 
-        usleep(250000); //## Sleep for 0.25 seconds
+        usleep(100000); //## Sleep for 0.1 seconds
 
         //## check if this job is still allocated to this worker
         $job = $this->get($job->id);

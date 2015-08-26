@@ -67,7 +67,7 @@ class MonitorShell extends Shell
                     'failed_at' => 'DESC'
                 ])
                 ->first();
-            $last_burried = $this->DelayedJobs->find()
+            $last_buried = $this->DelayedJobs->find()
                 ->select(['id', 'last_message', 'failed_at'])
                 ->where([
                     'status' => DelayedJobsTable::STATUS_BURRIED
@@ -121,9 +121,9 @@ class MonitorShell extends Shell
                 $this->out(__('<info>{0}</info> failed because <info>{1}</info> at <info>{2}</info>', $last_failed->id,
                     $last_failed->last_message, $last_failed->failed_at->i18nFormat()));
             }
-            if ($last_burried) {
-                $this->out(__('<info>{0}</info> was burried because <info>{1}</info> at <info>{2}</info>',
-                    $last_burried->id, $last_burried->last_message, $last_burried->failed_at->i18nFormat()));
+            if ($last_buried) {
+                $this->out(__('<info>{0}</info> was buried because <info>{1}</info> at <info>{2}</info>',
+                    $last_buried->id, $last_buried->last_message, $last_buried->failed_at->i18nFormat()));
             }
 
             if ($this->param('snapshot')) {
