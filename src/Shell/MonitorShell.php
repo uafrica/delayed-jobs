@@ -125,7 +125,11 @@ class MonitorShell extends Shell
                 $this->out(__('<info>{0}</info> was burried because <info>{1}</info> at <info>{2}</info>',
                     $last_burried->id, $last_burried->last_message, $last_burried->failed_at->i18nFormat()));
             }
-            usleep(250000);
+
+            if ($this->param('snapshot')) {
+                break;
+            }
+            usleep(100000);
         }
     }
 
@@ -133,7 +137,13 @@ class MonitorShell extends Shell
     {
         $options = parent::getOptionParser();
 
-        $options->description('Allows monitoring of the delayed job service');
+        $options
+            ->description('Allows monitoring of the delayed job service')
+            ->addOption('snapshot', [
+                'help' => 'Generate a single snapshot of the delayed job service',
+                'boolean' => true,
+                'short' => 's'
+            ]);
 
         return $options;
     }
