@@ -62,7 +62,11 @@ class WatchdogShell extends Shell
 
         $this->out('Starting Watchdog');
 
-        $this->startHost();
+        if ($this->param('workers') > 0) {
+            $this->startHost();
+        } else {
+            $this->stopHost();
+        }
 
         $this->recuring();
         $this->clean();
@@ -352,11 +356,19 @@ class WatchdogShell extends Shell
         $this->startHost();
     }
 
+    public function monitor()
+    {
+        $this->out('Moved into own shell - use bin/cake DelayedJobs.monitor to run');
+    }
+
     public function getOptionParser()
     {
         $options = parent::getOptionParser();
 
         $options
+            ->addSubcommand('monitor', [
+                'help' => 'Moved into own shell - use bin/cake DelayedJobs.monitor to run'
+            ])
             ->addSubcommand('startHost', [
                 'help' => 'Starts a host'
             ])
