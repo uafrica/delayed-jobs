@@ -75,7 +75,7 @@ class WatchdogShell extends Shell
         $this->Lock->unlock('DelayedJobs.WorkerShell.main');
     }
 
-    public function startHost()
+    public function startHost($worker_count = null)
     {
         try {
             $host_name = php_uname('n');
@@ -85,9 +85,9 @@ class WatchdogShell extends Shell
             $host = $this->Hosts->findByHost($host_name, $worker_name);
 
             if (!$host) {
-                $this->_startHost($host_name, $worker_name);
+                $this->_startHost($host_name, $worker_name, $worker_count);
             } else {
-                $this->_checkHost($host);
+                $this->_checkHost($host, $worker_count);
             }
         } catch (Exception $exc) {
             $this->out('<fail>Failed: ' . $exc->getMessage() . '</fail>');
@@ -195,9 +195,9 @@ class WatchdogShell extends Shell
      * @param $worker_name
      * @return mixed
      */
-    protected function _startHost($host_name, $worker_name)
+    protected function _startHost($host_name, $worker_name, $worker_count = null)
     {
-        $worker_count = $this->param('workers') * $this->param('parallel');
+        $worker_count = $worker_count ?: $this->param('workers') * $this->param('parallel');
 
         if ($worker_count > Configure::read('dj.max.workers')) {
             $worker_count = Configure::read('dj.max.workers');
@@ -257,7 +257,7 @@ class WatchdogShell extends Shell
         return $host;
     }
 
-    protected function _checkHost($host)
+    protected function _checkHost($host, $worker_count = null)
     {
         $process = new Process();
         $process->setPid($host->pid);
@@ -269,7 +269,7 @@ class WatchdogShell extends Shell
             $process_running = false;
         }
 
-        $host->worker_count = $this->param('workers') * $this->param('parallel');
+        $host->worker_count = $worker_count ?: $this->param('workers') * $this->param('parallel');
 
         if ($host->status == HostsTable::STATUS_IDLE) {
             //## Host is idle, need to start it
@@ -344,16 +344,30 @@ class WatchdogShell extends Shell
      */
     public function reload()
     {
-        $hostname = php_uname('n');
+        $host_name = php_uname('n');
+        $worker_name = Configure::read('dj.service.name');
 
-        $hosts = $this->Hosts->findByHostName($hostname);
-        $host_count = $hosts->count();
+        $host = $this->Hosts->findByHost($host_name, $worker_name);
 
-        $this->out('Killing running host.', 1, Shell::VERBOSE);
+        if (!$host) {
+            $this->out('<error>No host running</error>');
+            $this->_stop(1);
+        }
+
+        $worker_count = $host->worker_count;
+
+        $this->out(' - Killing running host.');
         $this->stopHost();
 
-        $this->out('Restarting host.', 1, Shell::VERBOSE);
-        $this->startHost();
+        $this->out(' - Waiting for host to stop');
+        while ($host) {
+            $host = $this->Hosts->findByHost($host_name, $worker_name);
+            sleep(1);
+            $this->out('.', 0, Shell::VERBOSE);
+        }
+
+        $this->out(' - Restarting host.');
+        $this->startHost($worker_count);
     }
 
     public function monitor()
