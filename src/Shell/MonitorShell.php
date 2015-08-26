@@ -94,7 +94,7 @@ class MonitorShell extends Shell
             $this->out(__('Delayed Jobs monitor <info>{0}</info>', date('H:i:s')));
             $this->hr();
             $this->out(__('Running hosts: <info>{0}</info>', $host_count));
-            $this->out(__('Workers: <info>{0}</info>', $worker_count['worker_count']));
+            $this->out(__('Workers: <info>{0}</info>', $worker_count['worker_count'] ?: 0));
             $this->out(__('Created / s: <info>{0}</info> <info>{1}</info> <info>{2}</info>', $created_per_second_5,
                 $completed_per_second_15, $completed_per_second_hour));
             $this->out(__('Completed /s : <info>{0}</info> <info>{1}</info> <info>{2}</info>', $completed_per_second_5,
@@ -112,9 +112,9 @@ class MonitorShell extends Shell
                 $this->out('Running jobs:');
                 $running_job_text = [];
                 foreach ($running_jobs as $running_job) {
-                    $running_job_text[] = __('{0} :: {1}', $running_job->id, $running_job->locked_by);
+                    $this->out(__(" - {0} ({1}) with {2}", $running_job->id, $running_job->group, $running_job->locked_by));
+                    $this->out(__("\t{0}::{1}", $running_job->class, $running_job->method));
                 }
-                $this->out(implode(' | ', $running_job_text));
             }
             $this->hr();
             if ($last_failed) {
