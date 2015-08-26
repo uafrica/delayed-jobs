@@ -1,6 +1,6 @@
 Delayed Jobs
 =================
-This delayed Jobs module was build by Jaco Roux for the uAfrica eCommerce Platform.
+This delayed Jobs module was built by Jaco Roux for the uAfrica eCommerce Platform.
 
 A plugin that allows you to load priority tasks for async processing. This is a scalable plugin that can be executed on multiple application servers to distribute the load.
 
