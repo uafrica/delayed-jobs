@@ -16,6 +16,7 @@ class HostsTable extends Table
     const STATUS_RUNNING = 2;
     const STATUS_TO_KILL = 3;
     const STATUS_UNKNOWN = 4;
+    const STATUS_SHUTDOWN = 5;
 
     public function initialize(array $config)
     {
@@ -33,13 +34,14 @@ class HostsTable extends Table
         return $validator;
     }
 
-    public function started($host_name, $worker_name, $pid)
+    public function started($host_name, $worker_name, $pid, $worker_count)
     {
         $data = [
             'host_name' => $host_name,
             'worker_name' => $worker_name,
             'pid' => $pid,
             'status' => self::STATUS_RUNNING,
+            'worker_count' => $worker_count
         ];
 
         $host = $this->findByHost($host_name, $worker_name);
@@ -76,10 +78,5 @@ class HostsTable extends Table
         $host->status = $status;
 
         return $this->save($host);
-    }
-
-    public function checkConfig()
-    {
-        return Configure::check('dj.service.name');
     }
 }

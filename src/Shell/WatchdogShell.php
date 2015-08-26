@@ -37,6 +37,19 @@ class WatchdogShell extends Shell
         return $worker_count >= 1 ? $worker_count : 1;
     }
 
+    protected function _welcome()
+    {
+        if (!Configure::check('dj.service.name')) {
+            throw new Exception('Could not load config, check your load settings in bootstrap.php');
+        }
+        $hostname = php_uname('n');
+
+        $this->clear();
+        $this->out('App Name: <info>' . Configure::read('dj.service.name') . '</info>');
+        $this->out('Hostname: <info>' . $hostname . '</info>');
+        $this->hr();
+    }
+
     /**
      * @return void
      */
@@ -47,63 +60,56 @@ class WatchdogShell extends Shell
             $this->_stop(1);
         }
 
-        if (!$this->Hosts->checkConfig()) {
-            throw new Exception('Could not load config, check your load settings in bootstrap.php');
-        }
-        $hostname = php_uname('n');
+        $this->out('Starting Watchdog');
 
-        $this->out('App Name: <info>' . Configure::read('dj.service.name') . '</info>');
-        $this->out('Hostname: <info>' . $hostname . '</info>');
-
-        $this->_workers = (int)$this->param('workers');
-        if ($this->_workers < 0) {
-            $this->_workers = 1;
-        }
-
-        $this->_workers *= (int)$this->param('parallel');
-
-        if ($this->_workers > Configure::read('dj.max.hosts')) {
-            $this->_workers = Configure::read('dj.max.hosts');
-            $this->out('<error>Too many hosts (max_hosts:' . Configure::read('dj.max.hosts') . ')</error>');
-        }
-        $this->out('Starting Watchdog: <info>' . $this->_workers . ' Hosts</info>');
-
-        try {
-            for ($i = 1; $i <= $this->_workers; $i++) {
-                $this->_startWorker($i);
-            }
-
-            //## Check that no other or more processes are running, if they are found, kill them
-            $max_workers = Configure::read('dj.max.hosts');
-            for ($i = $this->_workers + 1; $i <= $max_workers; $i++) {
-                $worker_name = Configure::read('dj.service.name') . '_worker' . $i;
-
-                $host = $this->Hosts->findByHost($hostname, $worker_name);
-
-                if ($host) {
-                    //## Host is in the database, need to remove it
-                    $this->_kill($host->pid, $worker_name);
-                    $this->Hosts->delete($host);
-                } else {
-                    //## No Host record found, just kill if it exists
-                    $check_pid = (new Process())->getPidByName('DelayedJobs.Host ' . $worker_name);
-
-                    if ($check_pid) {
-                        $this->_kill($check_pid, $worker_name);
-                    }
-                }
-            }
-        } catch (Exception $exc) {
-            $this->out('<fail>Failed: ' . $exc->getMessage() . '</fail>');
-        }
-
-        $this->out('<success>' . $this->_workers . ' started.</success>.');
+        $this->startHost();
 
         $this->recuring();
         $this->clean();
 
         $this->out('<success>!! All done !!</success>');
         $this->Lock->unlock('DelayedJobs.WorkerShell.main');
+    }
+
+    public function startHost()
+    {
+        try {
+            $host_name = php_uname('n');
+
+            $worker_name = Configure::read('dj.service.name');
+
+            $host = $this->Hosts->findByHost($host_name, $worker_name);
+
+            if (!$host) {
+                $this->_startHost($host_name, $worker_name);
+            } else {
+                $this->_checkHost($host);
+            }
+        } catch (Exception $exc) {
+            $this->out('<fail>Failed: ' . $exc->getMessage() . '</fail>');
+        }
+    }
+
+    public function stopHost()
+    {
+        $host_name = php_uname('n');
+        $worker_name = Configure::read('dj.service.name');
+
+        $host = $this->Hosts->findByHost($host_name, $worker_name);
+
+        if ($host) {
+            //## Host is in the database, tell the host to gracefully shutdown
+            $this->out(__('Told {0}.{1} to shutdown', $host_name, $worker_name));
+            $host->status = HostsTable::STATUS_SHUTDOWN;
+            $this->Hosts->save($host);
+        } else {
+            //## No Host record found, just kill if it exists
+            $check_pid = (new Process())->getPidByName('DelayedJobs.Host ' . $worker_name);
+
+            if ($check_pid) {
+                $this->_kill($check_pid, $worker_name);
+            }
+        }
     }
 
     public function recuring()
@@ -187,26 +193,27 @@ class WatchdogShell extends Shell
      */
     protected function _startHost($host_name, $worker_name)
     {
-        $this->out(
-            sprintf(
-                '<info>Starting:</info> %s',
-                $worker_name
-            )
-        );
+        $worker_count = $this->param('workers') * $this->param('parallel');
+
+        if ($worker_count > Configure::read('dj.max.workers')) {
+            $worker_count = Configure::read('dj.max.workers');
+        }
+
+        $this->out(__('Starting: <info>{0}.{1}</info> with {2} workers', $host_name, $worker_name, $worker_count));
 
         $base_path = self::BASEPATH;
 
         //## Host not found in database, start it
         $process = new Process($base_path . $worker_name);
         $pid = $process->getPid();
-        $host = $this->Hosts->started($host_name, $worker_name, $pid);
+        $host = $this->Hosts->started($host_name, $worker_name, $pid, $worker_count);
 
         sleep(2);
 
         if (!$process->status()) {
             $this->Hosts->delete($host);
             $this->out(
-                '<error>Worker: ' . $worker_name . ' Could not be started, Trying to find process to kill it?</error>'
+                '<error>Host: ' . $worker_name . ' Could not be started, Trying to find process to kill it?</error>'
             );
 
             $check_pid = $process->getPidByName('DelayedJobs.host ' . $worker_name);
@@ -216,11 +223,11 @@ class WatchdogShell extends Shell
                 $process->stop();
 
                 $this->out(
-                    '<success>Worker: ' . $worker_name . ' Found a process and killed it</success>'
+                    '<success>Host: ' . $worker_name . ' Found a process and killed it</success>'
                 );
             } else {
                 $this->out(
-                    '<error>Worker: ' . $worker_name . ' Could not find any processes to kill</error>'
+                    '<error>Host: ' . $worker_name . ' Could not find any processes to kill</error>'
                 );
             }
         } elseif (!$host) {
@@ -258,6 +265,8 @@ class WatchdogShell extends Shell
             $process_running = false;
         }
 
+        $host->worker_count = $this->param('workers') * $this->param('parallel');
+
         if ($host->status == HostsTable::STATUS_IDLE) {
             //## Host is idle, need to start it
 
@@ -265,14 +274,14 @@ class WatchdogShell extends Shell
                 //## Process is actually running, update status
                 $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
                 $this->out(
-                    '<info>Worker: ' . $host->worker_name . ' Idle, Changing status (pid:' . $host->pid . ')</info>',
+                    '<info>Host: ' . $host->worker_name . ' Idle, Changing status (pid:' . $host->pid . ')</info>',
                     2
                 );
             } else {
                 //## Process is not running, delete record
                 $this->Hosts->delete($host);
                 $this->out(
-                    '<error>Worker: ' . $host->worker_name . ' Not running but reported IDLE state, Removing database
+                    '<error>Host: ' . $host->worker_name . ' Not running but reported IDLE state, Removing database
                      record (pid:' . $host->pid . ')</error>',
                     2
                 );
@@ -325,21 +334,6 @@ class WatchdogShell extends Shell
         }
     }
 
-    protected function _startWorker($worker_number)
-    {
-        $host_name = php_uname('n');
-
-        $worker_name = Configure::read('dj.service.name') . '_worker' . $worker_number;
-
-        $host = $this->Hosts->findByHost($host_name, $worker_name);
-
-        if (!$host) {
-            $this->_startHost($host_name, $worker_name);
-        } else {
-            $this->_checkHost($host);
-        }
-    }
-
     /**
      * Reloads all running hosts
      * @return void
@@ -351,117 +345,11 @@ class WatchdogShell extends Shell
         $hosts = $this->Hosts->findByHostName($hostname);
         $host_count = $hosts->count();
 
-        $this->out('Killing ' . $host_count . ' running hosts.', 1, Shell::VERBOSE);
-        foreach ($hosts as $host) {
-            $this->_kill($host->pid, $host->worker_name);
-            $this->Hosts->delete($host);
-        }
+        $this->out('Killing running host.', 1, Shell::VERBOSE);
+        $this->stopHost();
 
-        $this->out('Restarting ' . $host_count . ' hosts.', 1, Shell::VERBOSE);
-        for ($i = 1; $i <= $host_count; $i++) {
-            $this->_startWorker($i);
-        }
-    }
-
-    public function monitor()
-    {
-        $status_map = [
-            DelayedJobsTable::STATUS_NEW => 'New',
-            DelayedJobsTable::STATUS_BUSY => 'Busy',
-            DelayedJobsTable::STATUS_BURRIED => 'Buried',
-            DelayedJobsTable::STATUS_SUCCESS => 'Success',
-            DelayedJobsTable::STATUS_KICK => 'Kicked',
-            DelayedJobsTable::STATUS_FAILED => 'Failed',
-            DelayedJobsTable::STATUS_UNKNOWN => 'Unknown',
-        ];
-        $this->loadModel('DelayedJobs.DelayedJobs');
-        $hostname = php_uname('n');
-
-        while (true) {
-            $statuses = $this->DelayedJobs->find('list', [
-                    'keyField' => 'status',
-                    'valueField' => 'counter'
-                ])
-                ->select([
-                    'status',
-                    'counter' => $this->DelayedJobs->find()
-                        ->func()
-                        ->count('id')
-                ])
-                ->group(['status'])
-                ->toArray();
-            $created_per_second_hour = $this->DelayedJobs->jobsPerSecond();
-            $created_per_second_15 = $this->DelayedJobs->jobsPerSecond([], 'created', '-15 minutes');
-            $created_per_second_5 = $this->DelayedJobs->jobsPerSecond([], 'created', '-5 minutes');
-            $completed_per_second_hour = $this->DelayedJobs->jobsPerSecond([
-                'status' => DelayedJobsTable::STATUS_SUCCESS
-            ], 'modified');
-            $completed_per_second_15 = $this->DelayedJobs->jobsPerSecond([
-                'status' => DelayedJobsTable::STATUS_SUCCESS
-            ], 'modified', '-15 minutes');
-            $completed_per_second_5 = $this->DelayedJobs->jobsPerSecond([
-                'status' => DelayedJobsTable::STATUS_SUCCESS
-            ], 'modified', '-5 minutes');
-            $last_failed = $this->DelayedJobs->find()
-                ->select(['id', 'last_message', 'failed_at'])
-                ->where([
-                    'status' => DelayedJobsTable::STATUS_FAILED
-                ])
-                ->order([
-                    'failed_at' => 'DESC'
-                ])
-                ->first();
-            $last_burried = $this->DelayedJobs->find()
-                ->select(['id', 'last_message', 'failed_at'])
-                ->where([
-                    'status' => DelayedJobsTable::STATUS_BURRIED
-                ])
-                ->order([
-                    'failed_at' => 'DESC'
-                ])
-                ->first();
-            $host_count = $this->Hosts->find()->count();
-            $running_jobs = $this->DelayedJobs
-                ->find()
-                ->where([
-                    'status' => DelayedJobsTable::STATUS_BUSY
-                ])
-                ->all();
-
-            $this->clear();
-            $this->out(__('Delayed Jobs monitor <info>{0} - {1}</info>', $hostname, date('H:i:s')));
-            $this->hr();
-            $this->out(__('Running hosts: <info>{0}</info>', $host_count));
-            $this->out(__('Created / s: <info>{0}</info> <info>{1}</info> <info>{2}</info>', $created_per_second_5, $completed_per_second_15, $completed_per_second_hour));
-            $this->out(__('Completed /s : <info>{0}</info> <info>{1}</info> <info>{2}</info>', $completed_per_second_5,
-                $completed_per_second_15, $completed_per_second_hour));
-            $this->hr();
-
-            $this->out('Total job count');
-            $this->out('');
-            foreach ($status_map as $status => $name) {
-                $this->out(__('{0}: <info>{1}</info>', $name, (isset($statuses[$status]) ? $statuses[$status] : 0)));
-            }
-
-            if (count($running_jobs) > 0) {
-                $this->hr();
-                $this->out('Running jobs:');
-                $running_job_text = [];
-                foreach ($running_jobs as $running_job) {
-                    $running_job_text[] = __('{0} :: {1}', $running_job->id, $running_job->locked_by);
-                }
-                $this->out(implode(' | ', $running_job_text));
-            }
-            $this->hr();
-            if ($last_failed) {
-                $this->out(__('<info>{0}</info> failed because <info>{1}</info> at <info>{2}</info>', $last_failed->id, $last_failed->last_message, $last_failed->failed_at->i18nFormat()));
-            }
-            if ($last_burried) {
-                $this->out(__('<info>{0}</info> was burried because <info>{1}</info> at <info>{2}</info>', $last_burried->id,
-                    $last_burried->last_message, $last_burried->failed_at->i18nFormat()));
-            }
-            usleep(250000);
-        }
+        $this->out('Restarting host.', 1, Shell::VERBOSE);
+        $this->startHost();
     }
 
     public function getOptionParser()
@@ -469,32 +357,29 @@ class WatchdogShell extends Shell
         $options = parent::getOptionParser();
 
         $options
+            ->addSubcommand('startHost', [
+                'help' => 'Starts a host'
+            ])
+            ->addSubcommand('stopHost', [
+                'help' => 'Stops a host'
+            ])
             ->addSubcommand('clean', [
                 'help' => 'Cleans out jobs that are completed and older than 4 weeks'
             ])
             ->addSubcommand('recuring', [
                 'help' => 'Fires the recuring event and creates the initial recuring job instance'
             ])
-            ->addSubcommand('monitor', [
-                'help' => 'Allows monitoring of the delayed job service'
-            ])
             ->addSubcommand('reload', [
                 'help' => 'Restarts all running worker hosts'
             ])
-            ->addOption(
-                'parallel',
-                [
+            ->addOption('parallel', [
                     'help' => 'Number of parallel workers (worker count is multiplied by this)',
                     'default' => 1
-                ]
-            )
-            ->addOption(
-                'workers',
-                [
+                ])
+            ->addOption('workers', [
                     'help' => 'Number of workers to run',
                     'default' => $this->_autoWorker()
-                ]
-            );
+                ]);;
 
         return $options;
     }
