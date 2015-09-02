@@ -158,7 +158,7 @@ class HostShell extends Shell
     {
         $this->out(__('## Updating jobs ##'), 1, Shell::VERBOSE);
 
-        $db_jobs = $this->DelayedJobs->getByHost($this->_workerId);
+        $db_jobs = $this->DelayedJobs->getNotDoneByHost($this->_workerId);
         foreach ($db_jobs as $running_job) {
             if (empty($this->_runningJobs[$running_job->id])) {
                 $this->_runningJobs[$running_job->id] = [
