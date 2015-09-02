@@ -182,13 +182,13 @@ class HostShell extends Shell
 
     protected function _startWorkers()
     {
-        $start_time = time();
+        $start_time = microtime(true);
         while (count($this->_runningJobs) < $this->_workerCount)
         {
             $this->_startWorker();
 
             //We've timed out on this round
-            if (time() - $start_time > 5) {
+            if (microtime(true) - $start_time > 1.0) {
                 break;
             }
         }
