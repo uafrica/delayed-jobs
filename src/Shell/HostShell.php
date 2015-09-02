@@ -116,8 +116,8 @@ class HostShell extends Shell
             $this->out(__('Job status: {0} :: ', $job_id), 0, Shell::VERBOSE);
 
             $status = new Process();
-            $status->setPid($running_job['pid']);
-            $process_running = $running_job['pid'] && $status->status();
+            $status->setPid($job->pid);
+            $process_running = $job->pid && $status->status();
 
             /*
              * If the process is no longer running, there is a change that it completed successfully
@@ -125,6 +125,7 @@ class HostShell extends Shell
              */
             if (!$process_running && $job->status === DelayedJobsTable::STATUS_BUSY) {
                 usleep(50000);
+                $this->out('.', 0, Shell::VERBOSE);
                 $job = $this->DelayedJobs->get($job_id, [
                     'fields' => [
                         'id',
@@ -135,7 +136,7 @@ class HostShell extends Shell
                 ]);
             }
 
-            if (!$process_running && $job->status === DelayedJobsTable::STATUS_BUSY) {
+            if ($job->pid && !$process_running && $job->status === DelayedJobsTable::STATUS_BUSY) {
                 //## Make sure that this job is not marked as running
                     $this->DelayedJobs->failed(
                         $job,
@@ -143,7 +144,7 @@ class HostShell extends Shell
                     );
                     unset($this->_runningJobs[$job_id]);
                     $this->out(__('<error>Job not running, but should be</error>'), 1, Shell::VERBOSE);
-            } elseif (!$process_running) {
+            } elseif (!$process_running || !$job->pid) {
                 $time = time() - (isset($running_job['start_time']) ? $running_job['start_time'] : time());
                 unset($this->_runningJobs[$job_id]);
                 $this->out(__('<success>Job\'s done:</success> took {0} seconds', $time), 1, Shell::VERBOSE);
