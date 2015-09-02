@@ -70,6 +70,7 @@ class MonitorShell extends Shell
                 ->first();
             if ($start || time() - $time > 5) {
                 $start = false;
+                $time = time();
                 $running_jobs = $this->DelayedJobs->find()
                     ->where([
                         'status' => DelayedJobsTable::STATUS_BUSY
