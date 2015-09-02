@@ -24,7 +24,7 @@ class HostShell extends Shell
         $hostname = php_uname('n');
 
         $this->clear();
-        $this->out('Hostname: <info>' . $hostname . '</info>');
+        $this->out('Hostname: <info>' . $hostname . '</info>', 1, Shell::VERBOSE);
         $this->hr();
     }
 

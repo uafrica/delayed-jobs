@@ -19,16 +19,11 @@ class WorkerShell extends Shell
     public $modelClass = 'DelayedJobs.DelayedJobs';
 
     /**
-     * @param \DelayedJobs\Lock $lock Inject lock object
      * @return void
      * @codeCoverageIgnore
      */
-    public function startup(Lock $lock = null)
+    public function startup()
     {
-        if (!$lock) {
-            $lock = new Lock();
-        }
-        $this->Lock = $lock;
     }
 
     public function main()
@@ -38,7 +33,8 @@ class WorkerShell extends Shell
         }
 
         if (empty($job_id)) {
-            throw new Exception("No Job ID received");
+            $this->out("<error>No Job ID received</error>");
+            $this->_stop(1);
         }
 
         if (!$this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id)) {
@@ -58,11 +54,13 @@ class WorkerShell extends Shell
         }
         //## First check if job is not locked
         if (!$this->param('force') && $job->status == DelayedJobsTable::STATUS_SUCCESS) {
-            throw new Exception("Job previously completed, Why is is being called");
+            $this->out("<error>Job previously completed, Why is is being called again</error>");
+            $this->_stop(2);
         }
 
         if (!$this->param('force') && $job->status == DelayedJobsTable::STATUS_BURRIED) {
-            throw new Exception("Job Failed too many times, but why was it called again");
+            $this->out("<error>Job Failed too many times, but why was it called again</error>");
+            $this->_stop(3);
         }
 
         try {
@@ -84,8 +82,6 @@ class WorkerShell extends Shell
             $this->DelayedJobs->failed($job, $exc->getMessage());
             $this->out('<fail>Job ' . $job_id . ' Failed (' . $exc->getMessage() . ')</fail>', 1, Shell::VERBOSE);
         }
-
-        $this->Lock->unlock('DelayedJobs.WorkerShell.main.' . $job_id);
     }
 
     /**
