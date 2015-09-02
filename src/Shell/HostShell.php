@@ -10,7 +10,7 @@ use DelayedJobs\Process;
 
 class HostShell extends Shell
 {
-    const UPDATETIMER = 5; //In seconds
+    const UPDATETIMER = 30; //In seconds
     public $Lock;
     public $modelClass = 'DelayedJobs.DelayedJobs';
     protected $_workerId;
@@ -70,6 +70,7 @@ class HostShell extends Shell
         //## Need to make sure that any running jobs for this host is in the array job_pids
         $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
         $start_time = time();
+        $this->_updateRunning();
         while (true) {
             $this->_startWorkers();
             usleep(50000);
@@ -109,7 +110,6 @@ class HostShell extends Shell
 
     protected function _checkRunning()
     {
-        $this->out(__('## Checking jobs ##'), 1, Shell::VERBOSE);
         foreach ($this->_runningJobs as $job_id => &$running_job) {
             $job = $running_job['job'];
 
@@ -167,8 +167,6 @@ class HostShell extends Shell
 
     protected function _updateRunning()
     {
-        $this->out(__('## Updating jobs ##'), 1, Shell::VERBOSE);
-
         $db_jobs = $this->DelayedJobs->getRunningByHost($this->_workerId);
         foreach ($db_jobs as $running_job) {
             if (empty($this->_runningJobs[$running_job->id])) {
@@ -188,7 +186,8 @@ class HostShell extends Shell
             $this->_startWorker();
 
             //We've timed out on this round
-            if (microtime(true) - $start_time > 1.0) {
+            if (microtime(true) - $start_time > 30.0) {
+                $this->out('<error>Timeout</error>', 1, Shell::VERBOSE);
                 break;
             }
         }
