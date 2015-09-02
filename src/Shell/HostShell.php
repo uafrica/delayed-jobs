@@ -185,15 +185,15 @@ class HostShell extends Shell
         $start_time = time();
         while (count($this->_runningJobs) < $this->_workerCount)
         {
-            $worker_started = $this->_startWorker();
+            $this->_startWorker();
 
-            //No jobs available, or we've timed out on this round
-            if (!$worker_started || time() - $start_time > 2) {
+            //We've timed out on this round
+            if (time() - $start_time > 5) {
                 break;
             }
         }
 
-        $this->out(__('Full with <info>{0}</info>', count($this->_runningJobs)), 1, Shell::VERBOSE);
+        $this->out(__('Full with <info>{0}</info> out of <info>{1}</info>', count($this->_runningJobs), $this->_workerCount), 1, Shell::VERBOSE);
     }
 
     protected function _startWorker()
