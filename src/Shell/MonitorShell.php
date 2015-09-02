@@ -24,6 +24,8 @@ class MonitorShell extends Shell
         $this->loadModel('DelayedJobs.DelayedJobs');
         $hostname = php_uname('n');
 
+        $time = time();
+        $start = true;
         while (true) {
             $statuses = $this->DelayedJobs->find('list', [
                 'keyField' => 'status',
@@ -58,24 +60,6 @@ class MonitorShell extends Shell
             $completed_per_second_5 = $this->DelayedJobs->jobsPerSecond([
                 'status' => DelayedJobsTable::STATUS_SUCCESS
             ], 'modified', '-5 minutes');
-            $last_failed = $this->DelayedJobs->find()
-                ->select(['id', 'last_message', 'failed_at'])
-                ->where([
-                    'status' => DelayedJobsTable::STATUS_FAILED
-                ])
-                ->order([
-                    'failed_at' => 'DESC'
-                ])
-                ->first();
-            $last_buried = $this->DelayedJobs->find()
-                ->select(['id', 'last_message', 'failed_at'])
-                ->where([
-                    'status' => DelayedJobsTable::STATUS_BURRIED
-                ])
-                ->order([
-                    'failed_at' => 'DESC'
-                ])
-                ->first();
             $host_count = $this->Hosts->find()
                 ->count();
             $worker_count = $this->Hosts->find()
@@ -84,11 +68,32 @@ class MonitorShell extends Shell
                 ])
                 ->hydrate(false)
                 ->first();
-            $running_jobs = $this->DelayedJobs->find()
-                ->where([
-                    'status' => DelayedJobsTable::STATUS_BUSY
-                ])
-                ->all();
+            if ($start || time() - $time > 5) {
+                $start = false;
+                $running_jobs = $this->DelayedJobs->find()
+                    ->where([
+                        'status' => DelayedJobsTable::STATUS_BUSY
+                    ])
+                    ->all();
+                $last_failed = $this->DelayedJobs->find()
+                    ->select(['id', 'last_message', 'failed_at'])
+                    ->where([
+                        'status' => DelayedJobsTable::STATUS_FAILED
+                    ])
+                    ->order([
+                        'failed_at' => 'DESC'
+                    ])
+                    ->first();
+                $last_buried = $this->DelayedJobs->find()
+                    ->select(['id', 'last_message', 'failed_at'])
+                    ->where([
+                        'status' => DelayedJobsTable::STATUS_BURRIED
+                    ])
+                    ->order([
+                        'failed_at' => 'DESC'
+                    ])
+                    ->first();
+            }
 
             $this->clear();
             $this->out(__('Delayed Jobs monitor <info>{0}</info>', date('H:i:s')));
@@ -129,7 +134,7 @@ class MonitorShell extends Shell
             if ($this->param('snapshot')) {
                 break;
             }
-            usleep(100000);
+            usleep(50000);
         }
     }
 
