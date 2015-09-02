@@ -279,10 +279,6 @@ class DelayedJobsTable extends Table
         ];
 
         $jobs = $this->find()
-            ->select([
-                'DelayedJobs.id',
-                'DelayedJobs.pid'
-            ])
             ->where($conditions)
             ->order([
                 'DelayedJobs.priority' => 'ASC',
