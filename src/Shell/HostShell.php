@@ -109,6 +109,7 @@ class HostShell extends Shell
 
     protected function _checkRunning()
     {
+        $this->out(__('## Checking jobs ##'), 1, Shell::VERBOSE);
         foreach ($this->_runningJobs as $job_id => &$running_job) {
             $job = $running_job['job'];
 
@@ -155,6 +156,8 @@ class HostShell extends Shell
 
     protected function _updateRunning()
     {
+        $this->out(__('## Updating jobs ##'), 1, Shell::VERBOSE);
+
         $db_jobs = $this->DelayedJobs->getByHost($this->_workerId);
         foreach ($db_jobs as $running_job) {
             if (empty($this->_runningJobs[$running_job->id])) {
