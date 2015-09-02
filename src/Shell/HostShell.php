@@ -71,9 +71,10 @@ class HostShell extends Shell
         $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
         $start_time = time();
         while (true) {
-            $this->_updateRunning();
             $this->_startWorkers();
             usleep(50000);
+
+            $this->_updateRunning();
             $this->_checkRunning();
 
             //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown

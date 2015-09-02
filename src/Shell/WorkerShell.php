@@ -10,10 +10,6 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
 class WorkerShell extends Shell
 {
     /**
-     * @var \DelayedJobs\Lock
-     */
-    public $Lock;
-    /**
      * @var string
      */
     public $modelClass = 'DelayedJobs.DelayedJobs';
@@ -35,11 +31,6 @@ class WorkerShell extends Shell
         if (empty($job_id)) {
             $this->out("<error>No Job ID received</error>");
             $this->_stop(1);
-        }
-
-        if (!$this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id)) {
-            $this->_stop(1);
-            return;
         }
 
         $this->out('<info>Starting Job: ' . $job_id . '</info>', 1, Shell::VERBOSE);
