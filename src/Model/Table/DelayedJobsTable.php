@@ -267,6 +267,30 @@ class DelayedJobsTable extends Table
         return $jobs;
     }
 
+    /**
+     * @param $host_id
+     * @return \Cake\ORM\Query
+     */
+    public function getByHost($host_id)
+    {
+        $conditions = [
+            'DelayedJobs.locked_by' => $host_id,
+        ];
+
+        $jobs = $this->find()
+            ->select([
+                'DelayedJobs.id',
+                'DelayedJobs.pid'
+            ])
+            ->where($conditions)
+            ->order([
+                'DelayedJobs.priority' => 'ASC',
+                'DelayedJobs.id' => 'ASC'
+            ]);
+
+        return $jobs;
+    }
+
     public function jobsPerSecond($conditions = [], $field = 'created', $time_range = '-1 hour')
     {
         $start_time = new Time($time_range);

@@ -112,13 +112,14 @@ class HostShell extends Shell
         foreach ($this->_runningJobs as $job_id => &$running_job) {
             $job = $running_job['job'];
 
+            $this->out(__('Job status: {0} :: ', $job_id), 0, Shell::VERBOSE);
+
             if ($job->locked_by !== $this->_workerId) {
                 //Not our job, why are we looking at it?
+                $this->out(__('<error>Not our job - ignoring it</error>'), 1, Shell::VERBOSE);
                 unset($this->_runningJobs[$job_id]);
                 continue;
             }
-
-            $this->out(__('Job status: {0} :: ', $job_id), 0, Shell::VERBOSE);
 
             $status = new Process();
             $status->setPid($running_job['pid']);
@@ -154,7 +155,7 @@ class HostShell extends Shell
 
     protected function _updateRunning()
     {
-        $db_jobs = $this->DelayedJobs->getRunningByHost($this->_workerId);
+        $db_jobs = $this->DelayedJobs->getByHost($this->_workerId);
         foreach ($db_jobs as $running_job) {
             if (empty($this->_runningJobs[$running_job->id])) {
                 $this->_runningJobs[$running_job->id] = [
