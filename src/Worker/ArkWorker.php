@@ -11,7 +11,7 @@ class ArkWorker
 
     protected function _bcfact($n)
     {
-        return ($n == 0 || $n == 1) ? 1 : bcmul($n, bcfact($n - 1));
+        return ($n == 0 || $n == 1) ? 1 : bcmul($n, $this->_bcfact($n - 1));
     }
 
     protected function _bcpi($precision)
@@ -31,7 +31,7 @@ class ArkWorker
         return bcdiv(1, (bcmul(12, ($num))), $precision);
     }
 
-    public function flood($payload)
+    public function flood($payload, $job)
     {
         $command = 'ps -p ' . $payload['pid'];
         exec($command, $op);
@@ -50,8 +50,16 @@ class ArkWorker
 
         $number_forks = rand($payload['first'] ? 1 : 0, $payload['max_fork']);
         $payload['first'] = false;
+        $sequence = rand(0, 9) > 0 ? null : 'ark_' . $job->id . '_' . time();
         for ($i = 0; $i < $number_forks; $i++) {
-            $this->_queueJob('FloodTest', 'DelayedJobs\Worker\ArkWorker', 'flood', $payload, 20);
+            $this->_queueJob(
+                'FloodTest',
+                'DelayedJobs\Worker\ArkWorker',
+                'flood',
+                $payload,
+                20,
+                $sequence
+            );
         }
 
         return $pi;

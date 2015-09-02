@@ -39,7 +39,8 @@ class NoahShell extends Shell
                     'work' => $work,
                     'pid' => getmypid()
                 ],
-                20
+                rand(1, 10) * 10,
+                'initial_' . rand(0, 100)
             );
         }
 

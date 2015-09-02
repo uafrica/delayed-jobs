@@ -167,36 +167,34 @@ class DelayedJobsTable extends Table
     public function nextJob()
     {
         $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
+        $run_at = new Time();
 
-        $job_query = $this
+        $sequence_query = $this
             ->find()
-            ->select([
-                'id',
-                'sequence'
-            ])
+            ->select(['sequence'])
+            ->where([
+                'or' => [
+                    'status' => self::STATUS_BUSY,
+                    'and' => [
+                        'status' => self::STATUS_FAILED,
+                        'run_at >' => $run_at
+                    ]
+                ],
+                'sequence is not' => null
+            ]);
+
+        return $this
+            ->find()
             ->where([
                 'DelayedJobs.status in' => $allowed,
-                'DelayedJobs.run_at <=' => new Time()
+                'DelayedJobs.run_at <=' => $run_at,
+                'DelayedJobs.sequence NOT IN' => $sequence_query
             ])
             ->order([
                 'DelayedJobs.priority' => 'ASC',
                 'DelayedJobs.id' => 'ASC'
             ])
-            ->limit(self::SEARCH_LIMIT) //We don't want to sit here for a million possible jobs, so we limit it to a reasonable limit
-            ->hydrate(false)
-            ->bufferResults(false);
-        $statement = $job_query->execute();
-        $result_set = new ResultSet($job_query, $statement);
-
-        foreach ($result_set as $job) {
-            if ($job && !$this->nextSequence($job)) {
-                $statement->closeCursor();
-                return $this->get($job['id']);
-            }
-        }
-        $statement->closeCursor();
-
-        return null;
+            ->first();
     }
 
     public function getOpenJob($worker_id = '')
@@ -241,8 +239,6 @@ class DelayedJobsTable extends Table
                 'scope' => 'delayed_jobs'
             ]);
         }
-
-        usleep(250000); //## Sleep for 0.25 seconds
     }
 
     /**

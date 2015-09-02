@@ -105,6 +105,7 @@ class WatchdogShell extends Shell
             //## Host is in the database, tell the host to gracefully shutdown
             $this->out(__('Told {0}.{1} to shutdown', $host_name, $worker_name));
             $host->status = HostsTable::STATUS_SHUTDOWN;
+            $host->worker_count = 0;
             $this->Hosts->save($host);
         } else {
             //## No Host record found, just kill if it exists
