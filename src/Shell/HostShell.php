@@ -115,16 +115,9 @@ class HostShell extends Shell
 
             $this->out(__('Job status: {0} :: ', $job_id), 0, Shell::VERBOSE);
 
-            if ($job->locked_by !== $this->_workerId) {
-                //Not our job, why are we looking at it?
-                $this->out(__('<error>Not our job - ignoring it</error>'), 1, Shell::VERBOSE);
-                unset($this->_runningJobs[$job_id]);
-                continue;
-            }
-
             $status = new Process();
             $status->setPid($running_job['pid']);
-            $process_running = $status->status();
+            $process_running = $running_job['pid'] && $status->status();
             if (!$process_running && $job->status === DelayedJobsTable::STATUS_BUSY) {
                 //## Make sure that this job is not marked as running
                     $this->DelayedJobs->failed(
