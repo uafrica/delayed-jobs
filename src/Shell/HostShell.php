@@ -118,6 +118,23 @@ class HostShell extends Shell
             $status = new Process();
             $status->setPid($running_job['pid']);
             $process_running = $running_job['pid'] && $status->status();
+
+            /*
+             * If the process is no longer running, there is a change that it completed successfully
+             * We fetch the job from the DB in that case to make sure
+             */
+            if (!$process_running && $job->status === DelayedJobsTable::STATUS_BUSY) {
+                usleep(50000);
+                $job = $this->DelayedJobs->get($job_id, [
+                    'fields' => [
+                        'id',
+                        'pid',
+                        'locked_by',
+                        'status'
+                    ]
+                ]);
+            }
+
             if (!$process_running && $job->status === DelayedJobsTable::STATUS_BUSY) {
                 //## Make sure that this job is not marked as running
                     $this->DelayedJobs->failed(
@@ -151,7 +168,7 @@ class HostShell extends Shell
     {
         $this->out(__('## Updating jobs ##'), 1, Shell::VERBOSE);
 
-        $db_jobs = $this->DelayedJobs->getNotDoneByHost($this->_workerId);
+        $db_jobs = $this->DelayedJobs->getRunningByHost($this->_workerId);
         foreach ($db_jobs as $running_job) {
             if (empty($this->_runningJobs[$running_job->id])) {
                 $this->_runningJobs[$running_job->id] = [

@@ -255,33 +255,13 @@ class DelayedJobsTable extends Table
         $jobs = $this
             ->find()
             ->select([
-                'DelayedJobs.id',
-                'DelayedJobs.pid'
+                'id',
+                'pid',
+                'locked_by',
+                'status'
             ])
             ->where($conditions)
             ->order([
-                'DelayedJobs.priority' => 'ASC',
-                'DelayedJobs.id' => 'ASC'
-            ]);
-
-        return $jobs;
-    }
-
-    /**
-     * @param $host_id
-     * @return \Cake\ORM\Query
-     */
-    public function getNotDoneByHost($host_id)
-    {
-        $conditions = [
-            'DelayedJobs.locked_by' => $host_id,
-            'DelayedJobs.status not in' => [self::STATUS_SUCCESS, self::STATUS_BURRIED, self::STATUS_UNKNOWN],
-        ];
-
-        $jobs = $this->find()
-            ->where($conditions)
-            ->order([
-                'DelayedJobs.priority' => 'ASC',
                 'DelayedJobs.id' => 'ASC'
             ]);
 
