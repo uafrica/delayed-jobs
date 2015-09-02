@@ -271,10 +271,11 @@ class DelayedJobsTable extends Table
      * @param $host_id
      * @return \Cake\ORM\Query
      */
-    public function getByHost($host_id)
+    public function getNotDoneByHost($host_id)
     {
         $conditions = [
             'DelayedJobs.locked_by' => $host_id,
+            'DelayedJobs.status not in' => [self::STATUS_SUCCESS, self::STATUS_BURRIED, self::STATUS_UNKNOWN],
         ];
 
         $jobs = $this->find()
