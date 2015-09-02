@@ -114,7 +114,7 @@ class MonitorShell extends Shell
 
             if (count($running_jobs) > 0) {
                 $this->hr();
-                $this->out('Running jobs:');
+                $this->out(__('Running job snapshot <info>{0} seconds ago</info>:', time() - $time));
                 $running_job_text = [];
                 foreach ($running_jobs as $running_job) {
                     $this->out(__(" - {0} ({1}) with {2}", $running_job->id, $running_job->group, $running_job->locked_by));

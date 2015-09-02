@@ -177,6 +177,8 @@ class HostShell extends Shell
                 break;
             }
         }
+
+        $this->out(__('Full with <info>{0}</info>', count($this->_runningJobs)), 1, Shell::VERBOSE);
     }
 
     protected function _startWorker()
