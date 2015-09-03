@@ -307,7 +307,7 @@ class DelayedJobsTable extends Table
     {
         return $this->deleteAll([
             'status' => self::STATUS_SUCCESS,
-            'modified <=' => new Time('-4 weeks')
+            'modified <=' => new Time('-2 weeks')
         ]);
     }
 
