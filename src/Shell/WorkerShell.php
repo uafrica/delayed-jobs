@@ -10,10 +10,6 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
 class WorkerShell extends Shell
 {
     /**
-     * @var \DelayedJobs\Lock
-     */
-    public $Lock;
-    /**
      * @var string
      */
     public $modelClass = 'DelayedJobs.DelayedJobs';
@@ -25,10 +21,6 @@ class WorkerShell extends Shell
      */
     public function startup(Lock $lock = null)
     {
-        if (!$lock) {
-            $lock = new Lock();
-        }
-        $this->Lock = $lock;
     }
 
     public function main()
@@ -39,11 +31,6 @@ class WorkerShell extends Shell
 
         if (empty($job_id)) {
             throw new Exception("No Job ID received");
-        }
-
-        if (!$this->Lock->lock('DelayedJobs.WorkerShell.main.' . $job_id)) {
-            $this->_stop(1);
-            return;
         }
 
         $this->out('<info>Starting Job: ' . $job_id . '</info>');
@@ -84,8 +71,6 @@ class WorkerShell extends Shell
             $this->DelayedJobs->failed($job, $exc->getMessage());
             $this->out('<fail>Job ' . $job_id . ' Failed (' . $exc->getMessage() . ')</fail>');
         }
-
-        $this->Lock->unlock('DelayedJobs.WorkerShell.main.' . $job_id);
     }
 
     /**

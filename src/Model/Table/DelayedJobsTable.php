@@ -167,38 +167,31 @@ class DelayedJobsTable extends Table
     public function nextJob()
     {
         $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
+        $run_at = new Time();
+        $sequence_query = $this->find()
+            ->select(['sequence'])
+            ->where([
+                'or' => [
+                    'status' => self::STATUS_BUSY,
+                    'and' => [
+                        'status' => self::STATUS_FAILED,
+                        'run_at >' => $run_at
+                    ]
+                ],
+                'sequence is not' => null
+            ]);
 
-        $job_query = $this
-            ->find()
-            ->select([
-                'id',
-                'sequence'
-            ])
+        return $this->find()
             ->where([
                 'DelayedJobs.status in' => $allowed,
-                'DelayedJobs.run_at <=' => new Time()
+                'DelayedJobs.run_at <=' => $run_at,
+                'DelayedJobs.sequence NOT IN' => $sequence_query
             ])
             ->order([
                 'DelayedJobs.priority' => 'ASC',
                 'DelayedJobs.id' => 'ASC'
             ])
-            ->limit(1000) //We don't want to sit here for a million possible jobs, so we limit it to a reasonable limit
-            ->hydrate(false)
-            ->bufferResults(false);
-        $statement = $job_query->execute();
-        $result_set = new ResultSet($job_query, $statement);
-
-        $count = 1;
-        foreach ($result_set as $job) {
-            if ($job && !$this->nextSequence($job)) {
-                $statement->closeCursor();
-                return $this->get($job['id']);
-            }
-            $count++;
-        }
-        $statement->closeCursor();
-
-        return null;
+            ->first();
     }
 
     public function getOpenJob($worker_id = '')

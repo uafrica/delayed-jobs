@@ -22,11 +22,6 @@ class HostShell extends Shell
             $this->_workerName = $this->args[0];
         }
 
-        $this->Lock = new Lock();
-        if (!$this->Lock->lock('DelayedJobs.HostShell.main.' . $this->_workerName)) {
-            $this->_stop(1);
-        }
-
         $this->_workerId = $this->_workerName . ' - ' . php_uname('n');
 
         /*
@@ -101,7 +96,7 @@ class HostShell extends Shell
             }
 
             //## Sleep so that the system can rest
-            usleep(500000);
+            usleep(50000);
         }
     }
 
