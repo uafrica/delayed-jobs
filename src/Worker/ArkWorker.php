@@ -40,12 +40,14 @@ class ArkWorker
         }
 
         $pi = $this->_bcpi(rand(1, $payload['work']));
-        //Fetch an api 25% of the time
-        if (rand(0, 3) == 0) {
+        //Fetch an api 50% of the time
+        if (rand(0, 1) == 0) {
             $client = new Client();
             $client->get('http://jsonplaceholder.typicode.com/posts');
 
             $pi .= ' - api';
+
+            sleep(rand(0, 120));
         }
 
         $number_forks = rand($payload['first'] ? 1 : 0, $payload['max_fork']);

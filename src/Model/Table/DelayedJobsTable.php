@@ -285,6 +285,27 @@ class DelayedJobsTable extends Table
         return $jobs;
     }
 
+    public function getRunning()
+    {
+        $conditions = [
+            'DelayedJobs.status' => self::STATUS_BUSY,
+        ];
+
+        $jobs = $this->find()
+            ->select([
+                'id',
+                'pid',
+                'status',
+                'sequence'
+            ])
+            ->where($conditions)
+            ->order([
+                'DelayedJobs.id' => 'ASC'
+            ]);
+
+        return $jobs;
+    }
+
     public function jobsPerSecond($conditions = [], $field = 'created', $time_range = '-1 hour')
     {
         $start_time = new Time($time_range);

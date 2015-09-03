@@ -68,7 +68,7 @@ class HostShell extends Shell
         $start_time = time();
         $this->_updateRunning();
         while (true) {
-            $this->_startWorker();
+            $this->_startWorkers();
             $this->_checkRunning();
 
             //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown
@@ -165,7 +165,7 @@ class HostShell extends Shell
 
     protected function _updateRunning()
     {
-        $db_jobs = $this->DelayedJobs->getRunningByHost($this->_workerId);
+        $db_jobs = $this->DelayedJobs->getRunning();
         foreach ($db_jobs as $running_job) {
             if (empty($this->_runningJobs[$running_job->id])) {
                 $this->_runningJobs[$running_job->id] = [
@@ -186,7 +186,7 @@ class HostShell extends Shell
             $this->_startWorker();
 
             //We've timed out on this round
-            if (microtime(true) - $start_time > 30.0) {
+            if (microtime(true) - $start_time > 10.0) {
                 $this->out('<error>Timeout</error>', 1, Shell::VERBOSE);
                 break;
             }
