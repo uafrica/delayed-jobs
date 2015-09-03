@@ -92,7 +92,6 @@ class HostShell extends Shell
                         $this->out(__(' - <comment>Still running:</comment> {0}, {1} seconds', $job_id, $busy_time), 1, Shell::VERBOSE);
                     }
                 }
-                $this->hr(1);
             }
 
             //## Sleep so that the system can rest
@@ -137,7 +136,6 @@ class HostShell extends Shell
             'max_execution_time' => $options['max_execution_time'],
         ];
         $this->out(' - <info>Runner started</info>', 1, Shell::VERBOSE);
-        $this->hr(1);
     }
 
     public function getOptionParser()
