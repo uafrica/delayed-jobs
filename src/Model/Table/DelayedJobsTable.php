@@ -186,9 +186,6 @@ class DelayedJobsTable extends Table
         $conditions = [
             'DelayedJobs.status in' => $allowed,
             'DelayedJobs.run_at <=' => $run_at,
-            'or' => [
-                'DelayedJobs.sequence IS' => null
-            ]
         ];
 
         if (!empty($known_jobs)) {
@@ -196,6 +193,7 @@ class DelayedJobsTable extends Table
         }
         if (!empty($known_sequences)) {
             $conditions['or']['DelayedJobs.sequence not in'] = $known_sequences;
+            $conditions['or']['DelayedJobs.sequence IS'] = null;
         }
 
         return $this
