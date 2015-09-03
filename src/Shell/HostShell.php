@@ -44,11 +44,6 @@ class HostShell extends Shell
             $this->_workerName = $this->args[0];
         }
 
-        $this->Lock = new Lock();
-        if (!$this->Lock->lock('DelayedJobs.HostShell.main')) {
-            $this->_stop(1);
-        }
-
         $this->_host = $this->Hosts
             ->find()
             ->where([
