@@ -62,18 +62,11 @@ class MonitorShell extends Shell
             ], 'modified', '-5 minutes');
             $host_count = $this->Hosts->find()
                 ->count();
-            $worker_count = $this->Hosts->find()
-                ->select([
-                    'worker_count' => $this->Hosts->find()
-                        ->func()
-                        ->sum('worker_count')
-                ])
-                ->hydrate(false)
-                ->first();
             if ($start || time() - $time > 5) {
                 $start = false;
                 $time = time();
                 $running_jobs = $this->DelayedJobs->find()
+                    ->select(['id', 'group', 'locked_by', 'class', 'method'])
                     ->where([
                         'status' => DelayedJobsTable::STATUS_BUSY
                     ])
