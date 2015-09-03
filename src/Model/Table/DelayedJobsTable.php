@@ -182,6 +182,14 @@ class DelayedJobsTable extends Table
             ]);
 
         return $this->find()
+            ->select([
+                'id',
+                'status',
+                'locked_by',
+                'pid',
+                'options',
+                'sequence'
+            ])
             ->where([
                 'DelayedJobs.status in' => $allowed,
                 'DelayedJobs.run_at <=' => $run_at,
@@ -217,7 +225,16 @@ class DelayedJobsTable extends Table
         usleep(250000); //## Sleep for 0.25 seconds
 
         //## check if this job is still allocated to this worker
-        $job = $this->get($job->id);
+        $job = $this->get($job->id, [
+            'fields' => [
+                'id',
+                'status',
+                'locked_by',
+                'pid',
+                'options',
+                'sequence'
+            ]
+        ]);
         $next_sequence = $this->nextSequence($job);
 
         /*

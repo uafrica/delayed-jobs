@@ -46,7 +46,6 @@ class HostShell extends Shell
         }
 
         $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
-        $this->hr();
         while (true) {
             $number_jobs = count($this->_runningJobs);
             if ($number_jobs < $max_allowed_jobs) {
@@ -55,7 +54,16 @@ class HostShell extends Shell
 
             //## Check Status of Fired Jobs
             foreach ($this->_runningJobs as $job_id => $running_job) {
-                $job = $this->DelayedJobs->get($job_id);
+                $job = $this->DelayedJobs->get($job_id, [
+                    'fields' => [
+                        'id',
+                        'status',
+                        'locked_by',
+                        'pid',
+                        'options',
+                        'sequence'
+                    ]
+                ]);
                 if ($job->locked_by !== $this->_workerId) {
                     //Not our job, why are we looking at it?
                     unset($this->_runningJobs[$job_id]);
