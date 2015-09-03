@@ -164,7 +164,7 @@ class DelayedJobsTable extends Table
     /**
      * @return mixed
      */
-    public function nextJob()
+    public function nextJob($known_jobs, $known_sequences)
     {
         $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
         $run_at = new Time();
@@ -183,13 +183,29 @@ class DelayedJobsTable extends Table
                 'sequence is not' => null
             ]);
 
+        $conditions = [
+            'DelayedJobs.status in' => $allowed,
+            'DelayedJobs.run_at <=' => $run_at,
+        ];
+
+        if (!empty($known_jobs)) {
+            $conditions['DelayedJobs.id not in'] = $known_jobs;
+        }
+        if (!empty($known_sequences)) {
+            $conditions['DelayedJobs.sequence not in'] = $known_sequences;
+        }
+
         return $this
             ->find()
-            ->where([
-                'DelayedJobs.status in' => $allowed,
-                'DelayedJobs.run_at <=' => $run_at,
-                'DelayedJobs.sequence NOT IN' => $sequence_query
+            ->select([
+                'id',
+                'status',
+                'locked_by',
+                'pid',
+                'options',
+                'sequence'
             ])
+            ->where($conditions)
             ->order([
                 'DelayedJobs.priority' => 'ASC',
                 'DelayedJobs.id' => 'ASC'
@@ -197,9 +213,9 @@ class DelayedJobsTable extends Table
             ->first();
     }
 
-    public function getOpenJob($worker_id = '')
+    public function getOpenJob($worker_id = '', $known_jobs = [], $known_sequences = [])
     {
-        $job = $this->nextJob();
+        $job = $this->nextJob($known_jobs, $known_sequences);
 
         if (!$job || !in_array($job->status, [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN])) {
             return false;
@@ -215,30 +231,30 @@ class DelayedJobsTable extends Table
         }
         $job->options = $options;
 
-        $this->lock($job, $worker_id);
-
-        usleep(100000); //## Sleep for 0.1 seconds
-
-        //## check if this job is still allocated to this worker
-        $job = $this->get($job->id);
-        $next_sequence = $this->nextSequence($job);
+//        $this->lock($job, $worker_id);
+//
+//        usleep(100000); //## Sleep for 0.1 seconds
+//
+//        //## check if this job is still allocated to this worker
+//        $job = $this->get($job->id);
+//        $next_sequence = $this->nextSequence($job);
 
         /*
          * If this job is locked by us, and another same sequence isn't running we carry on
          * Otherwise, we release this job back into the pool
          */
-        if ($job->locked_by === $worker_id && !$next_sequence) {
-            return $job;
-        } elseif ($job->locked_by === $worker_id && $next_sequence) {
-            Log::debug($job->sequence . ' was grabbed by someone else', [
-                'scope' => 'delayed_jobs'
-            ]);
-            $this->release($job);
-        } else {
-            Log::debug($job->id . ' was allocated to someone else', [
-                'scope' => 'delayed_jobs'
-            ]);
-        }
+//        if ($job->locked_by === $worker_id) {
+          return $job;
+//        } elseif ($job->locked_by === $worker_id) {
+//            Log::debug($job->sequence . ' was grabbed by someone else', [
+//                'scope' => 'delayed_jobs'
+//            ]);
+////            $this->release($job);
+//        } else {
+//            Log::debug($job->id . ' was allocated to someone else', [
+//                'scope' => 'delayed_jobs'
+//            ]);
+//        }
     }
 
     /**

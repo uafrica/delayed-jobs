@@ -3,6 +3,7 @@ namespace DelayedJobs\Shell;
 
 use Cake\Console\Shell;
 use Cake\Core\Configure;
+use Cake\Utility\Hash;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\HostsTable;
@@ -33,7 +34,7 @@ class HostShell extends Shell
         $this->out(__('Booting... My PID is <info>{0}</info>', getmypid()), 1, Shell::VERBOSE);
 
         //Wait 5 seconds for watchdog to finish
-        sleep(5);
+        //sleep(5);
 
         $this->loadModel('DelayedJobs.Hosts');
         $host_name = php_uname('n');
@@ -72,10 +73,7 @@ class HostShell extends Shell
         $start_time = time();
         $this->_updateRunning();
         while (true) {
-            $this->_startWorkers();
-            usleep(50000);
-
-            $this->_updateRunning();
+            $this->_startWorker();
             $this->_checkRunning();
 
             //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown
@@ -116,39 +114,10 @@ class HostShell extends Shell
             $this->out(__('Job status: {0} :: ', $job_id), 0, Shell::VERBOSE);
 
             $status = new Process();
-            $status->setPid($job->pid);
-            $process_running = $job->pid && $status->status();
+            $status->setPid($running_job['pid']);
+            $process_running = $running_job['pid'] && $status->status();
 
-            /*
-             * If the process is no longer running, there is a change that it completed successfully
-             * We fetch the job from the DB in that case to make sure
-             */
-            if (!$process_running && $job->status === DelayedJobsTable::STATUS_BUSY) {
-                usleep(50000);
-                $this->out('.', 0, Shell::VERBOSE);
-                $job = $this->DelayedJobs->get($job_id, [
-                    'fields' => [
-                        'id',
-                        'pid',
-                        'locked_by',
-                        'status'
-                    ]
-                ]);
-            }
-
-            if ($job->pid && !$process_running && $job->status === DelayedJobsTable::STATUS_BUSY) {
-                //## Make sure that this job is not marked as running
-                    $this->DelayedJobs->failed(
-                        $job,
-                        'Job not running, but db said it is, could be a runtime error'
-                    );
-                    unset($this->_runningJobs[$job_id]);
-                    $this->out(__('<error>Job not running, but should be</error>'), 1, Shell::VERBOSE);
-            } elseif (!$process_running || !$job->pid) {
-                $time = time() - (isset($running_job['start_time']) ? $running_job['start_time'] : time());
-                unset($this->_runningJobs[$job_id]);
-                $this->out(__('<success>Job\'s done:</success> took {0} seconds', $time), 1, Shell::VERBOSE);
-            } else {
+            if ($process_running) {
                 //## Check if job has not reached it max exec time
                 $busy_time = time() - $running_job['start_time'];
 
@@ -161,8 +130,42 @@ class HostShell extends Shell
                 } else {
                     $this->out(__('<comment>Still running</comment> - {0} seconds', $busy_time), 1, Shell::VERBOSE);
                 }
+
+                continue;
+            }
+
+            /*
+             * If the process is no longer running, there is a change that it completed successfully
+             * We fetch the job from the DB in that case to make sure
+             */
+            $job = $this->DelayedJobs->get($job_id, [
+                'fields' => [
+                    'id',
+                    'pid',
+                    'locked_by',
+                    'status'
+                ]
+            ]);
+            $this->_runningJobs[$job_id]['job'] = $job;
+
+            if (!$job->pid) {
+                $time = microtime(true) - (isset($running_job['start_time']) ? $running_job['start_time'] : microtime(true));
+                unset($this->_runningJobs[$job_id]);
+                $this->out(__('<success>Job\'s done:</success> took {0} seconds', round($time, 2)), 1, Shell::VERBOSE);
+                continue;
+            }
+
+            if ($job->pid && $job->status === DelayedJobsTable::STATUS_BUSY) {
+                //## Make sure that this job is not marked as running
+                $this->DelayedJobs->failed(
+                    $job,
+                    'Job not running, but db said it is, could be a runtime error'
+                );
+                unset($this->_runningJobs[$job_id]);
+                $this->out(__('<error>Job not running, but should be</error>'), 1, Shell::VERBOSE);
             }
         }
+        $this->out(__('---'), 2, Shell::VERBOSE);
     }
 
     protected function _updateRunning()
@@ -171,7 +174,9 @@ class HostShell extends Shell
         foreach ($db_jobs as $running_job) {
             if (empty($this->_runningJobs[$running_job->id])) {
                 $this->_runningJobs[$running_job->id] = [
+                    'id' => $running_job->id,
                     'pid' => $running_job->pid,
+                    'sequence' => $running_job->sequence
                 ];
             }
             $this->_runningJobs[$running_job->id]['job'] = $running_job;
@@ -206,13 +211,17 @@ class HostShell extends Shell
             return false;
         }
 
-        $job = $this->DelayedJobs->getOpenJob($this->_workerId);
+        $job = $this->DelayedJobs->getOpenJob(
+            $this->_workerId,
+            array_keys($this->_runningJobs),
+            Hash::filter(Hash::extract($this->_runningJobs, '{n}.sequence'))
+        );
 
         if (!$job) {
             return false;
         }
 
-        $this->out(__('<success>Starting job:</success> {0}', $job->id), 1, Shell::VERBOSE);
+        $this->out(__('<success>Starting job:</success> {0} - ', $job->id), 0, Shell::VERBOSE);
         if (isset($this->_runningJobs[$job->id])) {
             $this->out(__(' - <error>Already have this job</error>'), 1, Shell::VERBOSE);
             return true;
@@ -220,26 +229,24 @@ class HostShell extends Shell
 
         $options = (array)$job->options;
 
-        $this->out(__(' - <info>Runner: </info> {0}::{1}', $job->class, $job->method), 1, Shell::VERBOSE);
-
         if (!isset($options['max_execution_time'])) {
             $options['max_execution_time'] = 25 * 60;
         }
 
-        $path = ROOT . '/bin/cake DelayedJobs.worker -q ' . $job->id;
-        $p = new Process($path);
-
-        $pid = $p->getPid();
-
-        $this->DelayedJobs->setPid($job, $pid);
-
         $this->_runningJobs[$job->id] = [
-            'pid' => $pid,
-            'start_time' => time(),
+            'sequence' => $job->sequence,
+            'id' => $job->id,
+            'start_time' => microtime(true),
             'max_execution_time' => $options['max_execution_time'],
             'job' => $job
         ];
-        $this->out(__(' - <info>Runner started ({0})</info>', $pid), 1, Shell::VERBOSE);
+
+        $path = ROOT . '/bin/cake DelayedJobs.worker -q ' . $job->id;
+        $p = new Process($path);
+        $pid = $p->getPid();
+        $this->_runningJobs[$job->id]['pid'] = $pid;
+
+        $this->out(__(' <info>PID {0}</info>', $pid), 1, Shell::VERBOSE);
 
         return true;
     }
