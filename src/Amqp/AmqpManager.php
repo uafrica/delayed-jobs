@@ -142,7 +142,13 @@ class AmqpManager
     {
         $channel = $this->_getChannel();
         $channel->basic_qos(null, $qos, null);
-        $channel->basic_consume($this->_serviceName . '_queue', '', false, false, false, false, $callback);
+        return $channel->basic_consume($this->_serviceName . '_queue', '', false, false, false, false, $callback);
+    }
+
+    public function stopListening($tag)
+    {
+        $channel = $this->_getChannel();
+        $channel->basic_cancel($tag);
     }
 
     public function wait($timeout = 1)

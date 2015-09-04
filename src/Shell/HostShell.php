@@ -27,6 +27,7 @@ class HostShell extends Shell
      * @var \DelayedJobs\Amqp\AmqpManager
      */
     protected $_amqpManager;
+    protected $_tag;
 
     protected function _welcome()
     {
@@ -42,7 +43,7 @@ class HostShell extends Shell
         $this->out(__('Booting... My PID is <info>{0}</info>', getmypid()), 1, Shell::VERBOSE);
 
         //Wait 5 seconds for watchdog to finish
-        //sleep(5);
+        sleep(5);
 
         $this->loadModel('DelayedJobs.Hosts');
         $host_name = php_uname('n');
@@ -74,7 +75,7 @@ class HostShell extends Shell
         $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
         $start_time = time();
         $this->_amqpManager = new AmqpManager();
-        $this->_amqpManager->listen([$this, 'runWorker'], 2);
+        $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1));
         while (true) {
             //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown
             if (time() - $start_time >= self::UPDATETIMER) {
@@ -94,9 +95,10 @@ class HostShell extends Shell
                 break;
             }
 
-            if (!$this->_host || $this->_host->status !== HostsTable::STATUS_SHUTDOWN) {
-                $this->_amqpManager->wait();
+            if ($this->_host && $this->_host->status === HostsTable::STATUS_SHUTDOWN) {
+                $this->_amqpManager->stopListening($this->_tag);
             }
+            $this->_amqpManager->wait();
             $this->_checkRunning();
         }
 
@@ -257,7 +259,7 @@ class HostShell extends Shell
             ->addOption(
                 'workers',
                 [
-                    'help' => 'Number of jobs to run concurrently'
+                    'help' => 'Number of jobs to run concurrently',
                 ]
             )
             ->addArgument('workerName', [
