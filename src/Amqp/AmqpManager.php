@@ -119,7 +119,7 @@ class AmqpManager
     public function queueJob(DelayedJob $job)
     {
         $channel = $this->_getChannel();
-        $delay = ($job->run_at->diffInSeconds(new Time()) * 1000);
+        $delay = (new Time())->diffInSeconds($job->run_at, false) * 1000;
 
         $args = [
             'delivery_mode' => 2,

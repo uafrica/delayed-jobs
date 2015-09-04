@@ -78,7 +78,7 @@ class HostShell extends Shell
         while (true) {
             //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown
             if (time() - $start_time >= self::UPDATETIMER) {
-                $this->out('<info>Updating myself...</info>', 2, Shell::VERBOSE);
+                $this->out('<info>Updating myself...</info>', 0, Shell::VERBOSE);
                 $this->_host = $this->Hosts->find()
                     ->where([
                         'host_name' => $host_name,
@@ -86,6 +86,7 @@ class HostShell extends Shell
                     ])
                     ->first();
                 $start_time = time();
+                $this->out('<success>Done</success>', 1, Shell::VERBOSE);
             }
 
             if ($this->_host && $this->_host->status === HostsTable::STATUS_SHUTDOWN && empty($this->_runningJobs)) {
@@ -191,7 +192,6 @@ class HostShell extends Shell
                 $this->out(__('<error>Job not running, but should be</error>'), 1, Shell::VERBOSE);
             }
         }
-        $this->out('', 2, Shell::VERBOSE);
     }
 
     protected function _updateRunning()

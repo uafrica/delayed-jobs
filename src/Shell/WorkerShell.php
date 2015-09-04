@@ -57,6 +57,7 @@ class WorkerShell extends Shell
 
         try {
             $this->out(' - Executing job', 1, Shell::VERBOSE);
+            $job->status = DelayedJobsTable::STATUS_BUSY;
             $job->pid = getmypid();
             $job->start_time = new Time();
             $this->DelayedJobs->save($job);

@@ -324,9 +324,9 @@ class DelayedJobsTable extends Table
         ]);
     }
 
-    protected function _queueJob(DelayedJob $dj)
+    protected function _queueJob(DelayedJob $dj, $check_sequence = true)
     {
-        if ($dj->sequence && $this->_existingSequence($dj)) {
+        if ($check_sequence && $dj->sequence && $this->_existingSequence($dj)) {
             return;
         }
 
@@ -356,7 +356,7 @@ class DelayedJobsTable extends Table
             return;
         }
 
-        $this->_queueJob($next);
+        $this->_queueJob($next, false);
     }
 
     public function afterSaveCommit(Event $event, DelayedJob $dj)
