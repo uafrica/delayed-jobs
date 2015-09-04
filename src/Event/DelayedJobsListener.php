@@ -54,7 +54,7 @@ class DelayedJobsListener implements EventListenerInterface
             'options' => [],
             'priority' => 100,
             'sequence' => null,
-            'run_at' => new Time('+5 seconds')
+            'run_at' => new Time()
         ];
         $data = $event->subject();
 

@@ -11,6 +11,7 @@ use Cake\Log\Log;
 use Cake\ORM\ResultSet;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Entity\DelayedJob;
 
 /**
@@ -385,5 +386,13 @@ class DelayedJobsTable extends Table
         $this->connection()
             ->driver()
             ->autoQuoting($this->quote);
+    }
+
+    public function afterSaveCommit(Event $event, DelayedJob $dj)
+    {
+        if ($dj->isNew()) {
+            AmqpManager::instance()
+                ->queueJob($dj);
+        }
     }
 }
