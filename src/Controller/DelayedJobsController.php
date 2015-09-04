@@ -90,7 +90,7 @@ class DelayedJobsController extends AppController
                     'type' => $this->request->query('type') ?: 'success'
                 ],
                 'options' => [],
-                'priority' => rand(1, 9) * 10,
+                'priority' => rand(1, 9) * 10 + 100,
                 'run_at' => new Time('+10 seconds'),
                 'status' => DelayedJobsTable::STATUS_NEW,
             ]);

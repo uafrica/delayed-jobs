@@ -16,6 +16,20 @@ use PhpAmqpLib\Wire\AMQPTable;
 class AmqpManager
 {
     /**
+     * The globally available instance
+     *
+     * @var \DelayedJobs\Amqp\AmqpManager
+     */
+    protected static $_generalManager = null;
+
+    /**
+     * Internal flag to distinguish a common manager from the singleton
+     *
+     * @var bool
+     */
+    protected $_isGlobal = false;
+
+    /**
      * @var \PhpAmqpLib\Connection\AbstractConnection
      */
     protected $_connection = null;
@@ -26,6 +40,26 @@ class AmqpManager
     protected $_channel = null;
 
     protected $_serviceName;
+
+    /**
+     * Returns the globally available instance of a the AmqpManager
+     *
+     * @param \DelayedJobs\Amqp\AmqpManager $manager AMQP manager instance.
+     * @return \DelayedJobs\Amqp\AmqpManager the global AMQP manager
+     */
+    public static function instance($manager = null)
+    {
+        if ($manager instanceof AmqpManager) {
+            static::$_generalManager = $manager;
+        }
+        if (empty(static::$_generalManager)) {
+            static::$_generalManager = new AmqpManager();
+        }
+
+        static::$_generalManager->_isGlobal = true;
+
+        return static::$_generalManager;
+    }
 
     /**
      * @param \PhpAmqpLib\Connection\AbstractConnection|null $connection
@@ -104,10 +138,10 @@ class AmqpManager
         $channel->basic_publish($message, $exchange, 'route');
     }
 
-    public function listen($callback)
+    public function listen($callback, $qos = 1)
     {
         $channel = $this->_getChannel();
-        $channel->basic_qos(null, 1, null);
+        $channel->basic_qos(null, $qos, null);
         $channel->basic_consume($this->_serviceName . '_queue', '', false, false, false, false, $callback);
     }
 
@@ -128,8 +162,8 @@ class AmqpManager
         $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
     }
 
-    public function nack(AMQPMessage $message)
+    public function nack(AMQPMessage $message, $requeue = true)
     {
-        $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag']);
+        $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, $requeue);
     }
 }

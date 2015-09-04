@@ -74,15 +74,8 @@ class HostShell extends Shell
         $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
         $start_time = time();
         $this->_amqpManager = new AmqpManager();
-        $this->_amqpManager->listen([$this, 'runWorker']);
+        $this->_amqpManager->listen([$this, 'runWorker'], 2);
         while (true) {
-            $this->out(__('Job?'), 1, Shell::VERBOSE);
-            if (!$this->_amqpManager->wait()) {
-                $this->out(__('No job :('), 1, Shell::VERBOSE);
-            }
-
-            $this->_checkRunning();
-
             //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown
             if (time() - $start_time >= self::UPDATETIMER) {
                 $this->out('<info>Updating myself...</info>', 2, Shell::VERBOSE);
@@ -99,6 +92,11 @@ class HostShell extends Shell
                 $this->out('Time to die :(', 1, Shell::VERBOSE);
                 break;
             }
+
+            if (!$this->_host || $this->_host->status !== HostsTable::STATUS_SHUTDOWN) {
+                $this->_amqpManager->wait();
+            }
+            $this->_checkRunning();
         }
 
         if ($this->_host) {
@@ -111,16 +109,7 @@ class HostShell extends Shell
         $job_id = $message->body;
         $this->out(__('Got job <info>{0}</info>', $job_id), 1, Shell::VERBOSE);
         try {
-            $job = $this->DelayedJobs->get($job_id, [
-                'fields' => [
-                    'id',
-                    'pid',
-                    'locked_by',
-                    'status',
-                    'options',
-                    'sequence'
-                ]
-            ]);
+            $job = $this->DelayedJobs->getJob($job_id);
             $result = $this->_executeJob($job, $message);
 
             if ($result === false) {
@@ -128,14 +117,13 @@ class HostShell extends Shell
             }
         } catch (RecordNotFoundException $e) {
             $this->out(__('<error>Job {0} does not exist in the DB!</error>', $job_id), 1, Shell::VERBOSE);
-            $this->_amqpManager->ack($message);
+            $this->_amqpManager->nack($message, false);
             return;
         }
     }
 
     protected function _checkRunning()
     {
-        $this->out('Who\'s running?', 1, Shell::VERBOSE);
         foreach ($this->_runningJobs as $job_id => &$running_job) {
             $job = $running_job['job'];
 
@@ -153,7 +141,7 @@ class HostShell extends Shell
                     $this->out(__('<error>Job timeout</error>'), 1, Shell::VERBOSE);
                     $status->stop();
 
-                    $this->_amqpManager->ack($this->_runningJobs[$job_id]['message']);
+                    $this->_amqpManager->nack($this->_runningJobs[$job_id]['message'], false);
                     $this->DelayedJobs->failed($job, 'Job ran too long, killed');
                     unset($this->_runningJobs[$job_id]);
                 } else {
@@ -167,15 +155,22 @@ class HostShell extends Shell
              * If the process is no longer running, there is a change that it completed successfully
              * We fetch the job from the DB in that case to make sure
              */
-            $job = $this->DelayedJobs->get($job_id, [
-                'fields' => [
-                    'id',
-                    'pid',
-                    'locked_by',
-                    'status'
-                ]
-            ]);
-            $this->_runningJobs[$job_id]['job'] = $job;
+            try {
+                $job = $this->DelayedJobs->get($job_id, [
+                    'fields' => [
+                        'id',
+                        'pid',
+                        'locked_by',
+                        'status'
+                    ]
+                ]);
+                $this->_runningJobs[$job_id]['job'] = $job;
+            } catch (RecordNotFoundException $e) {
+                $this->out(__('<error>Job {0} does not exist in the DB!</error>', $job_id), 1, Shell::VERBOSE);
+                $this->_amqpManager->nack($this->_runningJobs[$job_id]['message'], false);
+                unset($this->_runningJobs[$job_id]);
+                continue;
+            }
 
             if (!$job->pid) {
                 $time = microtime(true) - (isset($running_job['start_time']) ? $running_job['start_time'] : microtime(true));
@@ -187,7 +182,7 @@ class HostShell extends Shell
 
             if ($job->pid && $job->status === DelayedJobsTable::STATUS_BUSY) {
                 //## Make sure that this job is not marked as running
-                $this->_amqpManager->ack($this->_runningJobs[$job_id]['message']);
+                $this->_amqpManager->nack($this->_runningJobs[$job_id]['message'], false);
                 $this->DelayedJobs->failed(
                     $job,
                     'Job not running, but db said it is, could be a runtime error'
@@ -234,6 +229,7 @@ class HostShell extends Shell
             $options['max_execution_time'] = 25 * 60;
         }
 
+        $this->DelayedJobs->lock($job, $this->_workerId);
         $this->_runningJobs[$job->id] = [
             'sequence' => $job->sequence,
             'id' => $job->id,
@@ -248,7 +244,7 @@ class HostShell extends Shell
         $pid = $p->getPid();
         $this->_runningJobs[$job->id]['pid'] = $pid;
 
-        $this->out(__('PID <info>{0}</info>', $pid), 1, Shell::VERBOSE);
+        $this->out(__('PID <info>{0}</info> :: <info>{1}::{2}</info>', $pid, $job->class, $job->method), 1, Shell::VERBOSE);
 
         return true;
     }
