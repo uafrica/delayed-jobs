@@ -75,6 +75,7 @@ class DelayedJobsTable extends Table
         }
         $job->status = self::STATUS_SUCCESS;
         $job->pid = null;
+        $job->end_time = new Time();
 
         return $this->save($job);
     }

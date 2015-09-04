@@ -89,6 +89,7 @@ class DelayedJobsController extends AppController
                 'payload' => [
                     'type' => $this->request->query('type') ?: 'success'
                 ],
+                'options' => [],
                 'run_at' => new Time(sprintf('+%s seconds', rand(5, 60))),
                 'status' => DelayedJobsTable::STATUS_NEW
             ]);

@@ -4,6 +4,7 @@ namespace DelayedJobs\Shell;
 use Cake\Console\Shell;
 use Cake\Core\Exception\Exception;
 use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\I18n\Time;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
@@ -58,6 +59,7 @@ class WorkerShell extends Shell
             $this->out(' - Executing job', 1, Shell::VERBOSE);
             $job->status = DelayedJobsTable::STATUS_BUSY;
             $job->pid = getmypid();
+            $job->start_time = new Time();
             $this->DelayedJobs->save($job);
 
             $response = $job->execute();
