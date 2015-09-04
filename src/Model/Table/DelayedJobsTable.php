@@ -391,8 +391,8 @@ class DelayedJobsTable extends Table
     public function afterSaveCommit(Event $event, DelayedJob $dj)
     {
         if ($dj->isNew()) {
-            AmqpManager::instance()
-                ->queueJob($dj);
+            $manager = new AmqpManager();
+            $manager->queueJob($dj);
         }
     }
 }

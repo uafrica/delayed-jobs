@@ -8,6 +8,7 @@ use DelayedJobs\Model\Entity\DelayedJob;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazyConnection;
+use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPAbstractCollection;
 use PhpAmqpLib\Wire\AMQPTable;
@@ -15,45 +16,16 @@ use PhpAmqpLib\Wire\AMQPTable;
 class AmqpManager
 {
     /**
-     * The globally available instance
-     *
-     * @var \DelayedJobs\Amqp\AmqpManager
-     */
-    protected static $_generalManager = null;
-
-    /**
-     * Internal flag to distinguish a common manager from the singleton
-     *
-     * @var bool
-     */
-    protected $_isGlobal = false;
-
-    /**
      * @var \PhpAmqpLib\Connection\AbstractConnection
      */
     protected $_connection = null;
 
-    protected $_serviceName;
-
     /**
-     * Returns the globally available instance of a the AmqpManager
-     *
-     * @param \DelayedJobs\Amqp\AmqpManager $manager AMQP manager instance.
-     * @return \DelayedJobs\Amqp\AmqpManager the global AMQP manager
+     * @var \PhpAmqpLib\Channel\AMQPChannel
      */
-    public static function instance($manager = null)
-    {
-        if ($manager instanceof AmqpManager) {
-            static::$_generalManager = $manager;
-        }
-        if (empty(static::$_generalManager)) {
-            static::$_generalManager = new AmqpManager();
-        }
+    protected $_channel = null;
 
-        static::$_generalManager->_isGlobal = true;
-
-        return static::$_generalManager;
-    }
+    protected $_serviceName;
 
     /**
      * @param \PhpAmqpLib\Connection\AbstractConnection|null $connection
@@ -71,6 +43,9 @@ class AmqpManager
 
     public function __destroy()
     {
+        if ($this->_channel) {
+            $this->_channel->close();
+        }
         if ($this->_connection && $this->_connection->isConnected()) {
             $this->_connection->close();
         }
@@ -78,9 +53,13 @@ class AmqpManager
 
     protected function _getChannel()
     {
-        $channel = $this->_connection->channel();
-        $this->_ensureQueue($channel);
-        return $channel;
+        if ($this->_channel) {
+            return $this->_channel;
+        }
+
+        $this->_channel = $this->_connection->channel();
+        $this->_ensureQueue($this->_channel);
+        return $this->_channel;
     }
 
     protected function _ensureQueue(AMQPChannel $channel)
@@ -119,11 +98,38 @@ class AmqpManager
             $headers = new AMQPTable();
             $headers->set('x-delay', $delay);
             $message->set('application_headers', $headers);
-            debug($delay);
-            debug($message->serialize_properties());
         }
 
         $exchange = $this->_serviceName . ($delay > 0 ? '_delayed_exchange' : '_direct_exchange');
         $channel->basic_publish($message, $exchange, 'route');
+    }
+
+    public function listen($callback)
+    {
+        $channel = $this->_getChannel();
+        $channel->basic_qos(null, 1, null);
+        $channel->basic_consume($this->_serviceName . '_queue', '', false, false, false, false, $callback);
+    }
+
+    public function wait($timeout = 1)
+    {
+        $channel = $this->_getChannel();
+        try {
+            while (count($channel->callbacks)) {
+                $channel->wait(null, false, $timeout);
+            }
+        } catch (AMQPTimeoutException $e) {
+            return false;
+        }
+    }
+
+    public function ack(AMQPMessage $message)
+    {
+        $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
+    }
+
+    public function nack(AMQPMessage $message)
+    {
+        $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag']);
     }
 }
