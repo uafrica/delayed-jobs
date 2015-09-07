@@ -1,9 +1,11 @@
 <?php
 namespace DelayedJobs\Shell;
 
+use Cake\Cache\Cache;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\Log\Log;
 use Cake\Utility\Hash;
 use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Lock;
@@ -15,7 +17,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 class HostShell extends Shell
 {
-    const UPDATETIMER = 30; //In seconds
+    const UPDATETIMER = 10; //In seconds
     public $Lock;
     public $modelClass = 'DelayedJobs.DelayedJobs';
     protected $_workerId;
@@ -94,6 +96,7 @@ class HostShell extends Shell
                     $this->out(' !!Worker count changed!! ', 0, Shell::VERBOSE);
                     $this->_amqpManager->stopListening($this->_tag);
                     $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->_workerCount);
+                    Log::debug(__('{0} updated worker count', $this->_workerId));
                 }
 
                 $this->_workerCount = $new_count;
@@ -123,7 +126,8 @@ class HostShell extends Shell
 
     public function runWorker(AMQPMessage $message)
     {
-        $job_id = $message->body;
+        $body = json_decode($message->body, true);
+        $job_id = $body['id'];
         $this->nl();
         try {
             $job = $this->DelayedJobs->getJob($job_id);
@@ -133,9 +137,23 @@ class HostShell extends Shell
                 $this->_amqpManager->nack($message);
             }
         } catch (RecordNotFoundException $e) {
-            $this->out(__('<error>Job {0} does not exist in the DB!</error>', $job_id), 1, Shell::VERBOSE);
+            if (!isset($body['is-transaction'])) {
+                $this->out(__('<error>Job {0} does not exist in the DB - could be a transaction delay - we try once more!</error>',
+                    $job_id), 1, Shell::VERBOSE);
+
+                //We do not want to cache the empty result
+                $cache_key = 'dj::' . Configure::read('dj.service.name') . '::' . $job_id;
+                Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
+                Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
+                $this->_amqpManager->ack($message);
+                $this->_amqpManager->requeueMessage($message);
+
+                return;
+            }
+            $this->out(__('<error>Job {0} does not exist in the DB!</error>',
+                $job_id), 1, Shell::VERBOSE);
+
             $this->_amqpManager->nack($message, false);
-            return;
         }
     }
 
@@ -161,6 +179,7 @@ class HostShell extends Shell
                     $this->_amqpManager->nack($this->_runningJobs[$job_id]['message'], false);
                     $this->DelayedJobs->failed($job, 'Job ran too long, killed');
                     unset($this->_runningJobs[$job_id]);
+                    Log::debug(__('{0} said {1} timed out', $this->_workerId, $job->id));
                 } else {
                     $this->out(__('<comment>Still running</comment> :: <info>{0} seconds</info>', round($busy_time, 2)), 1, Shell::VERBOSE);
                 }
@@ -194,7 +213,7 @@ class HostShell extends Shell
                 $this->_amqpManager->ack($this->_runningJobs[$job_id]['message']);
                 unset($this->_runningJobs[$job_id]);
                 $message = $job->status === DelayedJobsTable::STATUS_SUCCESS ? '<success>Job done</success>' : '<error>Job failed, will be retried</error>';
-
+                Log::debug(__('{0} completed {1}', $this->_workerId, $job->id));
                 $this->out(__('{0} :: <info>{1} seconds</info>', $message, round($time, 2)), 1, Shell::VERBOSE);
                 continue;
             }
@@ -207,6 +226,7 @@ class HostShell extends Shell
                     'Job not running, but db said it is, could be a runtime error'
                 );
                 unset($this->_runningJobs[$job_id]);
+                Log::debug(__('{0} said {1} had a runtime error', $this->_workerId, $job->id));
                 $this->out(__('<error>Job not running, but should be</error>'), 1, Shell::VERBOSE);
             }
         }
@@ -241,6 +261,12 @@ class HostShell extends Shell
             return false;
         }
 
+        if ($job->status === DelayedJobsTable::STATUS_SUCCESS || $job->status === DelayedJobsTable::STATUS_BURRIED) {
+            $this->out(__('Already processed'), 1, Shell::VERBOSE);
+            $this->_amqpManager->ack($message);
+            return true;
+        }
+
         $options = (array)$job->options;
 
         if (!isset($options['max_execution_time'])) {
@@ -261,6 +287,7 @@ class HostShell extends Shell
         $p = new Process($path);
         $pid = $p->getPid();
         $this->_runningJobs[$job->id]['pid'] = $pid;
+        Log::debug(__('{0} started job {1}', $this->_workerId, $job->id));
 
         $this->out(__('PID <info>{0}</info> :: <info>{1}::{2}</info>', $pid, $job->class, $job->method), 1, Shell::VERBOSE);
 

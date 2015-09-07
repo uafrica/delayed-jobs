@@ -315,11 +315,35 @@ class DelayedJobsTable extends Table
     /**
      * @return void
      */
-    public function afterSave(Event $event, DelayedJob $dj)
+    public function afterSave(Event $event, DelayedJob $dj, \ArrayObject $options)
     {
-        $cache_key = 'dj::' .
-            Configure::read('dj.service.name') .
-            '::' . $dj->id;
+        /*
+         * Special case for jobs that are created within a parent transaction
+         */
+        if (!$options['_primary']) {
+            $this->_processJobForQueue($dj);
+        }
+
+        $this->connection()
+            ->driver()
+            ->autoQuoting($this->quote);
+    }
+
+    /**
+     * @return void
+     */
+    public function afterSaveCommit(Event $event, DelayedJob $dj)
+    {
+        $this->_processJobForQueue($dj);
+    }
+
+    /**
+     * @param \DelayedJobs\Model\Entity\DelayedJob $dj
+     * @return void
+     */
+    protected function _processJobForQueue(DelayedJob $dj)
+    {
+        $cache_key = 'dj::' . Configure::read('dj.service.name') . '::' . $dj->id;
         Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
         Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
 
@@ -331,9 +355,9 @@ class DelayedJobsTable extends Table
             $this->_queueNextSequence($dj);
         }
 
-        $this->connection()
-            ->driver()
-            ->autoQuoting($this->quote);
+        if ($dj->isNew()) {
+            Log::debug(__('Job {0} has been created', $dj->id));
+        }
     }
 
     protected function _existingSequence(DelayedJob $dj)

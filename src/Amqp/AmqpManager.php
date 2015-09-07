@@ -94,6 +94,14 @@ class AmqpManager
 
         $this->_channel = $this->_connection->channel();
         $this->_ensureQueue($this->_channel);
+        $this->_channel->confirm_select();
+
+        $this->_channel->set_ack_handler(function (AMQPMessage $message) {
+            Log::debug("Message acked with content " . $message->body);
+        });
+        $this->_channel->set_nack_handler(function (AMQPMessage $message) {
+            Log::debug("Message nacked with content " . $message->body);
+        });
         return $this->_channel;
     }
 
@@ -120,14 +128,31 @@ class AmqpManager
     public function queueJob(DelayedJob $job)
     {
         $channel = $this->_getChannel();
-        $delay = (new Time())->diffInSeconds($job->run_at, false) * 1000;
+
+        $delay = $job->run_at->isFuture() ? (new Time())->diffInSeconds($job->run_at, false) * 1000 : 0;
 
         $args = [
             'delivery_mode' => 2,
             'priority' => Configure::read('dj.service.rabbit.max_priority') - $job->priority,
         ];
+        if ($delay > 0) {
+            $headers = new AMQPTable();
+            $headers->set('x-delay', $delay);
+            $args['application_headers'] = $headers;
+        }
 
-        $message = new AMQPMessage($job->id, $args);
+        $message = new AMQPMessage(json_encode(['id' => $job->id]), $args);
+
+        $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
+        $channel->basic_publish($message, $exchange, $this->_serviceName);
+        Log::debug(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->id, $exchange, $this->_serviceName, $delay, $args['priority']));
+
+        $channel->wait_for_pending_acks();
+    }
+
+    public function requeueMessage(AMQPMessage $message, $delay = 5000)
+    {
+        $channel = $this->_getChannel();
 
         if ($delay > 0) {
             $headers = new AMQPTable();
@@ -135,8 +160,15 @@ class AmqpManager
             $message->set('application_headers', $headers);
         }
 
+        $body = json_decode($message->body, true);
+        $body['is-transaction'] = true;
+        $message->setBody(json_encode($body));
+
         $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
         $channel->basic_publish($message, $exchange, $this->_serviceName);
+        Log::debug(__('Job {0} has been requeued to {1}, a delay of {2}', $message->body, $exchange, $delay));
+
+        $channel->wait_for_pending_acks();
     }
 
     public function listen($callback, $qos = 1)
