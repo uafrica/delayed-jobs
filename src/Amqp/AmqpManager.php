@@ -98,22 +98,22 @@ class AmqpManager
 
     protected function _ensureQueue(AMQPChannel $channel)
     {
-        $channel->exchange_declare($this->_serviceName . '_direct_exchange', 'direct', false, true, false, false, false);
-        $channel->exchange_declare($this->_serviceName . '_delayed_exchange', 'x-delayed-message', false, true, false, false, false, [
+        $channel->exchange_declare($this->_serviceName . '-direct-exchange', 'direct', false, true, false, false, false);
+        $channel->exchange_declare($this->_serviceName . '-delayed-exchange', 'x-delayed-message', false, true, false, false, false, [
             'x-delayed-type' => [
                 'S',
                 'direct'
             ]
         ]);
-        $channel->queue_declare($this->_serviceName . '_queue', false, true, false, false, false, [
+        $channel->queue_declare($this->_serviceName . '-queue', false, true, false, false, false, [
             'x-max-priority' => [
                 's',
                 Configure::read('dj.service.rabbit.max_priority')
             ]
         ]);
 
-        $channel->queue_bind($this->_serviceName . '_queue', $this->_serviceName . '_delayed_exchange', 'route');
-        $channel->queue_bind($this->_serviceName . '_queue', $this->_serviceName . '_direct_exchange', 'route');
+        $channel->queue_bind($this->_serviceName . '-queue', $this->_serviceName . '-delayed-exchange', $this->_serviceName);
+        $channel->queue_bind($this->_serviceName . '-queue', $this->_serviceName . '-direct-exchange', $this->_serviceName);
     }
 
     public function queueJob(DelayedJob $job)
@@ -134,15 +134,15 @@ class AmqpManager
             $message->set('application_headers', $headers);
         }
 
-        $exchange = $this->_serviceName . ($delay > 0 ? '_delayed_exchange' : '_direct_exchange');
-        $channel->basic_publish($message, $exchange, 'route');
+        $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
+        $channel->basic_publish($message, $exchange, $this->_serviceName);
     }
 
     public function listen($callback, $qos = 1)
     {
         $channel = $this->_getChannel();
         $channel->basic_qos(null, $qos, null);
-        return $channel->basic_consume($this->_serviceName . '_queue', '', false, false, false, false, $callback);
+        return $channel->basic_consume($this->_serviceName . '-queue', '', false, false, false, false, $callback);
     }
 
     public function stopListening($tag)
