@@ -74,11 +74,13 @@ class HostShell extends Shell
         //## Need to make sure that any running jobs for this host is in the array job_pids
         $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
         $start_time = time();
+        $this->_workerCount = $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1);
         $this->_amqpManager = new AmqpManager();
-        $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1));
+        $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->_workerCount);
         while (true) {
             //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown
             if (time() - $start_time >= self::UPDATETIMER) {
+                $this->nl();
                 $this->out('<info>Updating myself...</info>', 0, Shell::VERBOSE);
                 $this->_host = $this->Hosts->find()
                     ->where([
@@ -86,6 +88,16 @@ class HostShell extends Shell
                         'pid' => getmypid()
                     ])
                     ->first();
+                $new_count = $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1);
+
+                if ($new_count != $this->_workerCount) {
+                    $this->out(' !!Worker count changed!! ', 0, Shell::VERBOSE);
+                    $this->_amqpManager->stopListening($this->_tag);
+                    $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->_workerCount);
+                }
+
+                $this->_workerCount = $new_count;
+
                 $start_time = time();
                 $this->out('<success>Done</success>', 1, Shell::VERBOSE);
             }
@@ -98,7 +110,9 @@ class HostShell extends Shell
             if ($this->_host && $this->_host->status === HostsTable::STATUS_SHUTDOWN) {
                 $this->_amqpManager->stopListening($this->_tag);
             }
-            $this->_amqpManager->wait();
+            if (!$this->_amqpManager->wait()) {
+                $this->out('.', 0, Shell::VERBOSE);
+            }
             $this->_checkRunning();
         }
 
@@ -110,7 +124,7 @@ class HostShell extends Shell
     public function runWorker(AMQPMessage $message)
     {
         $job_id = $message->body;
-        $this->out(__('Got job <info>{0}</info>', $job_id), 1, Shell::VERBOSE);
+        $this->nl();
         try {
             $job = $this->DelayedJobs->getJob($job_id);
             $result = $this->_executeJob($job, $message);
@@ -179,7 +193,9 @@ class HostShell extends Shell
                 $time = microtime(true) - (isset($running_job['start_time']) ? $running_job['start_time'] : microtime(true));
                 $this->_amqpManager->ack($this->_runningJobs[$job_id]['message']);
                 unset($this->_runningJobs[$job_id]);
-                $this->out(__('<success>Job done</success> :: <info>{0} seconds</info>', round($time, 2)), 1, Shell::VERBOSE);
+                $message = $job->status === DelayedJobsTable::STATUS_SUCCESS ? '<success>Job done</success>' : '<error>Job failed, will be retried</error>';
+
+                $this->out(__('{0} :: <info>{1} seconds</info>', $message, round($time, 2)), 1, Shell::VERBOSE);
                 continue;
             }
 

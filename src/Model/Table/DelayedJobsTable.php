@@ -2,6 +2,7 @@
 
 namespace DelayedJobs\Model\Table;
 
+use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Database\Schema\Table as Schema;
 use Cake\Datasource\ConnectionManager;
@@ -266,10 +267,14 @@ class DelayedJobsTable extends Table
         return $exists;
     }
 
-    public function getJob($job_id)
+    public function getJob($job_id, $all_fields = false)
     {
-        return $this->get($job_id, [
-            'fields' => [
+        $options = [
+            'cache' => Configure::read('dj.service.cache'),
+            'key' => 'dj::' . Configure::read('dj.service.name') . '::' . $job_id . '::' . ($all_fields ? 'all' : 'limit')
+        ];
+        if (!$all_fields) {
+            $options['fields'] = [
                 'id',
                 'pid',
                 'locked_by',
@@ -278,8 +283,10 @@ class DelayedJobsTable extends Table
                 'sequence',
                 'class',
                 'method'
-            ]
-        ]);
+            ];
+        }
+
+        return $this->get($job_id, $options);
     }
 
     /**
@@ -308,8 +315,22 @@ class DelayedJobsTable extends Table
     /**
      * @return void
      */
-    public function afterSave()
+    public function afterSave(Event $event, DelayedJob $dj)
     {
+        $cache_key = 'dj::' .
+            Configure::read('dj.service.name') .
+            '::' . $dj->id;
+        Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
+        Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
+
+        if ($dj->isNew() || $dj->status === self::STATUS_FAILED) {
+            $this->_queueJob($dj);
+        }
+
+        if ($dj->sequence && $dj->status === self::STATUS_SUCCESS) {
+            $this->_queueNextSequence($dj);
+        }
+
         $this->connection()
             ->driver()
             ->autoQuoting($this->quote);
@@ -330,8 +351,7 @@ class DelayedJobsTable extends Table
             return;
         }
 
-        $manager = AmqpManager::instance();
-        $manager->queueJob($dj);
+        $dj->queue();
     }
 
     protected function _queueNextSequence(DelayedJob $dj)
@@ -357,16 +377,5 @@ class DelayedJobsTable extends Table
         }
 
         $this->_queueJob($next, false);
-    }
-
-    public function afterSaveCommit(Event $event, DelayedJob $dj)
-    {
-        if ($dj->isNew() || $dj->status === self::STATUS_FAILED) {
-            $this->_queueJob($dj);
-        }
-
-        if ($dj->sequence && $dj->status === self::STATUS_SUCCESS) {
-            $this->_queueNextSequence($dj);
-        }
     }
 }

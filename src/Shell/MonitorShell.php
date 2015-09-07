@@ -13,6 +13,7 @@ class MonitorShell extends Shell
     public function main()
     {
         $status_map = [
+            'waiting' => 'Waiting',
             DelayedJobsTable::STATUS_NEW => 'New',
             DelayedJobsTable::STATUS_BUSY => 'Busy',
             DelayedJobsTable::STATUS_BURRIED => 'Buried',
@@ -42,6 +43,12 @@ class MonitorShell extends Shell
                 ])
                 ->group(['status'])
                 ->toArray();
+            $statuses['waiting'] = $this->DelayedJobs->find()
+                ->where([
+                    'status' => DelayedJobsTable::STATUS_NEW,
+                    'run_at >' => new Time()
+                ])
+                ->count();
             $statuses[DelayedJobsTable::STATUS_NEW] = $this->DelayedJobs->find()
                 ->where([
                     'status' => DelayedJobsTable::STATUS_NEW,

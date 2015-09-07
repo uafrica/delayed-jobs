@@ -8,6 +8,7 @@ use Cake\Core\Exception\Exception;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\Time;
+use Cake\ORM\TableRegistry;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\HostsTable;
@@ -382,6 +383,18 @@ class WatchdogShell extends Shell
         $this->out('Moved into own shell - use bin/cake DelayedJobs.monitor to run');
     }
 
+    public function requeue()
+    {
+        $job = TableRegistry::get('DelayedJobs.DelayedJobs')->get($this->args[0]);
+
+        if ($job->status === DelayedJobsTable::STATUS_NEW || $job->status === DelayedJobsTable::STATUS_FAILED) {
+            $job->queue();
+            $this->out(__('<success>{0} has been queued</success>', $job->id));
+        } else {
+            $this->out(__('<error>{0} could not be queued</error>', $job->id));
+        }
+    }
+
     public function getOptionParser()
     {
         $options = parent::getOptionParser();
@@ -404,6 +417,17 @@ class WatchdogShell extends Shell
             ])
             ->addSubcommand('reload', [
                 'help' => 'Restarts all running worker hosts'
+            ])
+            ->addSubcommand('requeue', [
+                'help '=> 'Receues a job',
+                'parser' => [
+                    'arguments' => [
+                        'id' => [
+                            'help' => 'Job id',
+                            'required' => true
+                        ]
+                    ]
+                ]
             ])
             ->addOption('parallel', [
                     'help' => 'Number of parallel workers (worker count is multiplied by this)',

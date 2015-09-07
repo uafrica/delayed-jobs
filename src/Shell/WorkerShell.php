@@ -37,7 +37,7 @@ class WorkerShell extends Shell
         $this->out('<info>Starting Job: ' . $job_id . '</info>', 1, Shell::VERBOSE);
 
         try {
-            $job = $this->DelayedJobs->get($job_id);
+            $job = $this->DelayedJobs->getJob($job_id, true);
             $this->out(' - Got job from DB', 1, Shell::VERBOSE);
         } catch (RecordNotFoundException $e) {
             $this->out('<fail>Job ' . $job_id . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);

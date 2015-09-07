@@ -4,6 +4,7 @@ namespace DelayedJobs\Amqp;
 
 use Cake\Core\Configure;
 use Cake\I18n\Time;
+use Cake\Log\Log;
 use DelayedJobs\Model\Entity\DelayedJob;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
@@ -68,7 +69,7 @@ class AmqpManager
     {
         if ($connection === null) {
             $config = Configure::read('dj.service.rabbit.server');
-            $connection = new AMQPLazyConnection($config['host'], $config['port'], $config['user'], $config['pass']);
+            $connection = new AMQPLazyConnection($config['host'], $config['port'], $config['user'], $config['pass'], $config['path']);
         }
 
         $this->_connection = $connection;
