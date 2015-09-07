@@ -103,7 +103,7 @@ class WatchdogShell extends Shell
             $host = $this->Hosts->findByHost($hostname, $worker_name);
             if ($host) {
                 //## Host is in the database, need to remove it
-                $this->_stopHost($host->pid, $worker_name);
+                $this->_stopHost($host);
             } else {
                 //## No Host record found, just kill it with fire if it exists
                 $check_pid = (new Process())->getPidByName($worker_name);
@@ -143,7 +143,7 @@ class WatchdogShell extends Shell
         }
     }
 
-    protected function _stopHost($host = null)
+    protected function _stopHost($host)
     {
         //## Host is in the database, tell the host to gracefully shutdown
         $this->out(__('Told {0}.{1} to shutdown', $host->host_name, $host->worker_name));
