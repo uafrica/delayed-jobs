@@ -4,6 +4,7 @@ namespace DelayedJobs\Shell;
 use Cake\Cache\Cache;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
+use Cake\Datasource\Exception\InvalidPrimaryKeyException;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\Log\Log;
 use Cake\Utility\Hash;
@@ -153,6 +154,9 @@ class HostShell extends Shell
             $this->out(__('<error>Job {0} does not exist in the DB!</error>',
                 $job_id), 1, Shell::VERBOSE);
 
+            $this->_amqpManager->nack($message, false);
+        } catch (InvalidPrimaryKeyException $e) {
+            Log::debug(__('Invalid PK for {0}', $message->body));
             $this->_amqpManager->nack($message, false);
         }
     }

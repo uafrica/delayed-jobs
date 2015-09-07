@@ -3,12 +3,34 @@
 namespace DelayedJobs\Shell;
 
 use Cake\Console\Shell;
+use Cake\Core\Configure;
 use Cake\I18n\Time;
+use Cake\Network\Http\Client;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 class MonitorShell extends Shell
 {
     public $modelClass = 'DelayedJobs.Hosts';
+
+    protected function _getRabbitData()
+    {
+        $config = Configure::read('dj.service.rabbit.server');
+
+        $client = new Client([
+            'host' => $config['host'],
+            'port' => 15672,
+            'auth' => [
+                'username' => $config['user'],
+                'password' => $config['pass']
+            ]
+        ]);
+        $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
+            Configure::read('dj.service.name') . '-queue'), [], [
+                'type' => 'json'
+            ]);
+
+        return $queue_data->json;
+    }
 
     public function main()
     {
@@ -26,7 +48,9 @@ class MonitorShell extends Shell
         $hostname = php_uname('n');
 
         $time = time();
+        $rabbit_time = microtime(true);
         $start = true;
+
         while (true) {
             $statuses = $this->DelayedJobs->find('list', [
                 'keyField' => 'status',
@@ -75,6 +99,11 @@ class MonitorShell extends Shell
                 ])
                 ->hydrate(false)
                 ->first();
+            if ($start || microtime(true) - $rabbit_time > 50) {
+                $rabbit_status = $this->_getRabbitData();
+                $rabbit_time = microtime(true);
+            }
+
             if ($start || time() - $time > 5) {
                 $start = false;
                 $time = time();
@@ -120,6 +149,12 @@ class MonitorShell extends Shell
                 $this->out(__('{0}: <info>{1}</info>', $name, (isset($statuses[$status]) ? $statuses[$status] : 0)));
             }
 
+            $this->hr();
+            $this->out('Rabbit stats');
+            $this->nl();
+            $this->out(__('Ready: <info>{0}</info>', $rabbit_status['messages_ready']));
+            $this->out(__('Unacked: <info>{0}</info>', $rabbit_status['messages_unacknowledged']));
+
             if (count($running_jobs) > 0) {
                 $this->hr();
                 $this->out(__('Running job snapshot <info>{0} seconds ago</info>:', time() - $time));
@@ -142,7 +177,7 @@ class MonitorShell extends Shell
             if ($this->param('snapshot')) {
                 break;
             }
-            usleep(50000);
+            usleep(100000);
         }
     }
 
