@@ -63,10 +63,10 @@ class WatchdogShell extends Shell
 
         $this->out('Starting Watchdog');
 
-        if ($this->param('workers') > 0) {
-            $this->startHost();
+        if ($this->param('hosts') > 0) {
+            $this->startHosts();
         } else {
-            $this->stopHost();
+            $this->stopHosts();
         }
 
         $this->recuring();
@@ -76,46 +76,80 @@ class WatchdogShell extends Shell
         $this->Lock->unlock('DelayedJobs.WorkerShell.main');
     }
 
-    public function startHost($worker_count = null)
+    public function startHosts($host_count = null, $worker_count = null)
+    {
+        $host_count = $host_count ?: $this->param('hosts');
+        $worker_count = $worker_count ?: $this->param('workers');
+        $max_hosts = Configure::read('dj.max.hosts');
+
+        if ($host_count > $max_hosts) {
+            $host_count = $max_hosts;
+            $this->out('<error>Too many hosts (max_hosts:' . $max_hosts . ')</error>');
+        }
+        if ($worker_count > Configure::read('dj.max.workers')) {
+            $worker_count = Configure::read('dj.max.workers');
+        }
+
+        $this->out('Starting Watchdog: <info>' . $host_count . ' Hosts</info>');
+
+        $service_name = Configure::read('dj.service.name');
+        for ($i = 1;$i <= $host_count;$i++) {
+            $this->_startHost($service_name . '-host-' . $i, $worker_count);
+        }
+
+        $hostname = php_uname('n');
+        for ($i = $host_count + 1; $i <= $max_hosts; $i++) {
+            $worker_name = Configure::read('dj.service.name') . '-host-' . $i;
+            $host = $this->Hosts->findByHost($hostname, $worker_name);
+            if ($host) {
+                //## Host is in the database, need to remove it
+                $this->_stopHost($host->pid, $worker_name);
+            } else {
+                //## No Host record found, just kill it with fire if it exists
+                $check_pid = (new Process())->getPidByName($worker_name);
+                if ($check_pid) {
+                    $this->_kill($check_pid, $worker_name);
+                }
+            }
+        }
+    }
+
+    public function stopHosts()
+    {
+        $hostname = php_uname('n');
+        $hosts = $this->Hosts->find()
+            ->where([
+                'host_name' => $hostname
+            ]);
+        foreach ($hosts as $host) {
+            $this->_stopHost($host);
+        }
+    }
+
+    protected function _startHost($worker_name, $worker_count = null)
     {
         try {
             $host_name = php_uname('n');
 
-            $worker_name = Configure::read('dj.service.name');
-
             $host = $this->Hosts->findByHost($host_name, $worker_name);
 
             if (!$host) {
-                $this->_startHost($host_name, $worker_name, $worker_count);
+                $this->_createHostInstance($host_name, $worker_name, $worker_count);
             } else {
-                $this->_checkHost($host, $worker_count);
+                $this->_checkHostInstance($host, $worker_count);
             }
         } catch (Exception $exc) {
             $this->out('<fail>Failed: ' . $exc->getMessage() . '</fail>');
         }
     }
 
-    public function stopHost()
+    protected function _stopHost($host = null)
     {
-        $host_name = php_uname('n');
-        $worker_name = Configure::read('dj.service.name');
-
-        $host = $this->Hosts->findByHost($host_name, $worker_name);
-
-        if ($host) {
-            //## Host is in the database, tell the host to gracefully shutdown
-            $this->out(__('Told {0}.{1} to shutdown', $host_name, $worker_name));
-            $host->status = HostsTable::STATUS_SHUTDOWN;
-            $host->worker_count = 0;
-            $this->Hosts->save($host);
-        } else {
-            //## No Host record found, just kill if it exists
-            $check_pid = (new Process())->getPidByName('DelayedJobs.Host ' . $worker_name);
-
-            if ($check_pid) {
-                $this->_kill($check_pid, $worker_name);
-            }
-        }
+        //## Host is in the database, tell the host to gracefully shutdown
+        $this->out(__('Told {0}.{1} to shutdown', $host->host_name, $host->worker_name));
+        $host->status = HostsTable::STATUS_SHUTDOWN;
+        $host->worker_count = 0;
+        $this->Hosts->save($host);
     }
 
     public function recuring()
@@ -197,20 +231,14 @@ class WatchdogShell extends Shell
      * @param $worker_name
      * @return mixed
      */
-    protected function _startHost($host_name, $worker_name, $worker_count = null)
+    protected function _createHostInstance($host_name, $worker_name, $worker_count)
     {
-        $worker_count = $worker_count ?: $this->param('workers') * $this->param('parallel');
-
-        if ($worker_count > Configure::read('dj.max.workers')) {
-            $worker_count = Configure::read('dj.max.workers');
-        }
-
         $this->out(__('Starting: <info>{0}.{1}</info> with {2} workers', $host_name, $worker_name, $worker_count));
 
         $base_path = self::BASEPATH;
 
         //## Host not found in database, start it
-        $process = new Process($base_path . $worker_name);
+        $process = new Process($base_path . ' ' . $worker_name);
         $pid = $process->getPid();
         $host = $this->Hosts->started($host_name, $worker_name, $pid, $worker_count);
 
@@ -240,16 +268,14 @@ class WatchdogShell extends Shell
             $process->stop();
             $this->out(
                 sprintf(
-                    '<error>Could not start:</error> %s',
-                    $worker_name
+                    '<error>Could not start:</error> %s', $worker_name
                 ),
                 2
             );
         } else {
             $this->out(
                 sprintf(
-                    '<success>Started:</success> %s (pid: %s)',
-                    $worker_name,
+                    '<success>Started:</success> %s (pid: %s)', $worker_name,
                     $host->pid
                 ),
                 2
@@ -259,7 +285,7 @@ class WatchdogShell extends Shell
         return $host;
     }
 
-    protected function _checkHost($host, $worker_count = null)
+    protected function _checkHostInstance($host, $worker_count = null)
     {
         $process = new Process();
         $process->setPid($host->pid);
@@ -271,7 +297,7 @@ class WatchdogShell extends Shell
             $process_running = false;
         }
 
-        $host->worker_count = $worker_count ?: $this->param('workers') * $this->param('parallel');
+        $host->worker_count = $worker_count ?: $this->param('workers');
 
         if ($host->status == HostsTable::STATUS_IDLE) {
             //## Host is idle, need to start it
@@ -355,27 +381,32 @@ class WatchdogShell extends Shell
         $host_name = php_uname('n');
         $worker_name = Configure::read('dj.service.name');
 
-        $host = $this->Hosts->findByHost($host_name, $worker_name);
-
-        if (!$host) {
-            $this->out('<error>No host running</error>');
+        $hosts = $this->Hosts->find()
+            ->where([
+                'host_name' => $host_name
+            ]);
+        if ($hosts->count() == 0) {
+            $this->out('<error>No hosts running</error>');
             $this->_stop(1);
         }
 
-        $worker_count = $host->worker_count;
+        $worker_count = $hosts->first()->worker_count;
+        $host_count = $hosts->count();
+        $this->out(' - Killing running hosts.');
+        $this->stopHosts();
 
-        $this->out(' - Killing running host.');
-        $this->stopHost();
-
-        $this->out(' - Waiting for host to stop');
-        while ($host) {
-            $host = $this->Hosts->findByHost($host_name, $worker_name);
+        $this->out(' - Waiting for all hosts to stop');
+        $hosts = $this->Hosts->find()
+            ->where([
+                'host_name' => $host_name
+            ]);
+        while ($hosts->count() > 0) {
             sleep(1);
             $this->out('.', 0, Shell::VERBOSE);
         }
 
-        $this->out(' - Restarting host.');
-        $this->startHost($worker_count);
+        $this->out(' - Restarting hosts.');
+        $this->startHosts($host_count, $worker_count);
     }
 
     public function monitor()
@@ -403,11 +434,11 @@ class WatchdogShell extends Shell
             ->addSubcommand('monitor', [
                 'help' => 'Moved into own shell - use bin/cake DelayedJobs.monitor to run'
             ])
-            ->addSubcommand('startHost', [
-                'help' => 'Starts a host'
+            ->addSubcommand('startHosts', [
+                'help' => 'Starts hosts'
             ])
-            ->addSubcommand('stopHost', [
-                'help' => 'Stops a host'
+            ->addSubcommand('stopHosts', [
+                'help' => 'Stops hosts'
             ])
             ->addSubcommand('clean', [
                 'help' => 'Cleans out jobs that are completed and older than 4 weeks'
@@ -429,12 +460,12 @@ class WatchdogShell extends Shell
                     ]
                 ]
             ])
-            ->addOption('parallel', [
-                    'help' => 'Number of parallel workers (worker count is multiplied by this)',
+            ->addOption('workers', [
+                    'help' => 'Number of workers each host may run',
                     'default' => 1
                 ])
-            ->addOption('workers', [
-                    'help' => 'Number of workers to run',
+            ->addOption('hosts', [
+                    'help' => 'Number of hosts to run',
                     'default' => $this->_autoWorker()
                 ]);;
 
