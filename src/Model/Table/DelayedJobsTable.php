@@ -320,7 +320,7 @@ class DelayedJobsTable extends Table
         /*
          * Special case for jobs that are created within a parent transaction
          */
-        if (!$options['_primary']) {
+        if (!$options['atomic'] || !$options['_primary']) {
             $this->_processJobForQueue($dj);
         }
 
