@@ -439,8 +439,9 @@ class WatchdogShell extends Shell
         }
 
         $this->loadModel('DelayedJobs.DelayedJobs');
-        $basic_query = $this->DelayedJobs
+        $sequences = $this->DelayedJobs
             ->find()
+            ->distinct(['sequence'])
             ->select([
                 'id',
                 'status',
@@ -450,13 +451,7 @@ class WatchdogShell extends Shell
             ])
             ->where([
                 'status in' => [DelayedJobsTable::STATUS_NEW, DelayedJobsTable::STATUS_FAILED],
-                'run_at <' => new Time()
-            ]);
-
-        $sequences = $basic_query
-            ->cleanCopy()
-            ->distinct(['sequence'])
-            ->andWhere([
+                'run_at <' => new Time(),
                 'sequence is not' => null
             ])
             ->order([
@@ -465,14 +460,25 @@ class WatchdogShell extends Shell
             ])
             ->all();
 
-        $no_sequences = $basic_query
-            ->cleanCopy()
-            ->andWhere(['sequence is' => null])
+        $no_sequences = $this->DelayedJobs->find()
+            ->select([
+                'id',
+                'status',
+                'priority',
+                'sequence',
+                'run_at'
+            ])
+            ->where([
+                'status in' => [DelayedJobsTable::STATUS_NEW, DelayedJobsTable::STATUS_FAILED],
+                'run_at <' => new Time(),
+                'sequence is' => null
+            ])
             ->order([
                 'priority' => 'asc',
                 'id' => 'asc'
             ])
             ->all();
+
         $all_jobs = $sequences->append($no_sequences);
         foreach ($all_jobs as $job) {
             if ($this->_io->level() < Shell::VERBOSE) {
