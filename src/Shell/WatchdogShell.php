@@ -451,17 +451,28 @@ class WatchdogShell extends Shell
             ->where([
                 'status in' => [DelayedJobsTable::STATUS_NEW, DelayedJobsTable::STATUS_FAILED],
                 'run_at <' => new Time()
+            ]);
+
+        $sequences = $basic_query
+            ->cleanCopy()
+            ->distinct(['sequence'])
+            ->andWhere([
+                'sequence is not' => null
             ])
             ->order([
                 'priority' => 'asc',
                 'id' => 'asc'
-            ]);
-
-        $sequences = $basic_query
-            ->distinct(['sequence'])
+            ])
             ->all();
 
-        $no_sequences = $basic_query->andWhere(['sequence is' => null])->all();
+        $no_sequences = $basic_query
+            ->cleanCopy()
+            ->andWhere(['sequence is' => null])
+            ->order([
+                'priority' => 'asc',
+                'id' => 'asc'
+            ])
+            ->all();
         $all_jobs = $sequences->append($no_sequences);
         foreach ($all_jobs as $job) {
             if ($this->_io->level() < Shell::VERBOSE) {
