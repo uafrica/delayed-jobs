@@ -367,7 +367,7 @@ class DelayedJobsTable extends Table
             $this->_queueJob($dj);
         }
 
-        if ($dj->sequence && $dj->status === self::STATUS_SUCCESS) {
+        if ($dj->sequence && ($dj->status === self::STATUS_SUCCESS || $dj->status === self::STATUS_BURRIED)) {
             $this->_queueNextSequence($dj);
         }
     }
@@ -388,10 +388,10 @@ class DelayedJobsTable extends Table
             $dj->sequence &&
             $this->_existingSequence($dj)
         ) {
-            Log::debug(__('{0} will not be queued', $dj->id));
+            Log::debug(__('{0} will not be queued because sequence exists: {1}', $dj->id, $dj->sequence));
             return;
         }
-        Log::debug(__('{0} will be queued', $dj->id));
+        Log::debug(__('{0} will be queued with sequence of {1}', $dj->id, $dj->sequence));
         $dj->queue();
     }
 
