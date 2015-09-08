@@ -9,6 +9,10 @@ use Cake\Network\Http\Client;
 use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
+/**
+ * Class MonitorShell
+ * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
+ */
 class MonitorShell extends Shell
 {
     public $modelClass = 'DelayedJobs.Hosts';
@@ -18,6 +22,61 @@ class MonitorShell extends Shell
 
 
         return $queue_data->json;
+    }
+
+    protected function _rates($field, $status = null)
+    {
+        $available_rates = [
+            '30 seconds',
+            '5 minutes',
+            '15 minutes',
+            '1 hour'
+        ];
+
+        $conditions = [];
+        if ($status) {
+            $conditions = [
+                'status' => $status
+            ];
+        }
+
+        $return = [];
+        foreach ($available_rates as $available_rate) {
+            $return[] = $this->DelayedJobs->jobsPerSecond($conditions, $field, '-' . $available_rate);
+        }
+        return $return;
+    }
+
+    protected function _statusStats()
+    {
+        $statuses = $this->DelayedJobs->find('list', [
+            'keyField' => 'status',
+            'valueField' => 'counter'
+        ])
+            ->select([
+                'status',
+                'counter' => $this->DelayedJobs->find()
+                    ->func()
+                    ->count('id')
+            ])
+            ->where([
+                'not' => ['status' => DelayedJobsTable::STATUS_NEW]
+            ])
+            ->group(['status'])
+            ->toArray();
+        $statuses['waiting'] = $this->DelayedJobs->find()
+            ->where([
+                'status' => DelayedJobsTable::STATUS_NEW,
+                'run_at >' => new Time()
+            ])
+            ->count();
+        $statuses[DelayedJobsTable::STATUS_NEW] = $this->DelayedJobs->find()
+            ->where([
+                'status' => DelayedJobsTable::STATUS_NEW,
+                'run_at <=' => new Time()
+            ])
+            ->count();
+        return $statuses;
     }
 
     public function main()
@@ -40,45 +99,9 @@ class MonitorShell extends Shell
         $start = true;
 
         while (true) {
-            $statuses = $this->DelayedJobs->find('list', [
-                'keyField' => 'status',
-                'valueField' => 'counter'
-            ])
-                ->select([
-                    'status',
-                    'counter' => $this->DelayedJobs->find()
-                        ->func()
-                        ->count('id')
-                ])
-                ->where([
-                    'not' => ['status' => DelayedJobsTable::STATUS_NEW]
-                ])
-                ->group(['status'])
-                ->toArray();
-            $statuses['waiting'] = $this->DelayedJobs->find()
-                ->where([
-                    'status' => DelayedJobsTable::STATUS_NEW,
-                    'run_at >' => new Time()
-                ])
-                ->count();
-            $statuses[DelayedJobsTable::STATUS_NEW] = $this->DelayedJobs->find()
-                ->where([
-                    'status' => DelayedJobsTable::STATUS_NEW,
-                    'run_at <=' => new Time()
-                ])
-                ->count();
-            $created_per_second_hour = $this->DelayedJobs->jobsPerSecond();
-            $created_per_second_15 = $this->DelayedJobs->jobsPerSecond([], 'created', '-15 minutes');
-            $created_per_second_5 = $this->DelayedJobs->jobsPerSecond([], 'created', '-5 minutes');
-            $completed_per_second_hour = $this->DelayedJobs->jobsPerSecond([
-                'status' => DelayedJobsTable::STATUS_SUCCESS
-            ], 'modified');
-            $completed_per_second_15 = $this->DelayedJobs->jobsPerSecond([
-                'status' => DelayedJobsTable::STATUS_SUCCESS
-            ], 'modified', '-15 minutes');
-            $completed_per_second_5 = $this->DelayedJobs->jobsPerSecond([
-                'status' => DelayedJobsTable::STATUS_SUCCESS
-            ], 'modified', '-5 minutes');
+            $statuses = $this->_statusStats();
+            $created_rate = $this->_rates('created');
+            $completed_rate = $this->_rates('end_time', DelayedJobsTable::STATUS_SUCCESS);
             $host_count = $this->Hosts->find()
                 ->count();
             $worker_count = $this->Hosts->find()
@@ -87,6 +110,7 @@ class MonitorShell extends Shell
                 ])
                 ->hydrate(false)
                 ->first();
+
             if ($start || microtime(true) - $rabbit_time > 0.5) {
                 $rabbit_status = AmqpManager::queueStatus();
                 $rabbit_time = microtime(true);
@@ -96,12 +120,15 @@ class MonitorShell extends Shell
                 $start = false;
                 $time = time();
                 $running_jobs = $this->DelayedJobs->find()
+                    ->select([
+                        'id', 'group', 'locked_by', 'class', 'method'
+                    ])
                     ->where([
                         'status' => DelayedJobsTable::STATUS_BUSY
                     ])
                     ->all();
                 $last_failed = $this->DelayedJobs->find()
-                    ->select(['id', 'last_message', 'failed_at'])
+                    ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
                     ->where([
                         'status' => DelayedJobsTable::STATUS_FAILED
                     ])
@@ -110,13 +137,24 @@ class MonitorShell extends Shell
                     ])
                     ->first();
                 $last_buried = $this->DelayedJobs->find()
-                    ->select(['id', 'last_message', 'failed_at'])
+                    ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
                     ->where([
                         'status' => DelayedJobsTable::STATUS_BURRIED
                     ])
                     ->order([
                         'failed_at' => 'DESC'
                     ])
+                    ->first();
+                $time_diff = $this->DelayedJobs->find()->func()->timeDiff([
+                    'end_time' => 'literal',
+                    'start_time' => 'literal'
+                ]);
+                $longest_running = $this->DelayedJobs->find()
+                    ->select(['id', 'group', 'class', 'method', 'diff' => $time_diff])
+                    ->where([
+                        'status' => DelayedJobsTable::STATUS_SUCCESS
+                    ])
+                    ->orderDesc($time_diff)
                     ->first();
             }
 
@@ -125,10 +163,8 @@ class MonitorShell extends Shell
             $this->hr();
             $this->out(__('Running hosts: <info>{0}</info>', $host_count));
             $this->out(__('Workers: <info>{0}</info>', $worker_count['worker_count'] ?: 0));
-            $this->out(__('Created / s: <info>{0}</info> <info>{1}</info> <info>{2}</info>', $created_per_second_5,
-                $completed_per_second_15, $completed_per_second_hour));
-            $this->out(__('Completed /s : <info>{0}</info> <info>{1}</info> <info>{2}</info>', $completed_per_second_5,
-                $completed_per_second_15, $completed_per_second_hour));
+            $this->out(__('Created / s: <info>{0}</info>', implode(' ', $created_rate)));
+            $this->out(__('Completed /s : <info>{0}</info>', implode(' ', $completed_rate)));
             $this->hr();
 
             $this->out('Total current job count');
@@ -154,14 +190,17 @@ class MonitorShell extends Shell
             }
             $this->hr();
             if ($last_failed) {
-                $this->out(__('<info>{0}</info> failed because <info>{1}</info> at <info>{2}</info>', $last_failed->id,
+                $this->out(__('<info>{0} ({1}::{2}())</info> failed because <info>{3}</info> at <info>{4}</info>', $last_failed->id, $last_failed->class, $last_failed->method,
                     $last_failed->last_message, $last_failed->failed_at->i18nFormat()));
             }
             if ($last_buried) {
-                $this->out(__('<info>{0}</info> was buried because <info>{1}</info> at <info>{2}</info>',
-                    $last_buried->id, $last_buried->last_message, $last_buried->failed_at->i18nFormat()));
+                $this->out(__('<info>{0} ({1}::{2}())</info> was buried because <info>{3}</info> at <info>{4}</info>',
+                    $last_buried->id, $last_buried->class, $last_buried->method, $last_buried->last_message, $last_buried->failed_at->i18nFormat()));
             }
-
+            if ($longest_running) {
+                $this->out(__('<info>{0} ({1}::{2}())</info> is the longest running job at <info>{3}</info>', $longest_running->id,
+                    $longest_running->class, $longest_running->method, $longest_running->diff));
+            }
             if ($this->param('snapshot')) {
                 break;
             }
