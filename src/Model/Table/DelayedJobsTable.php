@@ -269,10 +269,7 @@ class DelayedJobsTable extends Table
 
     public function getJob($job_id, $all_fields = false)
     {
-        $options = [
-            'cache' => Configure::read('dj.service.cache'),
-            'key' => 'dj::' . Configure::read('dj.service.name') . '::' . $job_id . '::' . ($all_fields ? 'all' : 'limit')
-        ];
+        $options = [];
         if (!$all_fields) {
             $options['fields'] = [
                 'id',
@@ -286,7 +283,16 @@ class DelayedJobsTable extends Table
             ];
         }
 
-        return $this->get($job_id, $options);
+        $cache_key = 'dj::' .
+            Configure::read('dj.service.name') .
+            '::' .
+            $job_id .
+            '::' .
+            ($all_fields ? 'all' : 'limit');
+
+        return Cache::remember($cache_key, function () use ($job_id, $options) {
+            return $this->get($job_id, $options);
+        }, Configure::read('dj.service.cache'));
     }
 
     /**
@@ -346,6 +352,12 @@ class DelayedJobsTable extends Table
         $cache_key = 'dj::' . Configure::read('dj.service.name') . '::' . $dj->id;
         Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
         Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
+
+        if ($dj->has('payload')) {
+            Cache::write($cache_key . '::all', $dj, Configure::read('dj.service.cache'));
+        } else {
+            Cache::write($cache_key . '::limit', $dj, Configure::read('dj.service.cache'));
+        }
 
         if ($dj->isNew()) {
             Log::debug(__('Job {0} has been created', $dj->id));
