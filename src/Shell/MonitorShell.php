@@ -214,7 +214,7 @@ class MonitorShell extends Shell
                 'boolean' => true,
                 'short' => 's'
             ])
-            ->addOptions('hide-jobs', [
+            ->addOption('hide-jobs', [
                 'help' => 'Hide active jobs',
                 'boolean' => true,
                 'short' => 'j'
