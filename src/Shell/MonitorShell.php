@@ -126,6 +126,15 @@ class MonitorShell extends Shell
                         ])
                         ->all();
                 }
+                $last_completed = $this->DelayedJobs->find()
+                    ->select(['id', 'last_message', 'end_time', 'class', 'method'])
+                    ->where([
+                        'status' => DelayedJobsTable::STATUS_SUCCESS
+                    ])
+                    ->order([
+                        'end_time' => 'DESC'
+                    ])
+                    ->first();
                 $last_failed = $this->DelayedJobs->find()
                     ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
                     ->where([
@@ -190,6 +199,11 @@ class MonitorShell extends Shell
                 }
             }
             $this->hr();
+            if (!empty($last_completed)) {
+                $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> completed at <info>{3}</info>',
+                    $last_completed->id, $last_completed->class, $last_completed->method,
+                    $last_completed->end_time->i18nFormat()));
+            }
             if (!empty($last_failed)) {
                 $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> failed because <info>{3}</info> at <info>{4}</info>', $last_failed->id, $last_failed->class, $last_failed->method,
                     $last_failed->last_message, $last_failed->failed_at->i18nFormat()));
