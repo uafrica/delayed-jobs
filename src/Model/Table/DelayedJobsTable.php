@@ -14,6 +14,7 @@ use Cake\ORM\Table;
 use Cake\Validation\Validator;
 use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Entity\DelayedJob;
+use DelayedJobs\Traits\DebugTrait;
 
 /**
  * DelayedJob Model
@@ -21,6 +22,8 @@ use DelayedJobs\Model\Entity\DelayedJob;
  */
 class DelayedJobsTable extends Table
 {
+    use DebugTrait;
+
     const SEARCH_LIMIT = 10000;
     const STATUS_NEW = 1;
     const STATUS_BUSY = 2;
@@ -360,7 +363,7 @@ class DelayedJobsTable extends Table
         }
 
         if ($dj->isNew()) {
-            Log::debug(__('Job {0} has been created', $dj->id));
+            $this->dj_log(__('Job {0} has been created', $dj->id));
         }
 
         if ($dj->isNew() || $dj->status === self::STATUS_FAILED) {
@@ -388,10 +391,10 @@ class DelayedJobsTable extends Table
             $dj->sequence &&
             $this->_existingSequence($dj)
         ) {
-            Log::debug(__('{0} will not be queued because sequence exists: {1}', $dj->id, $dj->sequence));
+            $this->dj_log(__('{0} will not be queued because sequence exists: {1}', $dj->id, $dj->sequence));
             return;
         }
-        Log::debug(__('{0} will be queued with sequence of {1}', $dj->id, $dj->sequence));
+        $this->dj_log(__('{0} will be queued with sequence of {1}', $dj->id, $dj->sequence));
         $dj->queue();
     }
 
@@ -414,7 +417,7 @@ class DelayedJobsTable extends Table
             ->first();
 
         if (!$next) {
-            Log::debug(__('No more sequenced jobs found for {0}', $dj->sequence));
+            $this->dj_log(__('No more sequenced jobs found for {0}', $dj->sequence));
             return;
         }
 
