@@ -17,13 +17,6 @@ class MonitorShell extends Shell
 {
     public $modelClass = 'DelayedJobs.Hosts';
 
-    protected function _getRabbitData()
-    {
-
-
-        return $queue_data->json;
-    }
-
     protected function _rates($field, $status = null)
     {
         $available_rates = [
@@ -173,11 +166,13 @@ class MonitorShell extends Shell
                 $this->out(__('{0}: <info>{1}</info>', $name, (isset($statuses[$status]) ? $statuses[$status] : 0)));
             }
 
-            $this->hr();
-            $this->out('Rabbit stats');
-            $this->nl();
-            $this->out(__('Ready: <info>{0}</info>', $rabbit_status['messages_ready']));
-            $this->out(__('Unacked: <info>{0}</info>', $rabbit_status['messages_unacknowledged']));
+            if ($rabbit_status) {
+                $this->hr();
+                $this->out('Rabbit stats');
+                $this->nl();
+                $this->out(__('Ready: <info>{0}</info>', $rabbit_status['messages_ready']));
+                $this->out(__('Unacked: <info>{0}</info>', $rabbit_status['messages_unacknowledged']));
+            }
 
             if (count($running_jobs) > 0) {
                 $this->hr();

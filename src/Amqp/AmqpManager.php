@@ -228,6 +228,10 @@ class AmqpManager
         ]);
         $data = $queue_data->json;
 
+        if (!isset($data['messages'])) {
+            return null;
+        }
+
         return [
             'messages' => $data['messages'],
             'messages_ready' => $data['messages_ready'],
