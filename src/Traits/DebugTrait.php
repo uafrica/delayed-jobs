@@ -10,7 +10,7 @@ trait DebugTrait
 
     public function dj_log($message)
     {
-        if (Configure::read('dj.debug')) {
+        if (Configure::read('dj.debug') === true) {
             Log::debug($message);
         }
     }
