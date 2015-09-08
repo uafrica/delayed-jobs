@@ -59,7 +59,7 @@ class ArkWorker
                 'DelayedJobs\Worker\ArkWorker',
                 'flood',
                 $payload,
-                20,
+                rand(0, 9) + $job->priority,
                 $sequence
             );
         }

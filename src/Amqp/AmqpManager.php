@@ -5,7 +5,9 @@ namespace DelayedJobs\Amqp;
 use Cake\Core\Configure;
 use Cake\I18n\Time;
 use Cake\Log\Log;
+use Cake\Network\Http\Client;
 use DelayedJobs\Model\Entity\DelayedJob;
+use DelayedJobs\Traits\DebugTrait;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazyConnection;
@@ -16,6 +18,8 @@ use PhpAmqpLib\Wire\AMQPTable;
 
 class AmqpManager
 {
+    use DebugTrait;
+
     /**
      * The globally available instance
      *
@@ -97,10 +101,10 @@ class AmqpManager
         $this->_channel->confirm_select();
 
         $this->_channel->set_ack_handler(function (AMQPMessage $message) {
-            Log::debug("Message acked with content " . $message->body);
+            $this->dj_log("Message acked with content " . $message->body);
         });
         $this->_channel->set_nack_handler(function (AMQPMessage $message) {
-            Log::debug("Message nacked with content " . $message->body);
+            $this->dj_log("Message nacked with content " . $message->body);
         });
         return $this->_channel;
     }
@@ -145,7 +149,7 @@ class AmqpManager
 
         $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
         $channel->basic_publish($message, $exchange, $this->_serviceName);
-        Log::debug(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->id, $exchange, $this->_serviceName, $delay, $args['priority']));
+        $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->id, $exchange, $this->_serviceName, $delay, $args['priority']));
 
         $channel->wait_for_pending_acks();
     }
@@ -161,12 +165,12 @@ class AmqpManager
         }
 
         $body = json_decode($message->body, true);
-        $body['is-transaction'] = true;
+        $body['is-requeue'] = true;
         $message->setBody(json_encode($body));
 
         $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
         $channel->basic_publish($message, $exchange, $this->_serviceName);
-        Log::debug(__('Job {0} has been requeued to {1}, a delay of {2}', $message->body, $exchange, $delay));
+        $this->dj_log(__('Job {0} has been requeued to {1}, a delay of {2}', $message->body, $exchange, $delay));
 
         $channel->wait_for_pending_acks();
     }
@@ -204,5 +208,30 @@ class AmqpManager
     public function nack(AMQPMessage $message, $requeue = true)
     {
         $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, $requeue);
+    }
+
+    public static function queueStatus()
+    {
+        $config = Configure::read('dj.service.rabbit.server');
+
+        $client = new Client([
+            'host' => $config['host'],
+            'port' => 15672,
+            'auth' => [
+                'username' => $config['user'],
+                'password' => $config['pass']
+            ]
+        ]);
+        $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
+            Configure::read('dj.service.name') . '-queue'), [], [
+            'type' => 'json'
+        ]);
+        $data = $queue_data->json;
+
+        return [
+            'messages' => $data['messages'],
+            'messages_ready' => $data['messages_ready'],
+            'messages_unacknowledged' => $data['messages_unacknowledged']
+        ];
     }
 }

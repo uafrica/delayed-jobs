@@ -14,10 +14,18 @@ use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\HostsTable;
 use DelayedJobs\Process;
+use DelayedJobs\Traits\DebugTrait;
 use PhpAmqpLib\Message\AMQPMessage;
 
+/**
+ * Class HostShell
+ *
+ * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
+ */
 class HostShell extends Shell
 {
+    use DebugTrait;
+
     const UPDATETIMER = 10; //In seconds
     public $Lock;
     public $modelClass = 'DelayedJobs.DelayedJobs';
@@ -78,6 +86,8 @@ class HostShell extends Shell
         $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
         $start_time = time();
         $this->_workerCount = $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1);
+        $this->_workerCount = $this->_workerCount ?: 1;
+
         $this->_amqpManager = new AmqpManager();
         $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->_workerCount);
         while (true) {
@@ -94,13 +104,13 @@ class HostShell extends Shell
                 $new_count = $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1);
 
                 if ($new_count != $this->_workerCount) {
+                    $this->_workerCount = $new_count ?: 1;
+
                     $this->out(' !!Worker count changed!! ', 0, Shell::VERBOSE);
                     $this->_amqpManager->stopListening($this->_tag);
                     $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->_workerCount);
-                    Log::debug(__('{0} updated worker count', $this->_workerId));
+                    $this->dj_log(__('{0} updated worker count', $this->_workerId));
                 }
-
-                $this->_workerCount = $new_count;
 
                 $start_time = time();
                 $this->out('<success>Done</success>', 1, Shell::VERBOSE);
@@ -133,12 +143,8 @@ class HostShell extends Shell
         try {
             $job = $this->DelayedJobs->getJob($job_id);
             $result = $this->_executeJob($job, $message);
-
-            if ($result === false) {
-                $this->_amqpManager->nack($message);
-            }
         } catch (RecordNotFoundException $e) {
-            if (!isset($body['is-transaction'])) {
+            if (!isset($body['is-requeue'])) {
                 $this->out(__('<error>Job {0} does not exist in the DB - could be a transaction delay - we try once more!</error>',
                     $job_id), 1, Shell::VERBOSE);
 
@@ -156,7 +162,7 @@ class HostShell extends Shell
 
             $this->_amqpManager->nack($message, false);
         } catch (InvalidPrimaryKeyException $e) {
-            Log::debug(__('Invalid PK for {0}', $message->body));
+            $this->dj_log(__('Invalid PK for {0}', $message->body));
             $this->_amqpManager->nack($message, false);
         }
     }
@@ -183,7 +189,7 @@ class HostShell extends Shell
                     $this->_amqpManager->nack($this->_runningJobs[$job_id]['message'], false);
                     $this->DelayedJobs->failed($job, 'Job ran too long, killed');
                     unset($this->_runningJobs[$job_id]);
-                    Log::debug(__('{0} said {1} timed out', $this->_workerId, $job->id));
+                    $this->dj_log(__('{0} said {1} timed out', $this->_workerId, $job->id));
                 } else {
                     $this->out(__('<comment>Still running</comment> :: <info>{0} seconds</info>', round($busy_time, 2)), 1, Shell::VERBOSE);
                 }
@@ -217,7 +223,7 @@ class HostShell extends Shell
                 $this->_amqpManager->ack($this->_runningJobs[$job_id]['message']);
                 unset($this->_runningJobs[$job_id]);
                 $message = $job->status === DelayedJobsTable::STATUS_SUCCESS ? '<success>Job done</success>' : '<error>Job failed, will be retried</error>';
-                Log::debug(__('{0} completed {1}', $this->_workerId, $job->id));
+                $this->dj_log(__('{0} completed {1}', $this->_workerId, $job->id));
                 $this->out(__('{0} :: <info>{1} seconds</info>', $message, round($time, 2)), 1, Shell::VERBOSE);
                 continue;
             }
@@ -230,7 +236,7 @@ class HostShell extends Shell
                     'Job not running, but db said it is, could be a runtime error'
                 );
                 unset($this->_runningJobs[$job_id]);
-                Log::debug(__('{0} said {1} had a runtime error', $this->_workerId, $job->id));
+                $this->dj_log(__('{0} said {1} had a runtime error', $this->_workerId, $job->id));
                 $this->out(__('<error>Job not running, but should be</error>'), 1, Shell::VERBOSE);
             }
         }
@@ -255,13 +261,16 @@ class HostShell extends Shell
     {
         if ($this->_host && ($this->_host->status === HostsTable::STATUS_SHUTDOWN ||
             $this->_host->status === HostsTable::STATUS_TO_KILL)) {
+            $this->_amqpManager->nack($message);
             return false;
         }
 
         $this->out(__('<success>Starting job:</success> {0} :: ', $job->id), 0, Shell::VERBOSE);
 
         if ($this->DelayedJobs->nextSequence($job)) {
-            $this->out(__('Sequence exists <comment>{0}</comment>', $job->sequence), 1, Shell::VERBOSE);
+            $this->out(__('Sequence <comment>{0}</comment> is already busy', $job->sequence), 1, Shell::VERBOSE);
+            $this->dj_log(__('Sequence {0} is already busy', $job->sequence));
+            $this->_amqpManager->nack($message, false);
             return false;
         }
 
@@ -291,7 +300,7 @@ class HostShell extends Shell
         $p = new Process($path);
         $pid = $p->getPid();
         $this->_runningJobs[$job->id]['pid'] = $pid;
-        Log::debug(__('{0} started job {1}', $this->_workerId, $job->id));
+        $this->dj_log(__('{0} started job {1}', $this->_workerId, $job->id));
 
         $this->out(__('PID <info>{0}</info> :: <info>{1}::{2}</info>', $pid, $job->class, $job->method), 1, Shell::VERBOSE);
 

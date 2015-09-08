@@ -347,16 +347,16 @@ class DelayedJobsTable extends Table
         Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
         Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
 
+        if ($dj->isNew()) {
+            Log::debug(__('Job {0} has been created', $dj->id));
+        }
+
         if ($dj->isNew() || $dj->status === self::STATUS_FAILED) {
             $this->_queueJob($dj);
         }
 
         if ($dj->sequence && $dj->status === self::STATUS_SUCCESS) {
             $this->_queueNextSequence($dj);
-        }
-
-        if ($dj->isNew()) {
-            Log::debug(__('Job {0} has been created', $dj->id));
         }
     }
 
@@ -371,10 +371,15 @@ class DelayedJobsTable extends Table
 
     protected function _queueJob(DelayedJob $dj, $check_sequence = true)
     {
-        if ($check_sequence && $dj->sequence && $this->_existingSequence($dj)) {
+        if ($check_sequence &&
+            $dj->status === self::STATUS_NEW &&
+            $dj->sequence &&
+            $this->_existingSequence($dj)
+        ) {
+            Log::debug(__('{0} will not be queued', $dj->id));
             return;
         }
-
+        Log::debug(__('{0} will be queued', $dj->id));
         $dj->queue();
     }
 
@@ -397,6 +402,7 @@ class DelayedJobsTable extends Table
             ->first();
 
         if (!$next) {
+            Log::debug(__('No more sequenced jobs found for {0}', $dj->sequence));
             return;
         }
 

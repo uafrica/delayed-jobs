@@ -9,6 +9,7 @@ use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\Time;
 use Cake\ORM\TableRegistry;
+use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\HostsTable;
@@ -16,9 +17,8 @@ use DelayedJobs\Process;
 
 /**
  * Class WatchdogShell
- * @package DelayedJobs\Shell
  * @property \DelayedJobs\Model\Table\HostsTable $Hosts
- *
+ * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  */
 class WatchdogShell extends Shell
 {
@@ -126,7 +126,7 @@ class WatchdogShell extends Shell
         }
     }
 
-    protected function _startHost($worker_name, $worker_count = null)
+    protected function _startHost($worker_name, $worker_count)
     {
         try {
             $host_name = php_uname('n');
@@ -285,19 +285,17 @@ class WatchdogShell extends Shell
         return $host;
     }
 
-    protected function _checkHostInstance($host, $worker_count = null)
+    protected function _checkHostInstance($host, $worker_count)
     {
         $process = new Process();
         $process->setPid($host->pid);
         $details = $process->details();
 
-        if (strpos($details, 'DelayedJobs.host ' . $host->worker_name) !== false) {
+        if (strpos($details, 'host ' . $host->worker_name) !== false) {
             $process_running = true;
         } else {
             $process_running = false;
         }
-
-        $host->worker_count = $worker_count ?: $this->param('workers');
 
         if ($host->status == HostsTable::STATUS_IDLE) {
             //## Host is idle, need to start it
@@ -322,6 +320,8 @@ class WatchdogShell extends Shell
             //## Host is running, please confirm
             if ($process_running) {
                 //## Process is actually running, update status
+
+                $host->worker_count = $worker_count;
                 $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
                 $this->out(
                     sprintf(
@@ -340,7 +340,8 @@ class WatchdogShell extends Shell
                         $host->pid
                     )
                 );
-                $this->_startHost($host->host_name, $host->worker_name);
+
+                $this->_startHost($host->worker_name, $worker_count);
             }
         } elseif ($host->status == HostsTable::STATUS_TO_KILL) {
             //## Kill it with fire
@@ -357,6 +358,8 @@ class WatchdogShell extends Shell
         } else {
             //## Something went wrong, horribly wrong
             if ($process_running) {
+
+                $host->worker_count = $worker_count;
                 //## Process is actually running, update status
                 $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
                 $this->out(
@@ -402,7 +405,7 @@ class WatchdogShell extends Shell
             ]);
         while ($hosts->count() > 0) {
             sleep(1);
-            $this->out('.', 0, Shell::VERBOSE);
+            $this->out('.', 0);
         }
 
         $this->out(' - Restarting hosts.');
@@ -423,6 +426,46 @@ class WatchdogShell extends Shell
             $this->out(__('<success>{0} has been queued</success>', $job->id));
         } else {
             $this->out(__('<error>{0} could not be queued</error>', $job->id));
+        }
+    }
+
+    public function revive()
+    {
+        $stats = AmqpManager::queueStatus();
+        if ($stats['messages'] > 0) {
+            $this->out(__('<error>There are {0} messages currently queued</error>', $stats['messages']));
+            $this->out('We cannot reliablily determine which messages to requeue unless the RabbitMQ queue is empty.');
+            $this->_stop(1);
+        }
+
+        $this->loadModel('DelayedJobs.DelayedJobs');
+        $basic_query = $this->DelayedJobs
+            ->find()
+            ->select([
+                'id',
+                'status',
+                'priority',
+                'sequence',
+                'run_at'
+            ])
+            ->where([
+                'status in' => [DelayedJobsTable::STATUS_NEW, DelayedJobsTable::STATUS_FAILED],
+                'run_at <' => new Time()
+            ])
+            ->order([
+                'priority' => 'asc',
+                'id' => 'asc'
+            ]);
+
+        $sequences = $basic_query
+            ->distinct(['sequence'])
+            ->all();
+
+        $no_sequences = $basic_query->andWhere(['sequence is' => null])->all();
+        $all_jobs = $sequences->append($no_sequences);
+        foreach ($all_jobs as $job) {
+            $this->out(__(' - Queing job <info>{0}</info>', $job->id));
+            $job->queue();
         }
     }
 
@@ -448,6 +491,9 @@ class WatchdogShell extends Shell
             ])
             ->addSubcommand('reload', [
                 'help' => 'Restarts all running worker hosts'
+            ])
+            ->addSubcommand('revive', [
+                'help' => 'Requeues all new or failed jobs that should be in RabbitMQ'
             ])
             ->addSubcommand('requeue', [
                 'help '=> 'Receues a job',

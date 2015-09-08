@@ -6,6 +6,7 @@ use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\I18n\Time;
 use Cake\Network\Http\Client;
+use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 class MonitorShell extends Shell
@@ -14,20 +15,7 @@ class MonitorShell extends Shell
 
     protected function _getRabbitData()
     {
-        $config = Configure::read('dj.service.rabbit.server');
 
-        $client = new Client([
-            'host' => $config['host'],
-            'port' => 15672,
-            'auth' => [
-                'username' => $config['user'],
-                'password' => $config['pass']
-            ]
-        ]);
-        $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
-            Configure::read('dj.service.name') . '-queue'), [], [
-                'type' => 'json'
-            ]);
 
         return $queue_data->json;
     }
@@ -99,8 +87,8 @@ class MonitorShell extends Shell
                 ])
                 ->hydrate(false)
                 ->first();
-            if ($start || microtime(true) - $rabbit_time > 50) {
-                $rabbit_status = $this->_getRabbitData();
+            if ($start || microtime(true) - $rabbit_time > 0.5) {
+                $rabbit_status = AmqpManager::queueStatus();
                 $rabbit_time = microtime(true);
             }
 
