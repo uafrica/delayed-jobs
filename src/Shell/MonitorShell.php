@@ -109,7 +109,7 @@ class MonitorShell extends Shell
                 $rabbit_time = microtime(true);
             }
 
-            if ($start || time() - $time > 5) {
+            if ($this->param('hide-jobs') === false && ($start || time() - $time > 5)) {
                 $start = false;
                 $time = time();
                 $running_jobs = $this->DelayedJobs->find()
@@ -174,7 +174,7 @@ class MonitorShell extends Shell
                 $this->out(__('Unacked: <info>{0}</info>', $rabbit_status['messages_unacknowledged']));
             }
 
-            if (count($running_jobs) > 0) {
+            if ($this->param('hide-jobs') === false && count($running_jobs) > 0) {
                 $this->hr();
                 $this->out(__('Running job snapshot <info>{0} seconds ago</info>:', time() - $time));
                 $running_job_text = [];
@@ -213,6 +213,11 @@ class MonitorShell extends Shell
                 'help' => 'Generate a single snapshot of the delayed job service',
                 'boolean' => true,
                 'short' => 's'
+            ])
+            ->addOptions('hide-jobs', [
+                'help' => 'Hide active jobs',
+                'boolean' => true,
+                'short' => 'j'
             ]);
 
         return $options;
