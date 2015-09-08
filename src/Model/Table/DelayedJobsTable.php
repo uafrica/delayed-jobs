@@ -375,7 +375,7 @@ class DelayedJobsTable extends Table
     protected function _existingSequence(DelayedJob $dj)
     {
         return $this->exists([
-            'id !=' => $dj->id,
+            'id <' => $dj->id,
             'sequence' => $dj->sequence,
             'status in' => [self::STATUS_NEW, self::STATUS_BUSY, self::STATUS_FAILED, self::STATUS_UNKNOWN]
         ]);
