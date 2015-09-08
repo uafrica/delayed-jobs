@@ -109,17 +109,23 @@ class MonitorShell extends Shell
                 $rabbit_time = microtime(true);
             }
 
-            if ($this->param('hide-jobs') === false && ($start || time() - $time > 5)) {
+            if (($start || time() - $time > 5)) {
                 $start = false;
                 $time = time();
-                $running_jobs = $this->DelayedJobs->find()
-                    ->select([
-                        'id', 'group', 'locked_by', 'class', 'method'
-                    ])
-                    ->where([
-                        'status' => DelayedJobsTable::STATUS_BUSY
-                    ])
-                    ->all();
+                if ($this->param('hide-jobs') === false) {
+                    $running_jobs = $this->DelayedJobs->find()
+                        ->select([
+                            'id',
+                            'group',
+                            'locked_by',
+                            'class',
+                            'method'
+                        ])
+                        ->where([
+                            'status' => DelayedJobsTable::STATUS_BUSY
+                        ])
+                        ->all();
+                }
                 $last_failed = $this->DelayedJobs->find()
                     ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
                     ->where([
@@ -184,15 +190,15 @@ class MonitorShell extends Shell
                 }
             }
             $this->hr();
-            if ($last_failed) {
+            if (!empty($last_failed)) {
                 $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> failed because <info>{3}</info> at <info>{4}</info>', $last_failed->id, $last_failed->class, $last_failed->method,
                     $last_failed->last_message, $last_failed->failed_at->i18nFormat()));
             }
-            if ($last_buried) {
+            if (!empty($last_buried)) {
                 $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> was buried because <info>{3}</info> at <info>{4}</info>',
                     $last_buried->id, $last_buried->class, $last_buried->method, $last_buried->last_message, $last_buried->failed_at->i18nFormat()));
             }
-            if ($longest_running) {
+            if (!empty($longest_running)) {
                 $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> is the longest running job at <info>{3}</info>', $longest_running->id,
                     $longest_running->class, $longest_running->method, $longest_running->diff));
             }
