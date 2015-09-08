@@ -464,7 +464,10 @@ class WatchdogShell extends Shell
         $no_sequences = $basic_query->andWhere(['sequence is' => null])->all();
         $all_jobs = $sequences->append($no_sequences);
         foreach ($all_jobs as $job) {
-            $this->out(__(' - Queing job <info>{0}</info>', $job->id));
+            if ($this->_io->level() < Shell::VERBOSE) {
+                $this->out('.', 0, Shell::QUIET);
+            }
+            $this->out(__(' - Queing job <info>{0}</info>', $job->id), 1, Shell::VERBOSE);
             $job->queue();
         }
     }
