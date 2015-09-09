@@ -132,18 +132,7 @@ class AmqpManager
 
     public function queueJob(DelayedJob $job)
     {
-        try {
-            $channel = $this->_getChannel();
-        } catch (\Exception $e) {
-            Log::emergency(__(
-                'RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
-                $e->getMessage(),
-                get_class($e),
-                $job->id
-            ));
-
-            return false;
-        }
+        $channel = $this->_getChannel();
 
         $delay = $job->run_at->isFuture() ? (new Time())->diffInSeconds($job->run_at, false) * 1000 : 0;
 

@@ -1,6 +1,7 @@
 <?php
 namespace DelayedJobs\Model\Entity;
 
+use Cake\Core\Configure;
 use Cake\ORM\Entity;
 use Cake\Core\Exception\Exception;
 use DelayedJobs\Amqp\AmqpManager;
@@ -55,8 +56,19 @@ class DelayedJob extends Entity
 
     public function queue()
     {
-        $manager = AmqpManager::instance();
-        $manager->queueJob($this);
+        if (Configure::read('dj.service.rabbit.disable') === true) {
+            return;
+        }
+
+        try {
+            $manager = AmqpManager::instance();
+            $manager->queueJob($this);
+        } catch (\Exception $e) {
+            Log::emergency(__('RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
+                $e->getMessage(), get_class($e), $job->id));
+
+            return false;
+        }
     }
 
     /**
