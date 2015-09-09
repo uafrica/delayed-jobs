@@ -2,6 +2,7 @@
 
 namespace DelayedJobs\Model\Table;
 
+use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Database\Schema\Table as Schema;
 use Cake\Datasource\ConnectionManager;
@@ -11,7 +12,9 @@ use Cake\Log\Log;
 use Cake\ORM\ResultSet;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Entity\DelayedJob;
+use DelayedJobs\Traits\DebugTrait;
 
 /**
  * DelayedJob Model
@@ -19,6 +22,8 @@ use DelayedJobs\Model\Entity\DelayedJob;
  */
 class DelayedJobsTable extends Table
 {
+    use DebugTrait;
+
     const SEARCH_LIMIT = 10000;
     const STATUS_NEW = 1;
     const STATUS_BUSY = 2;
@@ -155,108 +160,9 @@ class DelayedJobsTable extends Table
             'sequence' => $job['sequence'],
             'status in' => [self::STATUS_BUSY, self::STATUS_FAILED]
         ];
-        $this->connection(ConnectionManager::get('buffered'));
         $result = $this->exists($conditions);
-        $this->connection(ConnectionManager::get('default'));
 
         return $result;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function nextJob($known_jobs, $known_sequences)
-    {
-        $allowed = [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN];
-        $run_at = new Time();
-
-        $sequence_query = $this
-            ->find()
-            ->select(['sequence'])
-            ->where([
-                'or' => [
-                    'status' => self::STATUS_BUSY,
-                    'and' => [
-                        'status' => self::STATUS_FAILED,
-                        'run_at >' => $run_at
-                    ]
-                ],
-                'sequence is not' => null
-            ]);
-
-        $conditions = [
-            'DelayedJobs.status in' => $allowed,
-            'DelayedJobs.run_at <=' => $run_at,
-        ];
-
-        if (!empty($known_jobs)) {
-            $conditions['DelayedJobs.id not in'] = $known_jobs;
-        }
-        if (!empty($known_sequences)) {
-            $conditions['or']['DelayedJobs.sequence not in'] = $known_sequences;
-            $conditions['or']['DelayedJobs.sequence IS'] = null;
-        }
-
-        return $this
-            ->find()
-            ->select([
-                'id',
-                'status',
-                'locked_by',
-                'pid',
-                'options',
-                'sequence'
-            ])
-            ->where($conditions)
-            ->order([
-                'DelayedJobs.priority' => 'ASC',
-                'DelayedJobs.id' => 'ASC'
-            ])
-            ->first();
-    }
-
-    public function getOpenJob($worker_id = '', $known_jobs = [], $known_sequences = [])
-    {
-        $job = $this->nextJob($known_jobs, $known_sequences);
-
-        if (!$job || !in_array($job->status, [self::STATUS_FAILED, self::STATUS_NEW, self::STATUS_UNKNOWN])) {
-            return false;
-        }
-
-        $options = (array)$job->options;
-        if (!isset($options['max_retries'])) {
-            $options['max_retries'] = Configure::read('dj.max.retries');
-        }
-
-        if (!isset($options['max_execution_time'])) {
-            $options['max_execution_time'] = Configure::read('dj.max.execution.time');
-        }
-        $job->options = $options;
-
-//        $this->lock($job, $worker_id);
-//
-//        usleep(100000); //## Sleep for 0.1 seconds
-//
-//        //## check if this job is still allocated to this worker
-//        $job = $this->get($job->id);
-//        $next_sequence = $this->nextSequence($job);
-
-        /*
-         * If this job is locked by us, and another same sequence isn't running we carry on
-         * Otherwise, we release this job back into the pool
-         */
-//        if ($job->locked_by === $worker_id) {
-          return $job;
-//        } elseif ($job->locked_by === $worker_id) {
-//            Log::debug($job->sequence . ' was grabbed by someone else', [
-//                'scope' => 'delayed_jobs'
-//            ]);
-////            $this->release($job);
-//        } else {
-//            Log::debug($job->id . ' was allocated to someone else', [
-//                'scope' => 'delayed_jobs'
-//            ]);
-//        }
     }
 
     /**
@@ -364,10 +270,38 @@ class DelayedJobsTable extends Table
         return $exists;
     }
 
+    public function getJob($job_id, $all_fields = false)
+    {
+        $options = [];
+        if (!$all_fields) {
+            $options['fields'] = [
+                'id',
+                'pid',
+                'locked_by',
+                'status',
+                'options',
+                'sequence',
+                'class',
+                'method'
+            ];
+        }
+
+        $cache_key = 'dj::' .
+            Configure::read('dj.service.name') .
+            '::' .
+            $job_id .
+            '::' .
+            ($all_fields ? 'all' : 'limit');
+
+        return Cache::remember($cache_key, function () use ($job_id, $options) {
+            return $this->get($job_id, $options);
+        }, Configure::read('dj.service.cache'));
+    }
+
     /**
      * @return void
      */
-    public function beforeSave()
+    public function beforeSave(Event $event, DelayedJob $dj)
     {
         $this->quote = $this->connection()
             ->driver()
@@ -375,15 +309,118 @@ class DelayedJobsTable extends Table
         $this->connection()
             ->driver()
             ->autoQuoting(true);
+
+        $options = (array)$dj->options;
+        if (!isset($options['max_retries'])) {
+            $options['max_retries'] = Configure::read('dj.max.retries');
+        }
+
+        if (!isset($options['max_execution_time'])) {
+            $options['max_execution_time'] = Configure::read('dj.max.execution.time');
+        }
+        $dj->options = $options;
     }
 
     /**
      * @return void
      */
-    public function afterSave()
+    public function afterSave(Event $event, DelayedJob $dj, \ArrayObject $options)
     {
+        /*
+         * Special case for jobs that are created within a parent transaction
+         */
+        if (!$options['atomic'] || !$options['_primary']) {
+            $this->_processJobForQueue($dj);
+        }
+
         $this->connection()
             ->driver()
             ->autoQuoting($this->quote);
+    }
+
+    /**
+     * @return void
+     */
+    public function afterSaveCommit(Event $event, DelayedJob $dj)
+    {
+        $this->_processJobForQueue($dj);
+    }
+
+    /**
+     * @param \DelayedJobs\Model\Entity\DelayedJob $dj
+     * @return void
+     */
+    protected function _processJobForQueue(DelayedJob $dj)
+    {
+        $cache_key = 'dj::' . Configure::read('dj.service.name') . '::' . $dj->id;
+        Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
+        Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
+
+        if ($dj->has('payload')) {
+            Cache::write($cache_key . '::all', $dj, Configure::read('dj.service.cache'));
+        } else {
+            Cache::write($cache_key . '::limit', $dj, Configure::read('dj.service.cache'));
+        }
+
+        if ($dj->isNew()) {
+            $this->dj_log(__('Job {0} has been created', $dj->id));
+        }
+
+        if ($dj->isNew() || $dj->status === self::STATUS_FAILED) {
+            $this->_queueJob($dj);
+        }
+
+        if ($dj->sequence && ($dj->status === self::STATUS_SUCCESS || $dj->status === self::STATUS_BURRIED)) {
+            $this->_queueNextSequence($dj);
+        }
+    }
+
+    protected function _existingSequence(DelayedJob $dj)
+    {
+        return $this->exists([
+            'id <' => $dj->id,
+            'sequence' => $dj->sequence,
+            'status in' => [self::STATUS_NEW, self::STATUS_BUSY, self::STATUS_FAILED, self::STATUS_UNKNOWN]
+        ]);
+    }
+
+    protected function _queueJob(DelayedJob $dj, $check_sequence = true)
+    {
+        if ($check_sequence &&
+            $dj->status === self::STATUS_NEW &&
+            $dj->sequence &&
+            $this->_existingSequence($dj)
+        ) {
+            $this->dj_log(__('{0} will not be queued because sequence exists: {1}', $dj->id, $dj->sequence));
+            return;
+        }
+        $this->dj_log(__('{0} will be queued with sequence of {1}', $dj->id, $dj->sequence));
+        $dj->queue();
+    }
+
+    protected function _queueNextSequence(DelayedJob $dj)
+    {
+        $next = $this->find()
+            ->select([
+                'id',
+                'sequence',
+                'priority',
+                'run_at'
+            ])
+            ->where([
+                'status' => self::STATUS_NEW,
+                'sequence' => $dj->sequence,
+            ])
+            ->order([
+                'id' => 'ASC'
+            ])
+            ->first();
+
+        if (!$next) {
+            $this->dj_log(__('No more sequenced jobs found for {0}', $dj->sequence));
+            return;
+        }
+
+        $this->_queueJob($next, false);
     }
 }

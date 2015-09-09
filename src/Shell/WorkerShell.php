@@ -5,11 +5,15 @@ use Cake\Console\Shell;
 use Cake\Core\Exception\Exception;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\I18n\Time;
+use Cake\Log\Log;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Table\DelayedJobsTable;
+use DelayedJobs\Traits\DebugTrait;
 
 class WorkerShell extends Shell
 {
+    use DebugTrait;
+
     /**
      * @var string
      */
@@ -37,7 +41,7 @@ class WorkerShell extends Shell
         $this->out('<info>Starting Job: ' . $job_id . '</info>', 1, Shell::VERBOSE);
 
         try {
-            $job = $this->DelayedJobs->get($job_id);
+            $job = $this->DelayedJobs->getJob($job_id, true);
             $this->out(' - Got job from DB', 1, Shell::VERBOSE);
         } catch (RecordNotFoundException $e) {
             $this->out('<fail>Job ' . $job_id . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
@@ -57,6 +61,7 @@ class WorkerShell extends Shell
 
         try {
             $this->out(' - Executing job', 1, Shell::VERBOSE);
+            $this->dj_log(__('Executing: {0}', $job->id));
             $job->status = DelayedJobsTable::STATUS_BUSY;
             $job->pid = getmypid();
             $job->start_time = new Time();
@@ -64,8 +69,13 @@ class WorkerShell extends Shell
 
             $response = $job->execute();
             $this->out(' - Execution complete', 1, Shell::VERBOSE);
+            $this->dj_log(__('Done with: {0}', $job->id));
 
-            $this->DelayedJobs->completed($job, is_string($response) ? $response : null);
+            if ($this->DelayedJobs->completed($job, is_string($response) ? $response : null)) {
+                $this->dj_log(__('Marked as completed: {0}', $job->id));
+            } else {
+                $this->dj_log(__('Not marked as completed: {0}', $job->id));
+            }
             $this->out('<success>Job ' . $job->id . ' Completed</success>', 1, Shell::VERBOSE);
 
             //Recuring job
@@ -77,6 +87,8 @@ class WorkerShell extends Shell
         } catch (\Exception $exc) {
             //## Job Failed
             $this->DelayedJobs->failed($job, $exc->getMessage());
+            $this->dj_log(__('Failed {0} because {1}', $job->id, $exc->getMessage()));
+
             $this->out('<fail>Job ' . $job_id . ' Failed (' . $exc->getMessage() . ')</fail>', 1, Shell::VERBOSE);
         }
     }

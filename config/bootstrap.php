@@ -15,11 +15,18 @@ if (!Configure::check('dj.service.name')) {
 if (!Configure::check('dj.max.workers')) {
     Configure::write("dj.max.workers", 10);
 }
+if (!Configure::check('dj.max.hosts')) {
+    Configure::write("dj.max.hosts", 10);
+}
 if (!Configure::check('dj.max.retries')) {
     Configure::write("dj.max.retries", 25);
 }
 if (!Configure::check('dj.max.execution.time')) {
     Configure::write("dj.max.execution.time", 6 * 60 * 60); // 6 Hours
+}
+
+if (!Configure::check('dj.service.cache')) {
+    Configure::write("dj.service.cache", 'default');
 }
 
 \Cake\Database\Type::map('serialize', 'DelayedJobs\Database\Type\SerializeType');

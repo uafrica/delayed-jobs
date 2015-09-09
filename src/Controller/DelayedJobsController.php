@@ -90,12 +90,10 @@ class DelayedJobsController extends AppController
                     'type' => $this->request->query('type') ?: 'success'
                 ],
                 'options' => [],
-                'run_at' => new Time(sprintf('+%s seconds', rand(5, 60))),
-                'status' => DelayedJobsTable::STATUS_NEW
+                'priority' => rand(1, 9) * 10 + 100,
+                'run_at' => new Time('+10 seconds'),
+                'status' => DelayedJobsTable::STATUS_NEW,
             ]);
-            $this->DelayedJobs->connection()
-                ->driver()
-                ->autoQuoting(true);
             $this->DelayedJobs->save($delayed_job);
         }
 

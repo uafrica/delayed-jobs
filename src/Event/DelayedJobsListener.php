@@ -3,6 +3,7 @@
 namespace DelayedJobs\Event;
 
 use Cake\Core\Exception\Exception;
+use Cake\Datasource\ConnectionManager;
 use Cake\Datasource\ModelAwareTrait;
 use Cake\Event\Event;
 use Cake\Event\EventListenerInterface;
@@ -54,7 +55,7 @@ class DelayedJobsListener implements EventListenerInterface
             'options' => [],
             'priority' => 100,
             'sequence' => null,
-            'run_at' => new Time('+5 seconds')
+            'run_at' => new Time()
         ];
         $data = $event->subject();
 
@@ -74,7 +75,11 @@ class DelayedJobsListener implements EventListenerInterface
         $entity = $this->DelayedJobs->newEntity($data);
         $entity->status = DelayedJobsTable::STATUS_NEW;
 
-        $result = $this->DelayedJobs->save($entity);
+        $options = [
+            'atomic' => !ConnectionManager::get('default')->inTransaction()
+        ];
+
+        $result = $this->DelayedJobs->save($entity, $options);
 
         if ($result) {
             return $entity;

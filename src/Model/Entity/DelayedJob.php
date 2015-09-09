@@ -3,6 +3,7 @@ namespace DelayedJobs\Model\Entity;
 
 use Cake\ORM\Entity;
 use Cake\Core\Exception\Exception;
+use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 class DelayedJob extends Entity
@@ -52,6 +53,12 @@ class DelayedJob extends Entity
         return $job_worker->{$method}($this->payload, $this);
     }
 
+    public function queue()
+    {
+        $manager = AmqpManager::instance();
+        $manager->queueJob($this);
+    }
+
     /**
      * When an object is cloned, PHP 5 will perform a shallow copy of all of the object's properties.
      * Any properties that are references to other variables, will remain references.
@@ -73,6 +80,9 @@ class DelayedJob extends Entity
         $this->last_message = null;
         $this->failed_at = null;
         $this->locked_by = null;
+        $this->start_time = null;
+        $this->end_time = null;
+        $this->pid = null;
     }
 
 }
