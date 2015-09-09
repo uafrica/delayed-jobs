@@ -71,8 +71,8 @@ class AmqpManager
      */
     public function __construct(AbstractConnection $connection = null)
     {
-        if ($connection === null) {
-            $config = Configure::read('dj.service.rabbit.server');
+        $config = Configure::read('dj.service.rabbit.server');
+        if ($connection === null && !empty($config['host'])) {
             $connection = new AMQPLazyConnection($config['host'], $config['port'], $config['user'], $config['pass'], $config['path']);
         }
 
