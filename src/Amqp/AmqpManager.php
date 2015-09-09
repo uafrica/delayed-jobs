@@ -97,6 +97,7 @@ class AmqpManager
         }
 
         $this->_channel = $this->_connection->channel();
+
         $this->_ensureQueue($this->_channel);
         $this->_channel->confirm_select();
 
@@ -131,7 +132,18 @@ class AmqpManager
 
     public function queueJob(DelayedJob $job)
     {
-        $channel = $this->_getChannel();
+        try {
+            $channel = $this->_getChannel();
+        } catch (\Exception $e) {
+            Log::emergency(__(
+                'RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
+                $e->getMessage(),
+                get_class($e),
+                $job->id
+            ));
+
+            return false;
+        }
 
         $delay = $job->run_at->isFuture() ? (new Time())->diffInSeconds($job->run_at, false) * 1000 : 0;
 
@@ -237,5 +249,18 @@ class AmqpManager
             'messages_ready' => $data['messages_ready'],
             'messages_unacknowledged' => $data['messages_unacknowledged']
         ];
+    }
+
+    /**
+     * @return bool
+     */
+    public function testConnection()
+    {
+        try {
+            $this->_connection->getSocket();
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 }
