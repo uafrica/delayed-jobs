@@ -6,6 +6,7 @@ use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\InvalidPrimaryKeyException;
 use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Utility\Hash;
 use DelayedJobs\Amqp\AmqpManager;
@@ -32,7 +33,7 @@ class HostShell extends Shell
     protected $_workerId;
     protected $_workerName;
     protected $_workerCount = 1;
-    protected $_runningJobs = [];
+    public $_runningJob;
     protected $_host;
     /**
      * @var \DelayedJobs\Amqp\AmqpManager
@@ -54,7 +55,7 @@ class HostShell extends Shell
         $this->out(__('Booting... My PID is <info>{0}</info>', getmypid()), 1, Shell::VERBOSE);
 
         //Wait 5 seconds for watchdog to finish
-        sleep(5);
+        sleep(2);
 
         $this->loadModel('DelayedJobs.Hosts');
         $host_name = php_uname('n');
@@ -74,64 +75,41 @@ class HostShell extends Shell
 
         $this->_workerId = $host_name . '.' . $this->_workerName;
 
-        /*
-         * Get Next Job
-         * Get Exclusive Lock on Job
-         * Fire Worker
-         * Worker fires job
-         * Worker monitors the exection time
-         */
-
-        //## Need to make sure that any running jobs for this host is in the array job_pids
-        $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
         $start_time = time();
-        $this->_workerCount = $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1);
-        $this->_workerCount = $this->_workerCount ?: 1;
 
-        $this->_amqpManager = new AmqpManager();
-        $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->_workerCount);
-        while (true) {
-            //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown
-            if (time() - $start_time >= self::UPDATETIMER) {
-                $this->nl();
-                $this->out('<info>Updating myself...</info>', 0, Shell::VERBOSE);
-                $this->_host = $this->Hosts->find()
-                    ->where([
-                        'host_name' => $host_name,
-                        'pid' => getmypid()
-                    ])
-                    ->first();
-                $new_count = $this->param('workers') ?: ($this->_host ? $this->_host->worker_count : 1);
-
-                if ($new_count != $this->_workerCount) {
-                    $this->_workerCount = $new_count ?: 1;
-
-                    $this->out(' !!Worker count changed!! ', 0, Shell::VERBOSE);
-                    $this->_amqpManager->stopListening($this->_tag);
-                    $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->_workerCount);
-                    $this->dj_log(__('{0} updated worker count', $this->_workerId));
-                }
-
-                $start_time = time();
-                $this->out('<success>Done</success>', 1, Shell::VERBOSE);
-            }
-
-            if ($this->_host && $this->_host->status === HostsTable::STATUS_SHUTDOWN && empty($this->_runningJobs)) {
-                $this->out('Time to die :(', 1, Shell::VERBOSE);
-                break;
-            }
-
-            if ($this->_host && $this->_host->status === HostsTable::STATUS_SHUTDOWN) {
-                $this->_amqpManager->stopListening($this->_tag);
-            }
-            if (!$this->_amqpManager->wait()) {
-                $this->out('.', 0, Shell::VERBOSE);
-            }
-            $this->_checkRunning();
+        declare(ticks = 1) {
+            pcntl_signal(\SIGTERM, [$this, 'handleSignal']);
+            pcntl_signal(\SIGINT, [$this, 'handleSignal']);
+            pcntl_signal(\SIGUSR1, [$this, 'handleSignal']);
+            pcntl_signal(\SIGHUP, [$this, 'handleSignal']);
         }
 
-        if ($this->_host) {
-            $this->Hosts->delete($this->_host);
+        $this->_amqpManager = new AmqpManager();
+        $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], 1);
+        $this->out(__('<info>Started up:</info> {0}', $this->_workerId), 1, Shell::VERBOSE);
+
+        while (true) {
+            $this->_amqpManager->wait();
+        }
+    }
+
+    public function handleSignal($signal)
+    {
+        switch ($signal) {
+            case \SIGTERM:
+            case \SIGUSR1:
+            case \SIGINT:
+                // some stuff before stop consumer e.g. delete lock etc
+                $this->_amqpManager->stopListening($this->_tag);
+                $this->_amqpManager->disconnect();
+
+                exit(0);
+                break;
+            case \SIGHUP:
+                // some stuff to restart consumer
+                break;
+            default:
+                // do nothing
         }
     }
 
@@ -139,9 +117,8 @@ class HostShell extends Shell
     {
         $body = json_decode($message->body, true);
         $job_id = $body['id'];
-        $this->nl();
         try {
-            $job = $this->DelayedJobs->getJob($job_id);
+            $job = $this->DelayedJobs->getJob($job_id, true);
             $result = $this->_executeJob($job, $message);
         } catch (RecordNotFoundException $e) {
             if (!isset($body['is-requeue'])) {
@@ -162,8 +139,12 @@ class HostShell extends Shell
 
             $this->_amqpManager->nack($message, false);
         } catch (InvalidPrimaryKeyException $e) {
-            $this->dj_log(__('Invalid PK for {0}', $message->body));
+            $this->dj_log(__('Invalid job message: {0}', $message->body));
             $this->_amqpManager->nack($message, false);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            $this->dj_log(__('Something bad happened. Hopefully it doesn\'t happen again. {0}', $e->getMessage()));
+            $this->_amqpManager->nack($message);
         }
     }
 
@@ -286,24 +267,41 @@ class HostShell extends Shell
             $options['max_execution_time'] = 25 * 60;
         }
 
-        $this->DelayedJobs->lock($job, $this->_workerId);
-        $this->_runningJobs[$job->id] = [
-            'sequence' => $job->sequence,
-            'id' => $job->id,
-            'start_time' => microtime(true),
-            'max_execution_time' => $options['max_execution_time'],
-            'job' => $job,
-            'message' => $message
-        ];
+        $this->dj_log(__('{0} starting job {1}', $this->_workerId, $job->id));
+        $job->start_time = new Time();
 
-        $path = ROOT . '/bin/cake DelayedJobs.worker -q ' . $job->id;
-        $p = new Process($path);
-        $pid = $p->getPid();
-        $this->_runningJobs[$job->id]['pid'] = $pid;
-        $this->dj_log(__('{0} started job {1}', $this->_workerId, $job->id));
+        $this->out(__('<info>{0}::{1}</info>', $job->class, $job->method), 0, Shell::VERBOSE);
 
-        $this->out(__('PID <info>{0}</info> :: <info>{1}::{2}</info>', $pid, $job->class, $job->method), 1, Shell::VERBOSE);
+        $this->_runningJob = $job;
+        try {
+            cli_set_process_title(__('{0} - Executing Job #{1}', $this->_workerId, $job->id));
+            $this->out(' :: <info>Executing</info>', 0, Shell::VERBOSE);
+            $this->dj_log(__('Executing: {0}', $job->id));
+            $response = $job->execute();
+            $this->out(' :: <success>Done</success>', 0, Shell::VERBOSE);
+            $this->dj_log(__('Done with: {0}', $job->id));
 
+            $this->DelayedJobs->completed($job, is_string($response) ? $response : null);
+
+            $this->out(__(' :: Took <comment>{0,number}</comment> seconds', $job->start_time->diffInSeconds($job->end_time)), 1, Shell::VERBOSE);
+            //Recuring job
+            if ($response instanceof \DateTime) {
+                $recuring_job = clone $job;
+                $recuring_job->run_at = $response;
+                $this->DelayedJobs->save($recuring_job);
+            }
+        } catch (\Exception $exc) {
+            //## Job Failed
+            $this->DelayedJobs->failed($job, $exc->getMessage());
+            $this->dj_log(__('Failed {0} because {1}', $job->id, $exc->getMessage()));
+
+            $this->out('<fail>Job ' . $job_id . ' Failed (' . $exc->getMessage() . ')</fail>', 1, Shell::VERBOSE);
+        }
+        $this->_runningJob = null;
+        $this->_amqpManager->ack($message);
+        cli_set_process_title(__('{0} - Waiting for job - Finished {1}', $this->_workerId, $job->id));
+
+        pcntl_signal_dispatch();
         return true;
     }
 

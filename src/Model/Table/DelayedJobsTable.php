@@ -109,6 +109,7 @@ class DelayedJobsTable extends Table
     {
         $job->status = self::STATUS_BUSY;
         $job->locked_by = $locked_by;
+        $job->start_time = new Time();
         $this->save($job);
     }
 

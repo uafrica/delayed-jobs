@@ -189,15 +189,11 @@ class AmqpManager
         $channel->basic_cancel($tag);
     }
 
-    public function wait($timeout = 1)
+    public function wait()
     {
         $channel = $this->_getChannel();
-        try {
-            while (count($channel->callbacks)) {
-                $channel->wait(null, false, $timeout);
-            }
-        } catch (AMQPTimeoutException $e) {
-            return false;
+        while (count($channel->callbacks)) {
+            $channel->wait();
         }
     }
 
@@ -251,5 +247,11 @@ class AmqpManager
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    public function disconnect()
+    {
+        $this->_channel->close();
+        $this->_connection->close();
     }
 }

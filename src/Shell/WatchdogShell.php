@@ -146,10 +146,12 @@ class WatchdogShell extends Shell
     protected function _stopHost($host)
     {
         //## Host is in the database, tell the host to gracefully shutdown
-        $this->out(__('Told {0}.{1} to shutdown', $host->host_name, $host->worker_name));
-        $host->status = HostsTable::STATUS_SHUTDOWN;
-        $host->worker_count = 0;
-        $this->Hosts->save($host);
+        $this->out(__('Shutting down {0}.{1}', $host->host_name, $host->worker_name));
+        $process = new Process();
+        $process->setPid($host->pid);
+        $process->stop();
+
+        $this->Hosts->delete($host);
     }
 
     public function recuring()

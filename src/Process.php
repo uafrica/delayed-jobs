@@ -66,7 +66,7 @@ class Process
 
     public function stop($timeout = 5)
     {
-        $command = 'kill ' . $this->pid;
+        $command = 'kill -2 ' . $this->pid;
         exec($command);
         $start_time = time();
         do {

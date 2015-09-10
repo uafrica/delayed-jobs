@@ -2,6 +2,7 @@
 
 namespace DelayedJobs\Worker;
 
+use Cake\Collection\Collection;
 use Cake\Network\Http\Client;
 use DelayedJobs\Traits\QueueJobTrait;
 
@@ -33,21 +34,19 @@ class ArkWorker
 
     public function flood($payload, $job)
     {
-        $command = 'ps -p ' . $payload['pid'];
-        exec($command, $op);
-        if (!isset($op[1])) {
-            return 'Flood has been stopped';
-        }
-
         $pi = $this->_bcpi(rand(1, $payload['work']));
         //Fetch an api 50% of the time
         if (rand(0, 1) == 0) {
             $client = new Client();
-            $client->get('http://jsonplaceholder.typicode.com/posts');
+            $response = $client->get('https://packagist.org/packages/list.json?type=cakephp-plugin');
+            $list = new Collection($response->json['packageNames']);
+            $list = $list->take(rand(5, 20));
+            foreach ($list as $item) {
+                $response = $client->get("https://packagist.org/packages/{$item}.json");
+                $response->json;
+            }
 
             $pi .= ' - api';
-
-            sleep(rand(0, 120));
         }
 
         $number_forks = rand($payload['first'] ? 1 : 0, $payload['max_fork']);
