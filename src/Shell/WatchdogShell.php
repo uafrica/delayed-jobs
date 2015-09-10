@@ -293,7 +293,7 @@ class WatchdogShell extends Shell
         $process->setPid($host->pid);
         $details = $process->details();
 
-        if (strpos($details, 'host ' . $host->worker_name) !== false) {
+        if (strpos($details, $host->worker_name) !== false) {
             $process_running = true;
         } else {
             $process_running = false;

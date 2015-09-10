@@ -142,9 +142,14 @@ class HostShell extends Shell
             $this->dj_log(__('Invalid job message: {0}', $message->body));
             $this->_amqpManager->nack($message, false);
         } catch (\Exception $e) {
+            if (isset($this->bad)) {
+                $this->dj_log(__('It happened again :( {0}', $e->getMessage()));
+                throw $e;
+            }
             Log::error($e->getMessage());
             $this->dj_log(__('Something bad happened. Hopefully it doesn\'t happen again. {0}', $e->getMessage()));
             $this->_amqpManager->nack($message);
+            $this->bad = true;
         }
     }
 
