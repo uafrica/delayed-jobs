@@ -6,13 +6,12 @@
     "cakephp/cakephp": "~3.0",
     "friendsofcake/crud": "~4.0",
     "cakephp/migrations": "~1.0",
-    "friendsofcake/cakephp-test-utilities": "dev-master",
     "videlalvaro/php-amqplib": "^2.5"
   },
   "require-dev": {
-    "cakephp/app": "dev-master",
+    "cakephp/app": "~3.0",
     "phpunit/phpunit": "~4.5",
-    "sizuhiko/fabricate": "v2.x-dev",
+    "sizuhiko/fabricate": "~2.0@dev",
     "sizuhiko/cake_fabricate": "dev-develop"
   },
   "license": "MIT",
