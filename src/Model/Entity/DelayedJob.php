@@ -2,6 +2,7 @@
 namespace DelayedJobs\Model\Entity;
 
 use Cake\Core\Configure;
+use Cake\Log\Log;
 use Cake\ORM\Entity;
 use Cake\Core\Exception\Exception;
 use DelayedJobs\Amqp\AmqpManager;
