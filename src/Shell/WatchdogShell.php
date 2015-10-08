@@ -17,6 +17,7 @@ use DelayedJobs\Process;
 
 /**
  * Class WatchdogShell
+ *
  * @property \DelayedJobs\Model\Table\HostsTable $Hosts
  * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  */
@@ -30,11 +31,13 @@ class WatchdogShell extends Shell
 
     /**
      * Creates (cpu-count - 1) worker processes (Minimum of 1 worker)
+     *
      * @return int
      */
     protected function _autoWorker()
     {
         $worker_count = (int)exec('nproc') - 1;
+
         return $worker_count >= 1 ? $worker_count : 1;
     }
 
@@ -93,7 +96,7 @@ class WatchdogShell extends Shell
         $this->out('Starting Watchdog: <info>' . $host_count . ' Hosts</info>');
 
         $service_name = Configure::read('dj.service.name');
-        for ($i = 1;$i <= $host_count;$i++) {
+        for ($i = 1; $i <= $host_count; $i++) {
             $this->_startHost($service_name . '-host-' . $i, $worker_count);
         }
 
@@ -152,29 +155,45 @@ class WatchdogShell extends Shell
         $this->Hosts->save($host);
     }
 
+    protected function _killHosts()
+    {
+        $hostname = php_uname('n');
+        $hosts = $this->Hosts->find()
+            ->where([
+                'host_name' => $hostname
+            ]);
+        foreach ($hosts as $host) {
+            $this->_kill($host->pid, $host->worker_name);
+            $this->Hosts->delete($host);
+        }
+    }
+
     public function recuring()
     {
         $this->out('Firing recuring event.');
         $event = new Event('DelayedJobs.recuring');
         $event->result = [];
-        EventManager::instance()->dispatch($event);
+        EventManager::instance()
+            ->dispatch($event);
 
         $this->loadModel('DelayedJobs.DelayedJobs');
         $this->out(__('{0} jobs to queue', count($event->result)), 1, Shell::VERBOSE);
         foreach ($event->result as $job) {
             if ($this->DelayedJobs->jobExists($job)) {
-                $this->out(__('  <error>Already queued:</error> {0}::{1}', $job['class'], $job['method']), 1, Shell::VERBOSE);
+                $this->out(__('  <error>Already queued:</error> {0}::{1}', $job['class'], $job['method']), 1,
+                    Shell::VERBOSE);
                 continue;
             }
 
             $dj_data = $job + [
-                'priority' => 100,
-                'options' => ['max_retries' => 5],
-                'run_at' => new Time('+30 seconds')
-            ];
+                    'priority' => 100,
+                    'options' => ['max_retries' => 5],
+                    'run_at' => new Time('+30 seconds')
+                ];
 
             $job_event = new Event('DelayedJob.queue', $dj_data);
-            EventManager::instance()->dispatch($job_event);
+            EventManager::instance()
+                ->dispatch($job_event);
             $this->out(__('  <success>Queued:</success> {0}::{1}', $job['class'], $job['method']), 1, Shell::VERBOSE);
         }
     }
@@ -194,35 +213,16 @@ class WatchdogShell extends Shell
      */
     protected function _kill($pid, $worker_name)
     {
-        $this->out(
-            sprintf(
-                '<info>To kill:</info> %s (pid: %s)',
-                $worker_name,
-                $pid
-            )
-        );
+        $this->out(sprintf('<info>To kill:</info> %s (pid: %s)', $worker_name, $pid));
 
         $process = new Process();
         $process->setPid($pid);
         $process->stop();
 
         if ($process->status()) {
-            $this->out(
-                sprintf(
-                    '<error>Could not stop:</error> %s (pid: %s)',
-                    $worker_name,
-                    $pid
-                )
-            );
+            $this->out(sprintf('<error>Could not stop:</error> %s (pid: %s)', $worker_name, $pid));
         } else {
-            $this->out(
-                sprintf(
-                    '<error>Killed:</error> %s (pid: %s)',
-                    $worker_name,
-                    $pid
-                ),
-                2
-            );
+            $this->out(sprintf('<error>Killed:</error> %s (pid: %s)', $worker_name, $pid), 2);
         }
     }
 
@@ -246,9 +246,9 @@ class WatchdogShell extends Shell
 
         if (!$process->status()) {
             $this->Hosts->delete($host);
-            $this->out(
-                '<error>Host: ' . $worker_name . ' Could not be started, Trying to find process to kill it?</error>'
-            );
+            $this->out('<error>Host: ' .
+                $worker_name .
+                ' Could not be started, Trying to find process to kill it?</error>');
 
             $check_pid = $process->getPidByName('DelayedJobs.host ' . $worker_name);
 
@@ -256,30 +256,15 @@ class WatchdogShell extends Shell
                 $process->setPid($check_pid);
                 $process->stop();
 
-                $this->out(
-                    '<success>Host: ' . $worker_name . ' Found a process and killed it</success>'
-                );
+                $this->out('<success>Host: ' . $worker_name . ' Found a process and killed it</success>');
             } else {
-                $this->out(
-                    '<error>Host: ' . $worker_name . ' Could not find any processes to kill</error>'
-                );
+                $this->out('<error>Host: ' . $worker_name . ' Could not find any processes to kill</error>');
             }
         } elseif (!$host) {
             $process->stop();
-            $this->out(
-                sprintf(
-                    '<error>Could not start:</error> %s', $worker_name
-                ),
-                2
-            );
+            $this->out(sprintf('<error>Could not start:</error> %s', $worker_name), 2);
         } else {
-            $this->out(
-                sprintf(
-                    '<success>Started:</success> %s (pid: %s)', $worker_name,
-                    $host->pid
-                ),
-                2
-            );
+            $this->out(sprintf('<success>Started:</success> %s (pid: %s)', $worker_name, $host->pid), 2);
         }
 
         return $host;
@@ -303,18 +288,16 @@ class WatchdogShell extends Shell
             if ($process_running) {
                 //## Process is actually running, update status
                 $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
-                $this->out(
-                    '<info>Host: ' . $host->worker_name . ' Idle, Changing status (pid:' . $host->pid . ')</info>',
-                    2
-                );
+                $this->out('<info>Host: ' .
+                    $host->worker_name .
+                    ' Idle, Changing status (pid:' .
+                    $host->pid .
+                    ')</info>', 2);
             } else {
                 //## Process is not running, delete record
                 $this->Hosts->delete($host);
-                $this->out(
-                    '<error>Host: ' . $host->worker_name . ' Not running but reported IDLE state, Removing database
-                     record (pid:' . $host->pid . ')</error>',
-                    2
-                );
+                $this->out('<error>Host: ' . $host->worker_name . ' Not running but reported IDLE state, Removing database
+                     record (pid:' . $host->pid . ')</error>', 2);
             }
         } elseif ($host->status == HostsTable::STATUS_RUNNING) {
             //## Host is running, please confirm
@@ -323,23 +306,12 @@ class WatchdogShell extends Shell
 
                 $host->worker_count = $worker_count;
                 $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
-                $this->out(
-                    sprintf(
-                        '<success>Running:</success> %s (pid: %s)',
-                        $host->worker_name,
-                        $host->pid
-                    )
-                );
+                $this->out(sprintf('<success>Running:</success> %s (pid: %s)', $host->worker_name, $host->pid));
             } else {
                 //## Process is not running, delete record and try to start it
                 $this->Hosts->delete($host);
-                $this->out(
-                    sprintf(
-                        '<error>Not running, restarting:</error> %s (pid: %s)',
-                        $host->worker_name,
-                        $host->pid
-                    )
-                );
+                $this->out(sprintf('<error>Not running, restarting:</error> %s (pid: %s)', $host->worker_name,
+                        $host->pid));
 
                 $this->_startHost($host->worker_name, $worker_count);
             }
@@ -362,21 +334,26 @@ class WatchdogShell extends Shell
                 $host->worker_count = $worker_count;
                 //## Process is actually running, update status
                 $this->Hosts->setStatus($host, HostsTable::STATUS_RUNNING);
-                $this->out(
-                    '<info>Worker: ' . $host->worker_name . ' Unknown Status, but running, changing status (pid:' . $host->pid . ')</info>'
-                );
+                $this->out('<info>Worker: ' .
+                    $host->worker_name .
+                    ' Unknown Status, but running, changing status (pid:' .
+                    $host->pid .
+                    ')</info>');
             } else {
                 //## Process is not running, delete record
                 $this->Hosts->remove($host);
-                $this->out(
-                    '<error>Worker: ' . $host->worker_name . ' Unknown status and not running, removing host (pid:' . $host->pid . ')</error>'
-                );
+                $this->out('<error>Worker: ' .
+                    $host->worker_name .
+                    ' Unknown status and not running, removing host (pid:' .
+                    $host->pid .
+                    ')</error>');
             }
         }
     }
 
     /**
      * Reloads all running hosts
+     *
      * @return void
      */
     public function reload()
@@ -403,9 +380,25 @@ class WatchdogShell extends Shell
             ->where([
                 'host_name' => $host_name
             ]);
-        while ($hosts->count() > 0) {
+
+        foreach ($hosts as $host) {
+            $process = new Process();
+            $process->setPid($host->pid);
+            if (!$process->status()) {
+                $this->Hosts->delete($host);
+            }
+        }
+
+        $start_time = time();
+        while ($hosts->count() > 0 && (time() - $start_time) <= 600) {
             sleep(1);
             $this->out('.', 0);
+        }
+        $this->out('');
+
+        if ($hosts->count() > 0 && time() - $start_time > 600) {
+            $this->out(' - Timeout waiting for hosts, killing manually');
+            $this->_killHosts();
         }
 
         $this->out(' - Restarting hosts.');
@@ -419,7 +412,8 @@ class WatchdogShell extends Shell
 
     public function requeue()
     {
-        $job = TableRegistry::get('DelayedJobs.DelayedJobs')->get($this->args[0]);
+        $job = TableRegistry::get('DelayedJobs.DelayedJobs')
+            ->get($this->args[0]);
 
         if ($job->status === DelayedJobsTable::STATUS_NEW || $job->status === DelayedJobsTable::STATUS_FAILED) {
             $job->queue();
@@ -439,8 +433,7 @@ class WatchdogShell extends Shell
         }
 
         $this->loadModel('DelayedJobs.DelayedJobs');
-        $sequences = $this->DelayedJobs
-            ->find()
+        $sequences = $this->DelayedJobs->find()
             ->distinct(['sequence'])
             ->select([
                 'id',
@@ -493,8 +486,7 @@ class WatchdogShell extends Shell
     {
         $options = parent::getOptionParser();
 
-        $options
-            ->addSubcommand('monitor', [
+        $options->addSubcommand('monitor', [
                 'help' => 'Moved into own shell - use bin/cake DelayedJobs.monitor to run'
             ])
             ->addSubcommand('startHosts', [
@@ -516,7 +508,7 @@ class WatchdogShell extends Shell
                 'help' => 'Requeues all new or failed jobs that should be in RabbitMQ'
             ])
             ->addSubcommand('requeue', [
-                'help '=> 'Receues a job',
+                'help ' => 'Receues a job',
                 'parser' => [
                     'arguments' => [
                         'id' => [
@@ -527,13 +519,13 @@ class WatchdogShell extends Shell
                 ]
             ])
             ->addOption('workers', [
-                    'help' => 'Number of workers each host may run',
-                    'default' => 1
-                ])
+                'help' => 'Number of workers each host may run',
+                'default' => 1
+            ])
             ->addOption('hosts', [
-                    'help' => 'Number of hosts to run',
-                    'default' => $this->_autoWorker()
-                ]);;
+                'help' => 'Number of hosts to run',
+                'default' => $this->_autoWorker()
+            ]);;
 
         return $options;
     }
