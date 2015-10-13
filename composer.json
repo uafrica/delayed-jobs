@@ -6,11 +6,11 @@
     "cakephp/cakephp": "~3.0.0",
     "friendsofcake/crud": "~4.0",
     "cakephp/migrations": "~1.0",
-    "friendsofcake/cakephp-test-utilities": "dev-master",
-    "videlalvaro/php-amqplib": "^2.5"
+    "friendsofcake/process-mq": "dev-master",
+    "friendsofcake/process-manager": "dev-master"
   },
   "require-dev": {
-    "cakephp/app": "dev-master",
+    "cakephp/app": "~3.0",
     "phpunit/phpunit": "~4.5",
     "sizuhiko/fabricate": "v2.x-dev",
     "sizuhiko/cake_fabricate": "dev-develop"
@@ -32,5 +32,41 @@
       "DelayedJobs\\Test\\": "tests",
       "Cake\\Test\\": "vendor/cakephp/cakephp/tests"
     }
-  }
+  },
+  "repositories": [
+    {
+      "type": "package",
+      "package": {
+        "name": "friendsofcake/process-mq",
+        "version": "dev-master",
+        "source": {
+          "url": "git@github.com:FriendsOfCake/process-mq.git",
+          "type": "git",
+          "reference": "master"
+        },
+        "autoload": {
+          "psr-4": {
+            "ProcessMQ\\": "src"
+          }
+        }
+      }
+    },
+    {
+      "type": "package",
+      "package": {
+        "name": "friendsofcake/process-manager",
+        "version": "dev-master",
+        "source": {
+          "url": "git@github.com:FriendsOfCake/process-manager.git",
+          "type": "git",
+          "reference": "master"
+        },
+        "autoload": {
+          "psr-4": {
+            "ProcessManager\\": "src"
+          }
+        }
+      }
+    }
+  ]
 }
