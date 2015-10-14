@@ -3,6 +3,7 @@
 namespace DelayedJobs\Amqp;
 
 use Cake\Core\Configure;
+use Cake\Datasource\ConnectionManager;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Network\Http\Client;
@@ -15,6 +16,7 @@ use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPAbstractCollection;
 use PhpAmqpLib\Wire\AMQPTable;
+use ProcessMQ\Queue;
 
 class AmqpManager
 {
@@ -35,7 +37,7 @@ class AmqpManager
     protected $_isGlobal = false;
 
     /**
-     * @var \PhpAmqpLib\Connection\AbstractConnection
+     * @var \ProcessMQ\Connection\RabbitMQConnection
      */
     protected $_connection = null;
 
@@ -67,36 +69,29 @@ class AmqpManager
     }
 
     /**
-     * @param \PhpAmqpLib\Connection\AbstractConnection|null $connection
      */
-    public function __construct(AbstractConnection $connection = null)
+    public function __construct()
     {
-        $config = Configure::read('dj.service.rabbit.server');
-        if ($connection === null && !empty($config['host'])) {
-            $connection = new AMQPLazyConnection($config['host'], $config['port'], $config['user'], $config['pass'], $config['path']);
-        }
-
-        $this->_connection = $connection;
+        $this->_connection = ConnectionManager::get('rabbit');
         $this->_serviceName = Configure::read('dj.service.name');
     }
 
     public function __destroy()
     {
-        if ($this->_channel) {
-            $this->_channel->close();
-        }
-        if ($this->_connection && $this->_connection->isConnected()) {
-            $this->_connection->close();
+        if ($this->_connection && $this->_connection->connection()->isConnected()) {
+            $this->_connection->connection()->disconnect();
         }
     }
 
-    protected function _getChannel()
+    protected function _getChannel($prefectCount = 1)
     {
         if ($this->_channel) {
             return $this->_channel;
         }
 
-        $this->_channel = $this->_connection->channel();
+        $this->_connection->channel($this->_serviceName, [
+            'prefetchCount' => $prefectCount
+        ]);
 
         $this->_ensureQueue($this->_channel);
         $this->_channel->confirm_select();
@@ -110,49 +105,63 @@ class AmqpManager
         return $this->_channel;
     }
 
-    protected function _ensureQueue(AMQPChannel $channel)
+    protected function _ensureQueues()
     {
-        $channel->exchange_declare($this->_serviceName . '-direct-exchange', 'direct', false, true, false, false, false);
-        $channel->exchange_declare($this->_serviceName . '-delayed-exchange', 'x-delayed-message', false, true, false, false, false, [
-            'x-delayed-type' => [
-                'S',
-                'direct'
-            ]
-        ]);
-        $channel->queue_declare($this->_serviceName . '-queue', false, true, false, false, false, [
-            'x-max-priority' => [
-                's',
-                Configure::read('dj.service.rabbit.max_priority')
-            ]
-        ]);
+        $this->_connection
+            ->exchange($this->_serviceName . '-direct-exchange', [
+                'type' => 'direct',
+                'flags' => AMQP_DURABLE
+            ])
+            ->declareExchange();
+        $this->_connection
+            ->exchange($this->_serviceName . '-delayed-exchange', [
+                'type' => 'x-delayed-message',
+                'flags' => AMQP_DURABLE,
+                'arguments' => [
+                    'x-delayed-type' => 'direct'
+                ]
+            ])
+            ->declareExchange();
 
-        $channel->queue_bind($this->_serviceName . '-queue', $this->_serviceName . '-delayed-exchange', $this->_serviceName);
-        $channel->queue_bind($this->_serviceName . '-queue', $this->_serviceName . '-direct-exchange', $this->_serviceName);
+        $queue = $this->_connection
+            ->queue($this->_serviceName . '-queue', [
+                'flags' => AMQP_DURABLE,
+                'arguments' => [
+                    'x-max-priority' => Configure::read('dj.service.rabbit.max_priority')
+                ]
+            ]);
+        $queue->bind($this->_serviceName . '-direct-exchange', $this->_serviceName);
+        $queue->bind($this->_serviceName . '-delayed-exchange', $this->_serviceName);
+        //$queue->declareQueue();
     }
 
     public function queueJob(DelayedJob $job)
     {
-        $channel = $this->_getChannel();
-
         $delay = $job->run_at->isFuture() ? (new Time())->diffInSeconds($job->run_at, false) * 1000 : 0;
 
-        $args = [
-            'delivery_mode' => 2,
-            'priority' => Configure::read('dj.service.rabbit.max_priority') - $job->priority,
+        $options = [
+            'compress' => false,
+            'serializer' => 'json',
+            'delivery_mode' => AMQP_DURABLE,
+            'attributes' => [
+                'priority' => Configure::read('dj.service.rabbit.max_priority') - $job->priority,
+            ]
         ];
         if ($delay > 0) {
-            $headers = new AMQPTable();
-            $headers->set('x-delay', $delay);
-            $args['application_headers'] = $headers;
+            $options['attributes']['headers'] = [
+                'x-delay' => $delay
+            ];
         }
 
-        $message = new AMQPMessage(json_encode(['id' => $job->id]), $args);
+        $data = [
+            'id' => $job->id
+        ];
 
-        $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
-        $channel->basic_publish($message, $exchange, $this->_serviceName);
-        $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->id, $exchange, $this->_serviceName, $delay, $args['priority']));
+        $publisher = ($delay > 0 ? 'delayed' : 'direct');
 
-        $channel->wait_for_pending_acks();
+        Queue::publish($publisher, $data, $options);
+        $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}',
+            $job->id, $publisher, $this->_serviceName, $delay, $options['attributes']['priority']));
     }
 
     public function requeueMessage(AMQPMessage $message, $delay = 5000)
