@@ -66,7 +66,7 @@ class DelayedJob extends Entity
             $manager->queueJob($this);
         } catch (\Exception $e) {
             Log::emergency(__('RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
-                $e->getMessage(), get_class($e), $job->id));
+                $e->getMessage(), get_class($e), $this->id));
 
             return false;
         }
