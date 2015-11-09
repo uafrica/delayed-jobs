@@ -140,6 +140,9 @@ class AmqpManager
             'delivery_mode' => 2,
             'priority' => Configure::read('dj.service.rabbit.max_priority') - $job->priority,
         ];
+        if ($args['priority'] < 0) {
+            $args['priority'] = 0;
+        }
         if ($delay > 0) {
             $headers = new AMQPTable();
             $headers->set('x-delay', $delay);

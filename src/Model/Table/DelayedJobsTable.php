@@ -319,6 +319,9 @@ class DelayedJobsTable extends Table
             $options['max_execution_time'] = Configure::read('dj.max.execution.time');
         }
         $dj->options = $options;
+        if (!is_numeric($dj->priority)) {
+            $dj->priority = Configure::read('dj.service.rabbit.max_priority');
+        }
     }
 
     /**
