@@ -5,7 +5,7 @@
   "require": {
     "cakephp/cakephp": "~3.0",
     "friendsofcake/crud": "~4.0",
-    "cakephp/migrations": "~1.0",
+    "cakephp/migrations": "^1.5.1",
     "videlalvaro/php-amqplib": "^2.5"
   },
   "require-dev": {

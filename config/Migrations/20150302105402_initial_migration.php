@@ -93,7 +93,7 @@ class InitialMigration extends AbstractMigration
             )
             ->addColumn(
                 'payload',
-                'binary',
+                'blob',
                 [
                     'default' => null,
                     'limit' => null,
@@ -102,7 +102,7 @@ class InitialMigration extends AbstractMigration
             )
             ->addColumn(
                 'options',
-                'binary',
+                'blob',
                 [
                     'default' => null,
                     'limit' => null,

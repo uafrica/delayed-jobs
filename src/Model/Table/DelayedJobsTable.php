@@ -182,7 +182,8 @@ class DelayedJobsTable extends Table
                 'id',
                 'pid',
                 'locked_by',
-                'status'
+                'status',
+                'priority',
             ])
             ->where($conditions)
             ->order([
@@ -203,7 +204,8 @@ class DelayedJobsTable extends Table
                 'id',
                 'pid',
                 'status',
-                'sequence'
+                'sequence',
+                'priority',
             ])
             ->where($conditions)
             ->order([
