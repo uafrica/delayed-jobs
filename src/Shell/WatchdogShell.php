@@ -124,8 +124,18 @@ class WatchdogShell extends Shell
             ->where([
                 'host_name' => $hostname
             ]);
+
+        if ($hosts->count() === 0) {
+            $this->out('No hosts to stop');
+            return;
+        }
+
         foreach ($hosts as $host) {
             $this->_stopHost($host);
+        }
+
+        if ($this->param('wait')) {
+            $this->_waitForStop($hostname);
         }
     }
 
@@ -352,29 +362,10 @@ class WatchdogShell extends Shell
     }
 
     /**
-     * Reloads all running hosts
-     *
      * @return void
      */
-    public function reload()
+    protected function _waitForStop($host_name)
     {
-        $host_name = php_uname('n');
-        $worker_name = Configure::read('dj.service.name');
-
-        $hosts = $this->Hosts->find()
-            ->where([
-                'host_name' => $host_name
-            ]);
-        if ($hosts->count() == 0) {
-            $this->out('<error>No hosts running</error>');
-            $this->_stop(1);
-        }
-
-        $worker_count = $hosts->first()->worker_count;
-        $host_count = $hosts->count();
-        $this->out(' - Killing running hosts.');
-        $this->stopHosts();
-
         $this->out(' - Waiting for all hosts to stop');
         $hosts = $this->Hosts->find()
             ->where([
@@ -400,6 +391,33 @@ class WatchdogShell extends Shell
             $this->out(' - Timeout waiting for hosts, killing manually');
             $this->_killHosts();
         }
+    }
+
+    /**
+     * Reloads all running hosts
+     *
+     * @return void
+     */
+    public function reload()
+    {
+        $host_name = php_uname('n');
+        $worker_name = Configure::read('dj.service.name');
+
+        $hosts = $this->Hosts->find()
+            ->where([
+                'host_name' => $host_name
+            ]);
+        if ($hosts->count() == 0) {
+            $this->out('<error>No hosts running</error>');
+            $this->_stop(1);
+        }
+
+        $worker_count = $hosts->first()->worker_count;
+        $host_count = $hosts->count();
+        $this->out(' - Killing running hosts.');
+        $this->stopHosts();
+
+        $this->_waitForStop($host_name);
 
         $this->out(' - Restarting hosts.');
         $this->startHosts($host_count, $worker_count);
@@ -493,7 +511,16 @@ class WatchdogShell extends Shell
                 'help' => 'Starts hosts'
             ])
             ->addSubcommand('stopHosts', [
-                'help' => 'Stops hosts'
+                'help' => 'Stops hosts',
+                'parser' => [
+                    'options' => [
+                        'wait' => [
+                            'help' => 'Wait for hosts to stop.',
+                            'default' => false,
+                            'boolean' => true
+                        ]
+                    ]
+                ]
             ])
             ->addSubcommand('clean', [
                 'help' => 'Cleans out jobs that are completed and older than 4 weeks'
