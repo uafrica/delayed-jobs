@@ -381,9 +381,11 @@ class WatchdogShell extends Shell
         }
 
         $start_time = time();
+        $hosts = $hosts->cleanCopy();
         while ($hosts->count() > 0 && (time() - $start_time) <= 600) {
             sleep(1);
             $this->out('.', 0);
+            $hosts = $hosts->cleanCopy();
         }
         $this->out('');
 
