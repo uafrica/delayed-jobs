@@ -9,6 +9,7 @@ use Cake\Datasource\ConnectionManager;
 use Cake\Event\Event;
 use Cake\I18n\Time;
 use Cake\Log\Log;
+use Cake\ORM\Query;
 use Cake\ORM\ResultSet;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -428,5 +429,62 @@ class DelayedJobsTable extends Table
         }
 
         $this->_queueJob($next, false);
+    }
+
+    public function rates($field, $status = null)
+    {
+        $available_rates = [
+            '30 seconds',
+            '5 minutes',
+            '15 minutes',
+            '1 hour'
+        ];
+
+        $conditions = [];
+        if ($status) {
+            $conditions = [
+                'status' => $status
+            ];
+        }
+
+        $return = [];
+        foreach ($available_rates as $available_rate) {
+            $return[] = $this->jobsPerSecond($conditions, $field, '-' . $available_rate);
+        }
+
+        return $return;
+    }
+
+    public function statusStats()
+    {
+        $statuses = $this->find('list', [
+            'keyField' => 'status',
+            'valueField' => 'counter'
+        ])
+            ->select([
+                'status',
+                'counter' => $this->find()
+                    ->func()
+                    ->count('id')
+            ])
+            ->where([
+                'not' => ['status' => self::STATUS_NEW]
+            ])
+            ->group(['status'])
+            ->toArray();
+        $statuses['waiting'] = $this->find()
+            ->where([
+                'status' => self::STATUS_NEW,
+                'run_at >' => new Time()
+            ])
+            ->count();
+        $statuses[self::STATUS_NEW] = $this->find()
+            ->where([
+                'status' => self::STATUS_NEW,
+                'run_at <=' => new Time()
+            ])
+            ->count();
+
+        return $statuses;
     }
 }

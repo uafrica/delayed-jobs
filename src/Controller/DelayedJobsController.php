@@ -4,6 +4,7 @@ namespace DelayedJobs\Controller;
 
 use App\Controller\AppController;
 use Cake\I18n\Time;
+use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
@@ -23,7 +24,7 @@ class DelayedJobsController extends AppController
         parent::initialize();
         $this->loadComponent('Crud.Crud', [
             'actions' => [
-                'Crud.Index',
+                'listJobs' => 'Crud.Index',
                 'Crud.View',
             ]
         ]);
@@ -33,15 +34,103 @@ class DelayedJobsController extends AppController
         }
     }
 
+    public function basicStats()
+    {
+        $this->loadModel('DelayedJobs.Hosts');
+
+        $data = [];
+        $data['statuses'] = $this->DelayedJobs->statusStats();
+        $data['created_rate'] = $this->DelayedJobs->rates('created');
+        $data['completed_rate'] = $this->DelayedJobs->rates('end_time', DelayedJobsTable::STATUS_SUCCESS);
+        $data['hosts'] = $this->Hosts->find();
+
+        $this->set('data', $data);
+        $this->set('_serialize', 'data');
+    }
+
+    public function rabbitStats()
+    {
+        $data = [];
+        $data['rabbit_status'] = AmqpManager::queueStatus();
+
+        $this->set('data', $data);
+        $this->set('_serialize', 'data');
+    }
+
+    public function runningJobs()
+    {
+        $data = [];
+        $data['running_jobs'] = $this->DelayedJobs->find()
+            ->select([
+                'id',
+                'group',
+                'locked_by',
+                'class',
+                'method'
+            ])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_BUSY
+            ]);
+        $this->set('data', $data);
+        $this->set('_serialize', 'data');
+    }
+
+    public function jobHistory()
+    {
+        $data = [];
+        $data['last_completed'] = $this->DelayedJobs->find()
+            ->select(['id', 'last_message', 'end_time', 'class', 'method'])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_SUCCESS
+            ])
+            ->order([
+                'end_time' => 'DESC'
+            ])
+            ->limit(5);
+        $data['last_failed'] = $this->DelayedJobs->find()
+            ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_FAILED
+            ])
+            ->order([
+                'failed_at' => 'DESC'
+            ])
+            ->limit(5);
+        $data['last_buried'] = $this->DelayedJobs->find()
+            ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_BURRIED
+            ])
+            ->order([
+                'failed_at' => 'DESC'
+            ])
+            ->limit(5);
+        $time_diff = $this->DelayedJobs->find()
+            ->func()
+            ->timeDiff([
+                'end_time' => 'literal',
+                'start_time' => 'literal'
+            ]);
+        $data['longest_running'] = $this->DelayedJobs->find()
+            ->select(['id', 'group', 'class', 'method', 'diff' => $time_diff])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_SUCCESS
+            ])
+            ->orderDesc($time_diff)
+            ->first();
+
+        $this->set('data', $data);
+        $this->set('_serialize', 'data');
+    }
+
     /**
      * @return mixed
      */
     public function index()
     {
-        $jobs_per_second = $this->DelayedJobs->jobsPerSecond();
+    }
 
-        $this->set(compact('jobs_per_second'));
-
+    public function listJobs() {
         return $this->Crud->execute();
     }
 

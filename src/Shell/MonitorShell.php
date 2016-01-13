@@ -92,9 +92,9 @@ class MonitorShell extends Shell
         $start = true;
 
         while (true) {
-            $statuses = $this->_statusStats();
-            $created_rate = $this->_rates('created');
-            $completed_rate = $this->_rates('end_time', DelayedJobsTable::STATUS_SUCCESS);
+            $statuses = $this->DelayedJobs->statusStats();
+            $created_rate = $this->DelayedJobs->rates('created');
+            $completed_rate = $this->DelayedJobs->rates('end_time', DelayedJobsTable::STATUS_SUCCESS);
             $host_count = $this->Hosts->find()
                 ->count();
             $worker_count = $this->Hosts->find()
