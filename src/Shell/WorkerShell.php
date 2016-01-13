@@ -67,7 +67,7 @@ class WorkerShell extends Shell
             $job->start_time = new Time();
             $this->DelayedJobs->save($job);
 
-            $response = $job->execute();
+            $response = $job->execute($this);
             $this->out(' - Execution complete', 1, Shell::VERBOSE);
             $this->dj_log(__('Done with: {0}', $job->id));
 

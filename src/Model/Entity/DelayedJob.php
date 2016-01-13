@@ -1,6 +1,7 @@
 <?php
 namespace DelayedJobs\Model\Entity;
 
+use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Log\Log;
 use Cake\ORM\Entity;
@@ -36,7 +37,7 @@ class DelayedJob extends Entity
         return $this->_getStream($payload, 'payload');
     }
 
-    public function execute()
+    public function execute(Shell $shell)
     {
         $class_name = $this->class;
         if (!class_exists($class_name)) {
@@ -52,7 +53,7 @@ class DelayedJob extends Entity
             );
         }
 
-        return $job_worker->{$method}($this->payload, $this);
+        return $job_worker->{$method}($this->payload, $this, $shell);
     }
 
     public function queue()
