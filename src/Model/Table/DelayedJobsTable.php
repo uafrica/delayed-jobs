@@ -105,18 +105,18 @@ class DelayedJobsTable extends Table
         return $this->save($job);
     }
 
-    public function lock(DelayedJob $job, $locked_by = '')
+    public function lock(DelayedJob $job, $host_name = '')
     {
         $job->start_time = new Time();
         $job->status = self::STATUS_BUSY;
-        $job->locked_by = $locked_by;
+        $job->host_name = $host_name;
         $this->save($job);
     }
 
     public function release(DelayedJob $job)
     {
         $job->status = self::STATUS_NEW;
-        $job->locked_by = null;
+        $job->host_name = null;
         $this->save($job);
     }
 
@@ -173,7 +173,7 @@ class DelayedJobsTable extends Table
     public function getRunningByHost($host_id)
     {
         $conditions = [
-            'DelayedJobs.locked_by' => $host_id,
+            'DelayedJobs.host_name' => $host_id,
             'DelayedJobs.status' => self::STATUS_BUSY,
         ];
 
@@ -182,7 +182,7 @@ class DelayedJobsTable extends Table
             ->select([
                 'id',
                 'pid',
-                'locked_by',
+                'host_name',
                 'status',
                 'priority',
             ])
@@ -280,7 +280,7 @@ class DelayedJobsTable extends Table
             $options['fields'] = [
                 'id',
                 'pid',
-                'locked_by',
+                'host_name',
                 'status',
                 'options',
                 'sequence',

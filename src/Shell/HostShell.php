@@ -222,6 +222,8 @@ class HostShell extends Shell
             return false;
         }
 
+        cli_set_process_title(sprintf('DJ Host :: %s :: Working %s', $this->_workerId, $job->id));
+
         $this->out(__('<success>Starting job:</success> {0} :: ', $job->id), 1, Shell::VERBOSE);
 
         if ($this->DelayedJobs->nextSequence($job)) {
@@ -242,12 +244,13 @@ class HostShell extends Shell
         ];
         $options = (array)$job->options + $default;
 
-        $this->DelayedJobs->lock($job, $this->_workerId);
+        $this->DelayedJobs->lock($job, $this->_hostName);
         $this->Worker->executeJob($job);
         $this->_amqpManager->ack($message);
         $this->_lastJob = $job->id;
         $this->_jobCount++;
         $this->out('');
+
         return true;
     }
 
