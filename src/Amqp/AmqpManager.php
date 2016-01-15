@@ -196,9 +196,8 @@ class AmqpManager
     {
         $channel = $this->_getChannel();
         try {
-            while (count($channel->callbacks)) {
-                $channel->wait(null, false, $timeout);
-            }
+            $channel->wait(null, false, $timeout);
+            return true;
         } catch (AMQPTimeoutException $e) {
             return false;
         }
