@@ -90,11 +90,16 @@ class MonitorShell extends Shell
         $time = time();
         $rabbit_time = microtime(true);
         $start = true;
+        $peak_created_rate = 0;
+        $peak_completed_rate = 0;
 
         while (true) {
             $statuses = $this->_statusStats();
             $created_rate = $this->_rates('created');
             $completed_rate = $this->_rates('end_time', DelayedJobsTable::STATUS_SUCCESS);
+            $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
+            $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
+
             $worker_count = $this->Workers->find()->count();
 
             if ($start || microtime(true) - $rabbit_time > 0.5) {
@@ -163,8 +168,8 @@ class MonitorShell extends Shell
             $this->out(__('Delayed Jobs monitor <info>{0}</info>', date('H:i:s')));
             $this->hr();
             $this->out(__('Running workers: <info>{0}</info>', $worker_count));
-            $this->out(__('Created / s: <info>{0}</info>', implode(' ', $created_rate)));
-            $this->out(__('Completed /s : <info>{0}</info>', implode(' ', $completed_rate)));
+            $this->out(__('Created / s: <info>{0}</info> :: Peak <info>{1}</info>', implode(' ', $created_rate), $peak_created_rate));
+            $this->out(__('Completed /s : <info>{0}</info> :: Peak <info>{1}</info>', implode(' ', $completed_rate), $peak_completed_rate));
             $this->hr();
 
             $this->out('Total current job count');
