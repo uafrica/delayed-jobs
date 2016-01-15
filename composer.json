@@ -3,14 +3,14 @@
   "description": "A CakePHP Plugin to manage and process background jobs with priority and retries",
   "type": "cakephp-plugin",
   "require": {
-    "cakephp/cakephp": "~3.0",
-    "friendsofcake/crud": "~4.0",
+    "cakephp/cakephp": "^3.0",
+    "friendsofcake/crud": "^4.0",
     "cakephp/migrations": "^1.5.1",
     "videlalvaro/php-amqplib": "^2.5"
   },
   "require-dev": {
-    "cakephp/app": "~3.0",
-    "phpunit/phpunit": "~4.5",
+    "cakephp/app": "^3.0",
+    "phpunit/phpunit": "^4.5",
     "sizuhiko/fabricate": "~2.0@dev",
     "sizuhiko/cake_fabricate": "dev-develop"
   },

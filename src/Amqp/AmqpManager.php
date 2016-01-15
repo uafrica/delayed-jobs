@@ -196,7 +196,7 @@ class AmqpManager
     {
         $channel = $this->_getChannel();
         try {
-            $channel->wait(null, false, $timeout);
+            $channel->wait(null, true, $timeout);
             return true;
         } catch (AMQPTimeoutException $e) {
             return false;

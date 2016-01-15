@@ -6,6 +6,7 @@ use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\InvalidPrimaryKeyException;
 use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\Event\Event;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Utility\Hash;
@@ -23,15 +24,16 @@ use PhpAmqpLib\Message\AMQPMessage;
  *
  * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  * @property \DelayedJobs\Shell\Task\WorkerTask $Worker
+ * @property \DelayedJobs\Shell\Task\ProcessManagerTask $ProcessManager
  */
 class HostShell extends Shell
 {
     use DebugTrait;
 
-    const UPDATETIMER = 5; //In seconds
+    const TIMEOUT = 30; //In seconds
     const MAXFAIL = 5;
     public $modelClass = 'DelayedJobs.DelayedJobs';
-    public $tasks = ['DelayedJobs.Worker'];
+    public $tasks = ['DelayedJobs.Worker', 'DelayedJobs.ProcessManager'];
     protected $_workerId;
     protected $_workerName;
     protected $_hostName;
@@ -45,6 +47,7 @@ class HostShell extends Shell
     protected $_startTime;
     protected $_jobCount = 0;
     protected $_lastJob;
+    private $__pulse = false;
 
     /**
      * @inheritDoc
@@ -56,20 +59,40 @@ class HostShell extends Shell
         $this->_workerName = Configure::read('dj.service.name');
         $this->_startTime = time();
 
-        if (isset($this->args[0])) {
-            $this->_workerName = $this->args[0];
-        }
-
-        $this->_host = $this->Hosts->find()
+        $host_count = $this->Hosts->find()
             ->where([
                 'host_name' => $this->_hostName,
-                'pid' => getmypid()
+                'status in' => [
+                    HostsTable::STATUS_RUNNING,
+                    HostsTable::STATUS_SHUTDOWN,
+                    HostsTable::STATUS_TO_KILL,
+                ]
             ])
-            ->first();
+            ->count();
+        $this->_workerName .= '-' . $host_count;
+
+        $this->_host = $this->Hosts->newEntity([
+            'host_name' => $this->_hostName,
+            'worker_name' => $this->_workerName,
+            'pid' => getmypid(),
+            'status' => HostsTable::STATUS_RUNNING
+        ]);
+        $this->Hosts->save($this->_host);
 
         $this->_workerId = $this->_hostName . '.' . $this->_workerName;
 
+        cli_set_process_title(sprintf('DJ Host :: %s :: Booting', $this->_workerId));
+
+        $this->_enableListeners();
+
         parent::startup();
+    }
+
+    protected function _enableListeners()
+    {
+        $this->ProcessManager->eventManager()
+            ->on('CLI.signal', [$this, 'stopHammerTime']);
+        $this->ProcessManager->handleKillSignals();
     }
 
     protected function _welcome()
@@ -89,12 +112,30 @@ class HostShell extends Shell
         $this->nl();
     }
 
+    public function stopHammerTime(Event $event = null)
+    {
+        $this->out('Shutting down...');
+
+        if ($this->_tag) {
+            $this->_amqpManager->stopListening($this->_tag);
+            $this->_tag = null;
+        }
+
+        if ($this->_host) {
+            $this->Hosts->delete($this->_host);
+        }
+
+        $this->_stop();
+    }
+
     public function main()
     {
         $this->_amqpManager = new AmqpManager();
         $this->_tag = $this->_amqpManager->listen([$this, 'runWorker']);
 
         $failure_count = 0;
+
+        $this->_heartbeat();
 
         while ($failure_count <= self::MAXFAIL) {
             try {
@@ -106,58 +147,30 @@ class HostShell extends Shell
             }
         }
 
-        if ($this->_host) {
-            $this->Hosts->delete($this->_host);
-        }
+        $this->stopHammerTime();
     }
 
     protected function _mainLoop()
     {
-        $start_time = time();
-
-        $waiting_string = 'Waiting for work: %s';
-        $chars = [
-            '-',
-            '\\',
-            '|',
-            '/'
-        ];
-        $char_key = 0;
-        $this->out(sprintf($waiting_string, $chars[$char_key++]), 0);
-
         while (true) {
-            //Every couple of seconds we update our host entry to catch changes to worker count, or self shutdown
-            if (time() - $start_time >= self::UPDATETIMER) {
-                $this->_host = $this->Hosts->find()
-                    ->where([
-                        'host_name' => $this->_hostName,
-                        'pid' => getmypid()
-                    ])
-                    ->first();
-
-                $start_time = time();
-            }
-
-            if ($this->_host && $this->_host->status === HostsTable::STATUS_SHUTDOWN && empty($this->_runningJobs)) {
-                $this->out('Time to die :(', 1, Shell::VERBOSE);
-                break;
-            }
-
             if ($this->_host && $this->_host->status === HostsTable::STATUS_SHUTDOWN) {
-                $this->_amqpManager->stopListening($this->_tag);
+                $this->stopHammerTime();
+                return;
             }
-            if (!$this->_amqpManager->wait()) {
-                if ($this->_io->level() >= Shell::NORMAL) {
-                    $this->_io->overwrite(sprintf($waiting_string, $chars[$char_key++]), 0);
-                    if ($char_key >= count($chars)) {
-                        $char_key = 0;
-                    }
-                }
-            } else {
-                $char_key = 0;
-                $this->out(sprintf($waiting_string, $chars[$char_key++]), 0);
-            }
+
+            $this->_amqpManager->wait(self::TIMEOUT);
+            $this->_heartbeat();
         }
+    }
+
+    protected function _heartbeat()
+    {
+        cli_set_process_title(sprintf('DJ Host :: %s :: %s', $this->_workerId, $this->__pulse ? 'O' : '-'));
+
+        $this->__pulse = !$this->__pulse;
+        $this->_host = $this->Hosts->get($this->_host->id);
+        $this->_host->pulse = new Time();
+        $this->Hosts->save($this->_host);
     }
 
     public function runWorker(AMQPMessage $message)
@@ -197,6 +210,8 @@ class HostShell extends Shell
         if ($this->_io->level() == Shell::NORMAL) {
             $this->_welcome();
         }
+
+        pcntl_signal_dispatch();
     }
 
     protected function _executeJob(DelayedJob $job, AMQPMessage $message)
