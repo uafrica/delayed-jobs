@@ -90,6 +90,8 @@ class WorkerTask extends Shell
             //## Job Failed
             $this->DelayedJobs->failed($job, $exc->getMessage());
             $this->out(sprintf('<error> - Execution completed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
+            $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
+
             $this->dj_log(__('Failed {0} because {1}', $job->id, $exc->getMessage()));
         } finally {
             $end = microtime(true);

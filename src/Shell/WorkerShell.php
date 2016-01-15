@@ -259,7 +259,10 @@ class WorkerShell extends Shell
     public function getOptionParser()
     {
         $options = parent::getOptionParser();
-
+        $options->addSubcommand('worker', [
+            'help' => 'Executes a job',
+            'parser' => $this->Worker->getOptionParser(),
+        ]);
         return $options;
     }
 
