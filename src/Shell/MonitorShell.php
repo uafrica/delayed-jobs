@@ -15,7 +15,7 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
  */
 class MonitorShell extends Shell
 {
-    public $modelClass = 'DelayedJobs.Hosts';
+    public $modelClass = 'DelayedJobs.Workers';
 
     protected function _rates($field, $status = null)
     {
@@ -95,14 +95,7 @@ class MonitorShell extends Shell
             $statuses = $this->_statusStats();
             $created_rate = $this->_rates('created');
             $completed_rate = $this->_rates('end_time', DelayedJobsTable::STATUS_SUCCESS);
-            $host_count = $this->Hosts->find()
-                ->count();
-            $worker_count = $this->Hosts->find()
-                ->select([
-                    'worker_count' => $this->Hosts->find()->func()->sum('worker_count')
-                ])
-                ->hydrate(false)
-                ->first();
+            $worker_count = $this->Workers->find()->count();
 
             if ($start || microtime(true) - $rabbit_time > 0.5) {
                 $rabbit_status = AmqpManager::queueStatus();
@@ -117,7 +110,7 @@ class MonitorShell extends Shell
                         ->select([
                             'id',
                             'group',
-                            'locked_by',
+                            'host_name',
                             'class',
                             'method'
                         ])
@@ -169,8 +162,7 @@ class MonitorShell extends Shell
             $this->clear();
             $this->out(__('Delayed Jobs monitor <info>{0}</info>', date('H:i:s')));
             $this->hr();
-            $this->out(__('Running hosts: <info>{0}</info>', $host_count));
-            $this->out(__('Workers: <info>{0}</info>', $worker_count['worker_count'] ?: 0));
+            $this->out(__('Running workers: <info>{0}</info>', $worker_count));
             $this->out(__('Created / s: <info>{0}</info>', implode(' ', $created_rate)));
             $this->out(__('Completed /s : <info>{0}</info>', implode(' ', $completed_rate)));
             $this->hr();
@@ -194,7 +186,7 @@ class MonitorShell extends Shell
                 $this->out(__('Running job snapshot <info>{0} seconds ago</info>:', time() - $time));
                 $running_job_text = [];
                 foreach ($running_jobs as $running_job) {
-                    $this->out(__(" - {0} ({1}) with {2}", $running_job->id, $running_job->group, $running_job->locked_by));
+                    $this->out(__(" - {0} ({1}) with {2}", $running_job->id, $running_job->group, $running_job->host_name));
                     $this->out(__("\t{0}::{1}", $running_job->class, $running_job->method));
                 }
             }
