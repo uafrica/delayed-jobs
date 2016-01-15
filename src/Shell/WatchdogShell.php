@@ -65,7 +65,7 @@ class WatchdogShell extends Shell
         if ($this->param('workers') > 0) {
             $this->startWorkers();
         } else {
-            $this->stopHosts();
+            $this->stopWorkers();
         }
 
         $this->recuring();
@@ -120,21 +120,21 @@ class WatchdogShell extends Shell
         }
     }
 
-    public function stopHosts()
+    public function stopWorkers()
     {
         $hostname = php_uname('n');
-        $hosts = $this->Workers->find()
+        $workers = $this->Workers->find()
             ->where([
                 'host_name' => $hostname
             ]);
 
-        if ($hosts->count() === 0) {
-            $this->out('No hosts to stop');
+        if ($workers->count() === 0) {
+            $this->out('No workers to stop');
             return;
         }
 
-        foreach ($hosts as $host) {
-            $this->_stopHost($host);
+        foreach ($workers as $worker) {
+            $this->_stopWorker($worker);
         }
 
         if ($this->param('wait')) {
@@ -159,16 +159,16 @@ class WatchdogShell extends Shell
         $this->Workers->save($worker);
     }
 
-    protected function _killHosts()
+    protected function _killWorkers()
     {
         $hostname = php_uname('n');
-        $hosts = $this->Workers->find()
+        $workers = $this->Workers->find()
             ->where([
                 'host_name' => $hostname
             ]);
-        foreach ($hosts as $host) {
-            $this->_kill($host->pid, $host->worker_name);
-            $this->Workers->delete($host);
+        foreach ($workers as $worker) {
+            $this->_kill($worker->pid, $worker->worker_name);
+            $this->Workers->delete($worker);
         }
     }
 
@@ -298,32 +298,32 @@ class WatchdogShell extends Shell
      */
     protected function _waitForStop($host_name)
     {
-        $this->out(' - Waiting for all hosts to stop');
-        $hosts = $this->Workers->find()
+        $this->out(' - Waiting for all workers to stop');
+        $workers = $this->Workers->find()
             ->where([
                 'host_name' => $host_name
             ]);
 
-        foreach ($hosts as $host) {
+        foreach ($workers as $worker) {
             $process = new Process();
-            $process->setPid($host->pid);
+            $process->setPid($worker->pid);
             if (!$process->status()) {
-                $this->Workers->delete($host);
+                $this->Workers->delete($worker);
             }
         }
 
         $start_time = time();
-        $hosts = $hosts->cleanCopy();
-        while ($hosts->count() > 0 && (time() - $start_time) <= 600) {
+        $workers = $workers->cleanCopy();
+        while ($workers->count() > 0 && (time() - $start_time) <= 600) {
             sleep(1);
             $this->out('.', 0);
-            $hosts = $hosts->cleanCopy();
+            $hosts = $workers->cleanCopy();
         }
         $this->out('');
 
         if ($hosts->count() > 0 && time() - $start_time > 600) {
             $this->out(' - Timeout waiting for hosts, killing manually');
-            $this->_killHosts();
+            $this->_killWorkers();
         }
     }
 
