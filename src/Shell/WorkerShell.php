@@ -157,21 +157,25 @@ class WorkerShell extends Shell
                 return;
             }
 
-            $this->_amqpManager->wait(self::TIMEOUT);
-            $this->_heartbeat();
+            $ran_job = $this->_amqpManager->wait(self::TIMEOUT);
+            $this->_heartbeat($ran_job);
 
             $this->out(sprintf('Memory usage: <info>%s</info>', Number::toReadableSize(memory_get_usage(true))), 1, Shell::VERBOSE);
             $this->out(sprintf('Peak memory usage: <info>%s</info>', Number::toReadableSize(memory_get_peak_usage(true))), 1, Shell::VERBOSE);
         }
     }
 
-    protected function _heartbeat()
+    protected function _heartbeat($job_ran = false)
     {
         cli_set_process_title(sprintf('DJ Worker :: %s :: %s', $this->_workerId, $this->__pulse ? 'O' : '-'));
 
         $this->__pulse = !$this->__pulse;
         $this->_worker = $this->Workers->get($this->_worker->id);
         $this->_worker->pulse = new Time();
+        if ($job_ran) {
+            $this->_worker->job_count++;
+        }
+
         $this->Workers->save($this->_worker);
     }
 
