@@ -15,6 +15,7 @@ use Cake\ORM\Entity;
  * @property \Cake\I18n\Time $modified
  * @property int $status
  * @property \Cake\I18n\Time $pulse
+ * @property int $job_count
  */
 class Worker extends Entity
 {
