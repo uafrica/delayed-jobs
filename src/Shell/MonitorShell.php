@@ -45,27 +45,35 @@ class MonitorShell extends Shell
             ->count();
 
         $this->out(__('Running workers: <info>{0}</info>', $worker_count));
+
         $this->out(__('Created / s: <info>{0}</info> :: Peak <info>{1}</info>', implode(' ', $created_rate),
             $this->peak_created_rate));
         $this->out(__('Completed /s : <info>{0}</info> :: Peak <info>{1}</info>', implode(' ', $completed_rate),
             $this->peak_completed_rate));
-        $this->hr();
-
-        $this->out('Total current job count');
         $this->out('');
+
+        $data = [
+            0 => array_values(self::STATUS_MAP),
+            1 => []
+        ];
+
         foreach (self::STATUS_MAP as $status => $name) {
-            $this->out(__('{0}: <info>{1}</info>', $name, (isset($statuses[$status]) ? $statuses[$status] : 0)));
+            $data[1][] = isset($statuses[$status]) ? $statuses[$status] : 0;
         }
+
+        $this->helper('table')->output($data);
     }
 
     protected function _rabbitStats()
     {
         $rabbit_status = AmqpManager::queueStatus();
-        $this->hr();
         $this->out('Rabbit stats');
         $this->nl();
-        $this->out(__('Ready: <info>{0}</info>', $rabbit_status['messages_ready']));
-        $this->out(__('Unacked: <info>{0}</info>', $rabbit_status['messages_unacknowledged']));
+        $this->helper('table')
+            ->output([
+                ['Ready', 'Unacked'],
+                [$rabbit_status['messages_ready'], $rabbit_status['messages_unacknowledged']]
+            ]);
     }
 
     protected function _historicJobs()
@@ -115,22 +123,22 @@ class MonitorShell extends Shell
         $this->out('Historic jobs');
         $this->nl();
         if (!empty($last_completed)) {
-            $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> completed at <info>{3}</info> and took <info>{4}</info> seconds',
+            $this->out(__('Last completed: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{3}</info> :: <info>{4}</info> seconds',
                 $last_completed->id, $last_completed->class, $last_completed->method,
                 $last_completed->end_time->i18nFormat(), $last_completed->end_time->diffInSeconds($last_completed->start_time)));
         }
         if (!empty($last_failed)) {
-            $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> failed because <info>{3}</info> at <info>{4}</info>',
+            $this->out(__('Last failed: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>',
                 $last_failed->id, $last_failed->class, $last_failed->method, $last_failed->last_message,
                 $last_failed->failed_at->i18nFormat()));
         }
         if (!empty($last_buried)) {
-            $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> was buried because <info>{3}</info> at <info>{4}</info>',
+            $this->out(__('Last burried: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>>',
                 $last_buried->id, $last_buried->class, $last_buried->method, $last_buried->last_message,
                 $last_buried->failed_at->i18nFormat()));
         }
         if (!empty($longest_running)) {
-            $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> is the longest running job. It took <info>{3}</info> and finished at <info>{4}</info>',
+            $this->out(__('Longest run: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{4}</info> :: <info>{3}</info>',
                 $longest_running->id, $longest_running->class, $longest_running->method, $longest_running->diff,
                 $last_completed->end_time->i18nFormat()));
         }

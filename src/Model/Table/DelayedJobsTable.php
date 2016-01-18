@@ -436,7 +436,6 @@ class DelayedJobsTable extends Table
         $available_rates = [
             '30 seconds',
             '5 minutes',
-            '15 minutes',
             '1 hour'
         ];
 
