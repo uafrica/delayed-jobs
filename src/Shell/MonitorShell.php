@@ -71,7 +71,7 @@ class MonitorShell extends Shell
     protected function _historicJobs()
     {
         $last_completed = $this->DelayedJobs->find()
-            ->select(['id', 'last_message', 'end_time', 'class', 'method'])
+            ->select(['id', 'last_message', 'end_time', 'class', 'method', 'start_time', 'end_time'])
             ->where([
                 'status' => DelayedJobsTable::STATUS_SUCCESS
             ])
@@ -115,9 +115,9 @@ class MonitorShell extends Shell
         $this->out('Historic jobs');
         $this->nl();
         if (!empty($last_completed)) {
-            $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> completed at <info>{3}</info>',
+            $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> completed at <info>{3}</info> and took <info>{4}</info> seconds',
                 $last_completed->id, $last_completed->class, $last_completed->method,
-                $last_completed->end_time->i18nFormat()));
+                $last_completed->end_time->i18nFormat(), $last_completed->end_time->diffInSeconds($last_completed->start_time)));
         }
         if (!empty($last_failed)) {
             $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> failed because <info>{3}</info> at <info>{4}</info>',
@@ -130,7 +130,7 @@ class MonitorShell extends Shell
                 $last_buried->failed_at->i18nFormat()));
         }
         if (!empty($longest_running)) {
-            $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> is the longest running job. It took <info>{3}</info> seconds and finished at <info>{4}</info>',
+            $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> is the longest running job. It took <info>{3}</info> and finished at <info>{4}</info>',
                 $longest_running->id, $longest_running->class, $longest_running->method, $longest_running->diff,
                 $last_completed->end_time->i18nFormat()));
         }
@@ -144,7 +144,8 @@ class MonitorShell extends Shell
                 'group',
                 'host_name',
                 'class',
-                'method'
+                'method',
+                'start_time'
             ])
             ->where([
                 'status' => DelayedJobsTable::STATUS_BUSY
@@ -158,7 +159,7 @@ class MonitorShell extends Shell
         $running_job_text = [];
         foreach ($running_jobs as $running_job) {
             $this->out(__(" - <info>{0}</info> @ <info>{2}</info>", $running_job->id, $running_job->group, $running_job->host_name));
-            $this->out(__("\t<info>{0}::{1}</info>\tRun time: <info>{2}</info>", $running_job->class, $running_job->method, $running_job->start_time->diffInSeconds()));
+            $this->out(__("\t<info>{0}::{1}</info>\tRun time: <info>{2}</info> seconds", $running_job->class, $running_job->method, $running_job->start_time->diffInSeconds()));
         }
     }
 
