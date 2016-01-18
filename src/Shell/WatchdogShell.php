@@ -358,11 +358,6 @@ class WatchdogShell extends Shell
         $this->startWorkers($worker_count);
     }
 
-    public function monitor()
-    {
-        $this->out('Moved into own shell - use bin/cake DelayedJobs.monitor to run');
-    }
-
     public function requeue()
     {
         $job = TableRegistry::get('DelayedJobs.DelayedJobs')
@@ -439,18 +434,24 @@ class WatchdogShell extends Shell
     {
         $options = parent::getOptionParser();
 
-        $options->addSubcommand('monitor', [
-                'help' => 'Moved into own shell - use bin/cake DelayedJobs.monitor to run'
+        $options
+            ->addSubcommand('start-workers', [
+                'help' => 'Starts workers',
+                'parser' => [
+                    'options' => [
+                        'workers' => [
+                            'help' => 'Number of workers to run',
+                            'default' => $this->_autoWorker()
+                        ]
+                    ]
+                ]
             ])
-            ->addSubcommand('startHosts', [
-                'help' => 'Starts hosts'
-            ])
-            ->addSubcommand('stopHosts', [
-                'help' => 'Stops hosts',
+            ->addSubcommand('stop-workers', [
+                'help' => 'Stops workers',
                 'parser' => [
                     'options' => [
                         'wait' => [
-                            'help' => 'Wait for hosts to stop.',
+                            'help' => 'Wait for workers to stop.',
                             'default' => false,
                             'boolean' => true
                         ]
@@ -483,7 +484,7 @@ class WatchdogShell extends Shell
             ->addOption('workers', [
                 'help' => 'Number of workers to run',
                 'default' => $this->_autoWorker()
-            ]);;
+            ]);
 
         return $options;
     }
