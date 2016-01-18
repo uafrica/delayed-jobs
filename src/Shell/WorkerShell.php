@@ -250,7 +250,7 @@ class WorkerShell extends Shell
         ];
         $options = (array)$job->options + $default;
 
-        $this->DelayedJobs->lock($job, $this->_workerName);
+        $this->DelayedJobs->lock($job, $this->_hostName);
         $this->Worker->executeJob($job);
         $this->_amqpManager->ack($message);
         $this->_lastJob = $job->id;
