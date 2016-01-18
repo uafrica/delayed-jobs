@@ -449,7 +449,7 @@ class DelayedJobsTable extends Table
 
         $return = [];
         foreach ($available_rates as $available_rate) {
-            $return[] = $this->DelayedJobs->jobsPerSecond($conditions, $field, '-' . $available_rate);
+            $return[] = $this->jobsPerSecond($conditions, $field, '-' . $available_rate);
         }
 
         return $return;
@@ -457,13 +457,13 @@ class DelayedJobsTable extends Table
 
     public function statusStats()
     {
-        $statuses = $this->DelayedJobs->find('list', [
+        $statuses = $this->find('list', [
             'keyField' => 'status',
             'valueField' => 'counter'
         ])
             ->select([
                 'status',
-                'counter' => $this->DelayedJobs->find()
+                'counter' => $this->find()
                     ->func()
                     ->count('id')
             ])
@@ -472,13 +472,13 @@ class DelayedJobsTable extends Table
             ])
             ->group(['status'])
             ->toArray();
-        $statuses['waiting'] = $this->DelayedJobs->find()
+        $statuses['waiting'] = $this->find()
             ->where([
                 'status' => self::STATUS_NEW,
                 'run_at >' => new Time()
             ])
             ->count();
-        $statuses[self::STATUS_NEW] = $this->DelayedJobs->find()
+        $statuses[self::STATUS_NEW] = $this->find()
             ->where([
                 'status' => self::STATUS_NEW,
                 'run_at <=' => new Time()
