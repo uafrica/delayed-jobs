@@ -164,11 +164,19 @@ class MonitorShell extends Shell
             ->all();
         $this->hr();
         $this->out('Running jobs');
-        $running_job_text = [];
+        $data = [
+            ['Id', 'Host', 'Method', 'Run time']
+        ];
         foreach ($running_jobs as $running_job) {
-            $this->out(__(" - <info>{0}</info> @ <info>{2}</info>", $running_job->id, $running_job->group, $running_job->host_name));
-            $this->out(__("\t<info>{0}::{1}</info>\tRun time: <info>{2}</info> seconds", $running_job->class, $running_job->method, $running_job->start_time->diffInSeconds()));
+            $row = [
+                $running_job->id,
+                $running_job->host_name,
+                $running_job->class . '::' . $running_job->method,
+                $running_job->start_time->diffInSeconds()
+            ];
+            $data[] = $row;
         }
+        $this->helper('table')->output($data);
     }
 
     public function main()
@@ -193,7 +201,7 @@ class MonitorShell extends Shell
             if ($this->param('snapshot')) {
                 break;
             }
-            sleep(1);
+            usleep(250000);
         }
     }
 
