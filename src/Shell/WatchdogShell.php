@@ -314,14 +314,17 @@ class WatchdogShell extends Shell
 
         $start_time = time();
         $workers = $workers->cleanCopy();
-        while ($workers->count() > 0 && (time() - $start_time) <= 600) {
+        $worker_count = $workers->count();
+        $this->out(sprintf('  - Running workers: %s', $worker_count), 0);
+        while ($worker_count > 0 && (time() - $start_time) <= 600) {
             sleep(1);
-            $this->out('.', 0);
-            $hosts = $workers->cleanCopy();
+            $workers = $workers->cleanCopy();
+            $worker_count = $workers->count();
+            $this->_io->overwrite(sprintf('  - Running workers: %s', $worker_count), 0);
         }
         $this->out('');
 
-        if ($hosts->count() > 0 && time() - $start_time > 600) {
+        if ($workers->count() > 0 && time() - $start_time > 600) {
             $this->out(' - Timeout waiting for hosts, killing manually');
             $this->_killWorkers();
         }
@@ -335,26 +338,24 @@ class WatchdogShell extends Shell
     public function reload()
     {
         $host_name = php_uname('n');
-        $worker_name = Configure::read('dj.service.name');
 
-        $hosts = $this->Workers->find()
+        $workers = $this->Workers->find()
             ->where([
                 'host_name' => $host_name
             ]);
-        if ($hosts->count() == 0) {
-            $this->out('<error>No hosts running</error>');
+        if ($workers->count() == 0) {
+            $this->out('<error>No workers running</error>');
             $this->_stop(1);
         }
 
-        $worker_count = $hosts->first()->worker_count;
-        $host_count = $hosts->count();
-        $this->out(' - Killing running hosts.');
-        $this->stopHosts();
+        $worker_count = $workers->count();
+        $this->out(' - Killing running workers.');
+        $this->stopWorkers();
 
         $this->_waitForStop($host_name);
 
-        $this->out(' - Restarting hosts.');
-        $this->startHosts($host_count, $worker_count);
+        $this->out(' - Restarting workers.');
+        $this->startWorkers($worker_count);
     }
 
     public function monitor()
