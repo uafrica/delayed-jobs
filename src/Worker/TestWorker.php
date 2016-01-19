@@ -17,7 +17,7 @@ class TestWorker extends BaseWorker
      */
     public function test($payload)
     {
-        sleep(rand(1, 10));
+        sleep(2);
         $time = (new Time())->i18nFormat();
         if ($payload['type'] === 'success') {
             return 'Successfull test at ' . $time;

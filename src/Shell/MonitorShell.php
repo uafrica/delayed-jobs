@@ -15,211 +15,322 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
  */
 class MonitorShell extends Shell
 {
-    public $modelClass = 'DelayedJobs.Hosts';
+    const STATUS_MAP = [
+        'waiting' => 'Waiting',
+        DelayedJobsTable::STATUS_NEW => 'New',
+        DelayedJobsTable::STATUS_BUSY => 'Busy',
+        DelayedJobsTable::STATUS_BURRIED => 'Buried',
+        DelayedJobsTable::STATUS_SUCCESS => 'Success',
+        DelayedJobsTable::STATUS_KICK => 'Kicked',
+        DelayedJobsTable::STATUS_FAILED => 'Failed',
+        DelayedJobsTable::STATUS_UNKNOWN => 'Unknown',
+    ];
 
-    protected function _rates($field, $status = null)
+    public $modelClass = 'DelayedJobs.Workers';
+
+    public $loop_counter;
+
+    protected function _basicStats()
     {
-        $available_rates = [
-            '30 seconds',
-            '5 minutes',
-            '15 minutes',
-            '1 hour'
+        static $peak_created_rate = 0.0;
+        static $peak_completed_rate = 0.0;
+
+        $statuses = $this->DelayedJobs->statusStats();
+        $created_rate = $this->DelayedJobs->jobRates('created');
+        $completed_rate = $this->DelayedJobs->jobRates('end_time', DelayedJobsTable::STATUS_SUCCESS);
+        $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
+        $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
+
+        $this->out("Created / s:\t" .
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>', $created_rate[0], $created_rate[1],
+                $created_rate[2], $peak_created_rate));
+        $this->out("Completed / s:\t" .
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>', $completed_rate[0],
+                $completed_rate[1], $completed_rate[2], $peak_completed_rate));
+        $this->out('');
+
+        $data = [
+            0 => array_values(self::STATUS_MAP),
+            1 => []
         ];
 
-        $conditions = [];
-        if ($status) {
-            $conditions = [
-                'status' => $status
-            ];
+        foreach (self::STATUS_MAP as $status => $name) {
+            $data[1][] = str_pad(isset($statuses[$status]) ? $statuses[$status] : 0, 8, ' ', STR_PAD_LEFT);
         }
 
-        $return = [];
-        foreach ($available_rates as $available_rate) {
-            $return[] = $this->DelayedJobs->jobsPerSecond($conditions, $field, '-' . $available_rate);
-        }
-        return $return;
+        $this->helper('table')->output($data);
     }
 
-    protected function _statusStats()
+    protected function _basicStatsWithCharts()
     {
-        $statuses = $this->DelayedJobs->find('list', [
-            'keyField' => 'status',
-            'valueField' => 'counter'
-        ])
+        static $created_points = [];
+        static $completed_points = [];
+        static $status_points = [];
+        static $peak_created_rate = 0.0;
+        static $peak_completed_rate = 0.0;
+
+        $max_length = 50;
+
+        $statuses = $this->DelayedJobs->statusStats();
+        $created_rate = $this->DelayedJobs->jobRates('created');
+        $completed_rate = $this->DelayedJobs->jobRates('end_time', DelayedJobsTable::STATUS_SUCCESS);
+        $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
+        $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
+
+        if (empty($created_points) || $this->loop_counter % 4 === 0) {
+            $created_points[] = $created_rate[0];
+            $completed_points[] = $completed_rate[0];
+
+            foreach (self::STATUS_MAP as $status => $name) {
+                if (empty($status_points[$status])) {
+                    $status_points[$status] = [];
+                }
+                $status_points[$status][] = isset($statuses[$status]) ? $statuses[$status] : 0;
+            }
+        }
+
+        if (count($created_points) > $max_length) {
+            array_splice($created_points, -$max_length);
+            array_splice($completed_points, -$max_length);
+            foreach (self::STATUS_MAP as $status => $name) {
+                if (empty($status_points[$status])) {
+                    continue;
+                }
+                array_splice($status_points[$status], -$max_length);
+            }
+        }
+
+        $worker_count = $this->Workers->find()
+            ->count();
+
+        $this->out(__('Running workers: <info>{0}</info>', $worker_count));
+
+        $this->helper('DelayedJobs.sparkline')
+            ->output([
+                'data' => $created_points,
+                'title' => 'Created / s',
+                'length' => $max_length
+            ]);
+        $this->out("\t\t" .
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $created_rate[0], $created_rate[1], $created_rate[2], $peak_created_rate));
+
+        $this->helper('DelayedJobs.sparkline')
+            ->output([
+                'data' => $completed_points,
+                'title' => 'Completed / s',
+                'length' => $max_length
+            ]);
+
+        $this->out("\t\t" .
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $completed_rate[0], $completed_rate[1], $completed_rate[2], $peak_completed_rate));
+
+        foreach (self::STATUS_MAP as $status => $name) {
+            $this->helper('DelayedJobs.sparkline')
+                ->output([
+                    'data' => $status_points[$status],
+                    'title' => $name . "\t",
+                    'length' => $max_length,
+                    'formatter' => '%7d'
+                ]);
+        }
+    }
+
+    protected function _rabbitStats()
+    {
+        $rabbit_status = AmqpManager::queueStatus();
+        if (empty($rabbit_status)) {
+            return;
+        }
+
+        $this->out('Rabbit stats');
+        $this->nl();
+        $this->helper('table')
+            ->output([
+                ['Ready', 'Unacked'],
+                [$rabbit_status['messages_ready'], $rabbit_status['messages_unacknowledged']]
+            ]);
+    }
+
+    protected function _rabbitStatsWithCharts()
+    {
+        static $ready_points = [];
+        static $unacked_points = [];
+
+        $max_length = 50;
+
+        $rabbit_status = AmqpManager::queueStatus();
+        if (empty($rabbit_status)) {
+            return;
+        }
+
+        if (empty($ready_points) || $this->loop_counter % 4 === 0) {
+            $ready_points[] = $rabbit_status['messages_ready'];
+            $unacked_points[] = $rabbit_status['messages_unacknowledged'];
+        }
+
+        if (count($ready_points) > $max_length) {
+            array_splice($ready_points, -$max_length);
+            array_splice($unacked_points, -$max_length);
+        }
+
+        $this->helper('DelayedJobs.sparkline')
+            ->output([
+                'data' => $ready_points,
+                'title' => "MQ Ready",
+                'length' => $max_length
+            ]);
+
+        $this->helper('DelayedJobs.sparkline')
+            ->output([
+                'data' => $unacked_points,
+                'title' => 'MQ Unacked',
+                'length' => $max_length
+            ]);
+    }
+
+    protected function _historicJobs()
+    {
+        $last_completed = $this->DelayedJobs->find()
+            ->select(['id', 'last_message', 'end_time', 'class', 'method', 'start_time', 'end_time'])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_SUCCESS
+            ])
+            ->order([
+                'end_time' => 'DESC'
+            ])
+            ->first();
+        $last_failed = $this->DelayedJobs->find()
+            ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_FAILED
+            ])
+            ->order([
+                'failed_at' => 'DESC'
+            ])
+            ->first();
+        $last_buried = $this->DelayedJobs->find()
+            ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_BURRIED
+            ])
+            ->order([
+                'failed_at' => 'DESC'
+            ])
+            ->first();
+        $time_diff = $this->DelayedJobs->find()
+            ->func()
+            ->timeDiff([
+                'end_time' => 'literal',
+                'start_time' => 'literal'
+            ]);
+        $longest_running = $this->DelayedJobs->find()
+            ->select(['id', 'group', 'class', 'method', 'diff' => $time_diff])
+            ->where([
+                'status' => DelayedJobsTable::STATUS_SUCCESS
+            ])
+            ->orderDesc($time_diff)
+            ->first();
+
+        $this->hr();
+        $this->out('Historic jobs');
+        $this->nl();
+        if (!empty($last_completed)) {
+            $this->out(__('Last completed: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{3}</info> :: <info>{4}</info> seconds',
+                $last_completed->id, $last_completed->class, $last_completed->method,
+                $last_completed->end_time->i18nFormat(), $last_completed->end_time->diffInSeconds($last_completed->start_time)));
+        }
+        if (!empty($last_failed)) {
+            $this->out(__('Last failed: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>',
+                $last_failed->id, $last_failed->class, $last_failed->method, $last_failed->last_message,
+                $last_failed->failed_at->i18nFormat()));
+        }
+        if (!empty($last_buried)) {
+            $this->out(__('Last burried: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>>',
+                $last_buried->id, $last_buried->class, $last_buried->method, $last_buried->last_message,
+                $last_buried->failed_at->i18nFormat()));
+        }
+        if (!empty($longest_running)) {
+            $this->out(__('Longest run: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{4}</info> :: <info>{3}</info>',
+                $longest_running->id, $longest_running->class, $longest_running->method, $longest_running->diff,
+                $last_completed->end_time->i18nFormat()));
+        }
+    }
+
+    protected function _activeJobs()
+    {
+        $running_jobs = $this->DelayedJobs->find()
             ->select([
-                'status',
-                'counter' => $this->DelayedJobs->find()
-                    ->func()
-                    ->count('id')
+                'id',
+                'group',
+                'host_name',
+                'class',
+                'method',
+                'start_time'
             ])
             ->where([
-                'not' => ['status' => DelayedJobsTable::STATUS_NEW]
+                'status' => DelayedJobsTable::STATUS_BUSY
             ])
-            ->group(['status'])
-            ->toArray();
-        $statuses['waiting'] = $this->DelayedJobs->find()
-            ->where([
-                'status' => DelayedJobsTable::STATUS_NEW,
-                'run_at >' => new Time()
+            ->order([
+                'start_time' => 'ASC'
             ])
-            ->count();
-        $statuses[DelayedJobsTable::STATUS_NEW] = $this->DelayedJobs->find()
-            ->where([
-                'status' => DelayedJobsTable::STATUS_NEW,
-                'run_at <=' => new Time()
-            ])
-            ->count();
-        return $statuses;
+            ->all();
+        $this->hr();
+        $this->out('Running jobs');
+        $data = [
+            ['Id', 'Host', 'Method', 'Run time']
+        ];
+        foreach ($running_jobs as $running_job) {
+            $row = [
+                $running_job->id,
+                $running_job->host_name,
+                $running_job->class . '::' . $running_job->method,
+                $running_job->start_time->diffInSeconds()
+            ];
+            $data[] = $row;
+        }
+        $this->helper('table')->output($data);
     }
 
     public function main()
     {
-        $status_map = [
-            'waiting' => 'Waiting',
-            DelayedJobsTable::STATUS_NEW => 'New',
-            DelayedJobsTable::STATUS_BUSY => 'Busy',
-            DelayedJobsTable::STATUS_BURRIED => 'Buried',
-            DelayedJobsTable::STATUS_SUCCESS => 'Success',
-            DelayedJobsTable::STATUS_KICK => 'Kicked',
-            DelayedJobsTable::STATUS_FAILED => 'Failed',
-            DelayedJobsTable::STATUS_UNKNOWN => 'Unknown',
-        ];
         $this->loadModel('DelayedJobs.DelayedJobs');
-        $hostname = php_uname('n');
 
-        $time = time();
-        $rabbit_time = microtime(true);
-        $start = true;
-
+        $this->start_time = time();
+        $this->clear();
         while (true) {
-            $statuses = $this->_statusStats();
-            $created_rate = $this->_rates('created');
-            $completed_rate = $this->_rates('end_time', DelayedJobsTable::STATUS_SUCCESS);
-            $host_count = $this->Hosts->find()
-                ->count();
-            $worker_count = $this->Hosts->find()
-                ->select([
-                    'worker_count' => $this->Hosts->find()->func()->sum('worker_count')
-                ])
-                ->hydrate(false)
-                ->first();
-
-            if ($start || microtime(true) - $rabbit_time > 0.5) {
-                $rabbit_status = AmqpManager::queueStatus();
-                $rabbit_time = microtime(true);
+            if ($this->param('basic-stats')) {
+                $this->out("\e[0;0H");
+            } else {
+                $this->clear();
             }
+            $this->out(__('Delayed Jobs monitor - <info>{0}</info>', date('H:i:s')));
+            $this->hr();
 
-            if (($start || time() - $time > 5)) {
-                $start = false;
-                $time = time();
+            if ($this->param('basic-stats')) {
+                $this->_basicStatsWithCharts();
+                $this->_rabbitStatsWithCharts();
+                $this->_historicJobs();
+            } else {
+                $this->_basicStats();
+                $this->_rabbitStats();
+                $this->_historicJobs();
+
                 if ($this->param('hide-jobs') === false) {
-                    $running_jobs = $this->DelayedJobs->find()
-                        ->select([
-                            'id',
-                            'group',
-                            'locked_by',
-                            'class',
-                            'method'
-                        ])
-                        ->where([
-                            'status' => DelayedJobsTable::STATUS_BUSY
-                        ])
-                        ->all();
-                }
-                $last_completed = $this->DelayedJobs->find()
-                    ->select(['id', 'last_message', 'end_time', 'class', 'method'])
-                    ->where([
-                        'status' => DelayedJobsTable::STATUS_SUCCESS
-                    ])
-                    ->order([
-                        'end_time' => 'DESC'
-                    ])
-                    ->first();
-                $last_failed = $this->DelayedJobs->find()
-                    ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
-                    ->where([
-                        'status' => DelayedJobsTable::STATUS_FAILED
-                    ])
-                    ->order([
-                        'failed_at' => 'DESC'
-                    ])
-                    ->first();
-                $last_buried = $this->DelayedJobs->find()
-                    ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
-                    ->where([
-                        'status' => DelayedJobsTable::STATUS_BURRIED
-                    ])
-                    ->order([
-                        'failed_at' => 'DESC'
-                    ])
-                    ->first();
-                $time_diff = $this->DelayedJobs->find()->func()->timeDiff([
-                    'end_time' => 'literal',
-                    'start_time' => 'literal'
-                ]);
-                $longest_running = $this->DelayedJobs->find()
-                    ->select(['id', 'group', 'class', 'method', 'diff' => $time_diff])
-                    ->where([
-                        'status' => DelayedJobsTable::STATUS_SUCCESS
-                    ])
-                    ->orderDesc($time_diff)
-                    ->first();
-            }
-
-            $this->clear();
-            $this->out(__('Delayed Jobs monitor <info>{0}</info>', date('H:i:s')));
-            $this->hr();
-            $this->out(__('Running hosts: <info>{0}</info>', $host_count));
-            $this->out(__('Workers: <info>{0}</info>', $worker_count['worker_count'] ?: 0));
-            $this->out(__('Created / s: <info>{0}</info>', implode(' ', $created_rate)));
-            $this->out(__('Completed /s : <info>{0}</info>', implode(' ', $completed_rate)));
-            $this->hr();
-
-            $this->out('Total current job count');
-            $this->out('');
-            foreach ($status_map as $status => $name) {
-                $this->out(__('{0}: <info>{1}</info>', $name, (isset($statuses[$status]) ? $statuses[$status] : 0)));
-            }
-
-            if ($rabbit_status) {
-                $this->hr();
-                $this->out('Rabbit stats');
-                $this->nl();
-                $this->out(__('Ready: <info>{0}</info>', $rabbit_status['messages_ready']));
-                $this->out(__('Unacked: <info>{0}</info>', $rabbit_status['messages_unacknowledged']));
-            }
-
-            if ($this->param('hide-jobs') === false && count($running_jobs) > 0) {
-                $this->hr();
-                $this->out(__('Running job snapshot <info>{0} seconds ago</info>:', time() - $time));
-                $running_job_text = [];
-                foreach ($running_jobs as $running_job) {
-                    $this->out(__(" - {0} ({1}) with {2}", $running_job->id, $running_job->group, $running_job->locked_by));
-                    $this->out(__("\t{0}::{1}", $running_job->class, $running_job->method));
+                    $this->_activeJobs();
                 }
             }
-            $this->hr();
-            if (!empty($last_completed)) {
-                $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> completed at <info>{3}</info>',
-                    $last_completed->id, $last_completed->class, $last_completed->method,
-                    $last_completed->end_time->i18nFormat()));
-            }
-            if (!empty($last_failed)) {
-                $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> failed because <info>{3}</info> at <info>{4}</info>', $last_failed->id, $last_failed->class, $last_failed->method,
-                    $last_failed->last_message, $last_failed->failed_at->i18nFormat()));
-            }
-            if (!empty($last_buried)) {
-                $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> was buried because <info>{3}</info> at <info>{4}</info>',
-                    $last_buried->id, $last_buried->class, $last_buried->method, $last_buried->last_message, $last_buried->failed_at->i18nFormat()));
-            }
-            if (!empty($longest_running)) {
-                $this->out(__('<info>{0}</info> <comment>{1}::{2}()</comment> is the longest running job at <info>{3}</info>', $longest_running->id,
-                    $longest_running->class, $longest_running->method, $longest_running->diff));
-            }
+
             if ($this->param('snapshot')) {
                 break;
             }
-            usleep(100000);
+            usleep(250000);
+
+            $this->loop_counter++;
+            if ($this->loop_counter > 1000) {
+                $this->loop_counter = 0;
+            }
         }
     }
 
@@ -234,9 +345,16 @@ class MonitorShell extends Shell
                 'boolean' => true,
                 'short' => 's'
             ])
+            ->addOption('basic-stats', [
+                'help' => 'Show basic information with sparklines',
+                'boolean' => true,
+                'default' => false,
+                'short' => 'b'
+            ])
             ->addOption('hide-jobs', [
                 'help' => 'Hide active jobs',
                 'boolean' => true,
+                'default' => false,
                 'short' => 'j'
             ]);
 

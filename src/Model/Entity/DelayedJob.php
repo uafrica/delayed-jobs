@@ -3,14 +3,17 @@ namespace DelayedJobs\Model\Entity;
 
 use Cake\Console\Shell;
 use Cake\Core\Configure;
+use Cake\Event\EventDispatcherInterface;
+use Cake\Event\EventDispatcherTrait;
 use Cake\Log\Log;
 use Cake\ORM\Entity;
 use Cake\Core\Exception\Exception;
 use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
-class DelayedJob extends Entity
+class DelayedJob extends Entity implements EventDispatcherInterface
 {
+    use EventDispatcherTrait;
 
     protected function _getStream($stream, $property = null)
     {
@@ -53,7 +56,16 @@ class DelayedJob extends Entity
             );
         }
 
-        return $job_worker->{$method}($this->payload, $this, $shell);
+        $event = $this->dispatchEvent('DelayedJobs.beforeJobExecute', [$this]);
+        if ($event->isStopped()) {
+            return $event->result;
+        }
+
+        $result = $job_worker->{$method}($this->payload, $this, $shell);
+
+        $this->dispatchEvent('DelayedJobs.afterJobExecute', [$this, $result]);
+
+        return $result;
     }
 
     public function queue()
@@ -63,8 +75,17 @@ class DelayedJob extends Entity
         }
 
         try {
+            $event = $this->dispatchEvent('DelayedJobs.beforeJobQueue', [$this]);
+            if ($event->isStopped()) {
+                return $event->result;
+            }
+
             $manager = AmqpManager::instance();
-            $manager->queueJob($this);
+            $message = $manager->queueJob($this);
+
+            $this->dispatchEvent('DelayedJobs.afterJobQueue', [$this, $message]);
+
+            return true;
         } catch (\Exception $e) {
             Log::emergency(__('RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
                 $e->getMessage(), get_class($e), $this->id));

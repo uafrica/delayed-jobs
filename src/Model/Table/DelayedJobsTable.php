@@ -94,7 +94,12 @@ class DelayedJobsTable extends Table
             $job->status = self::STATUS_BURRIED;
         }
 
-        $growth_factor = 5 + pow($job->retries + 1, 4);
+        $growth_factor = 5 + ($job->retries + 1) ** 4;
+
+        $growth_factor_random = mt_rand(0, 100) % 2 ? -1 : +1;
+        $growth_factor_random = $growth_factor_random * ceil(log($growth_factor + mt_rand(0, $growth_factor)));
+
+        $growth_factor += $growth_factor_random;
 
         $job->run_at = new Time("+{$growth_factor} seconds");
         $job->last_message = $message;
@@ -105,17 +110,18 @@ class DelayedJobsTable extends Table
         return $this->save($job);
     }
 
-    public function lock(DelayedJob $job, $locked_by = '')
+    public function lock(DelayedJob $job, $host_name = '')
     {
+        $job->start_time = new Time();
         $job->status = self::STATUS_BUSY;
-        $job->locked_by = $locked_by;
+        $job->host_name = $host_name;
         $this->save($job);
     }
 
     public function release(DelayedJob $job)
     {
         $job->status = self::STATUS_NEW;
-        $job->locked_by = null;
+        $job->host_name = null;
         $this->save($job);
     }
 
@@ -172,7 +178,7 @@ class DelayedJobsTable extends Table
     public function getRunningByHost($host_id)
     {
         $conditions = [
-            'DelayedJobs.locked_by' => $host_id,
+            'DelayedJobs.host_name' => $host_id,
             'DelayedJobs.status' => self::STATUS_BUSY,
         ];
 
@@ -181,7 +187,7 @@ class DelayedJobsTable extends Table
             ->select([
                 'id',
                 'pid',
-                'locked_by',
+                'host_name',
                 'status',
                 'priority',
             ])
@@ -226,9 +232,8 @@ class DelayedJobsTable extends Table
             ->find()
             ->where($conditions)
             ->count();
-        $count = number_format($count / $second_count, 3);
 
-        return $count;
+        return $count / $second_count;
     }
 
     /**
@@ -279,7 +284,7 @@ class DelayedJobsTable extends Table
             $options['fields'] = [
                 'id',
                 'pid',
-                'locked_by',
+                'host_name',
                 'status',
                 'options',
                 'sequence',
@@ -428,5 +433,61 @@ class DelayedJobsTable extends Table
         }
 
         $this->_queueJob($next, false);
+    }
+
+    public function jobRates($field, $status = null)
+    {
+        $available_rates = [
+            '30 seconds',
+            '5 minutes',
+            '1 hour'
+        ];
+
+        $conditions = [];
+        if ($status) {
+            $conditions = [
+                'status' => $status
+            ];
+        }
+
+        $return = [];
+        foreach ($available_rates as $available_rate) {
+            $return[] = $this->jobsPerSecond($conditions, $field, '-' . $available_rate);
+        }
+
+        return $return;
+    }
+
+    public function statusStats()
+    {
+        $statuses = $this->find('list', [
+            'keyField' => 'status',
+            'valueField' => 'counter'
+        ])
+            ->select([
+                'status',
+                'counter' => $this->find()
+                    ->func()
+                    ->count('id')
+            ])
+            ->where([
+                'not' => ['status' => self::STATUS_NEW]
+            ])
+            ->group(['status'])
+            ->toArray();
+        $statuses['waiting'] = $this->find()
+            ->where([
+                'status' => self::STATUS_NEW,
+                'run_at >' => new Time()
+            ])
+            ->count();
+        $statuses[self::STATUS_NEW] = $this->find()
+            ->where([
+                'status' => self::STATUS_NEW,
+                'run_at <=' => new Time()
+            ])
+            ->count();
+
+        return $statuses;
     }
 }

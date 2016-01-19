@@ -3,6 +3,7 @@
 namespace DelayedJobs\Amqp;
 
 use Cake\Core\Configure;
+use Cake\Core\Exception\Exception;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Network\Http\Client;
@@ -156,6 +157,8 @@ class AmqpManager
         $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->id, $exchange, $this->_serviceName, $delay, $args['priority']));
 
         $channel->wait_for_pending_acks();
+
+        return $message;
     }
 
     public function requeueMessage(AMQPMessage $message, $delay = 5000)
@@ -196,9 +199,8 @@ class AmqpManager
     {
         $channel = $this->_getChannel();
         try {
-            while (count($channel->callbacks)) {
-                $channel->wait(null, false, $timeout);
-            }
+            $channel->wait(null, true, $timeout);
+            return true;
         } catch (AMQPTimeoutException $e) {
             return false;
         }
@@ -226,10 +228,14 @@ class AmqpManager
                 'password' => $config['pass']
             ]
         ]);
-        $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
-            Configure::read('dj.service.name') . '-queue'), [], [
-            'type' => 'json'
-        ]);
+        try {
+            $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
+                Configure::read('dj.service.name') . '-queue'), [], [
+                'type' => 'json'
+            ]);
+        } catch (Exception $e) {
+            return [];
+        }
         $data = $queue_data->json;
 
         if (!isset($data['messages'])) {
