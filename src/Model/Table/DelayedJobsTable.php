@@ -94,7 +94,10 @@ class DelayedJobsTable extends Table
             $job->status = self::STATUS_BURRIED;
         }
 
-        $growth_factor = 5 + pow($job->retries + 1, 4);
+        $growth_factor = 5 + ($job->retries + 1) ** 4;
+
+        $growth_factor_random = mt_rand(0, 100) % 2 ? -1 : +1;
+        $growth_factor_random = ceil($growth_factor_random * log($growth_factor + mt_rand(0, 10)));
 
         $job->run_at = new Time("+{$growth_factor} seconds");
         $job->last_message = $message;
