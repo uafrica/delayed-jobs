@@ -28,28 +28,62 @@ class MonitorShell extends Shell
 
     public $modelClass = 'DelayedJobs.Workers';
 
+    public $loop_counter;
     public $peak_created_rate = 0;
     public $peak_completed_rate = 0;
 
     protected function _basicStats()
     {
+        static $created_points = [];
+        static $completed_points = [];
+        static $peak_created_rate = 0.0;
+        static $peak_completed_rate = 0.0;
+
+        $max_length = 50;
+
         $statuses = $this->DelayedJobs->statusStats();
         $created_rate = $this->DelayedJobs->jobRates('created');
         $completed_rate = $this->DelayedJobs->jobRates('end_time', DelayedJobsTable::STATUS_SUCCESS);
-        $this->peak_created_rate = $created_rate[0] > $this->peak_created_rate ? $created_rate[0] :
-            $this->peak_created_rate;
-        $this->peak_completed_rate = $completed_rate[0] > $this->peak_completed_rate ? $completed_rate[0] :
-            $this->peak_completed_rate;
+        $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
+        $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
+
+        if (empty($created_points) || $this->loop_counter % 4 === 0) {
+            $created_points[] = $created_rate[0];
+            $completed_points[] = $completed_rate[0];
+        }
+
+        if (count($created_points) > $max_length) {
+            array_splice($created_points, -$max_length);
+            array_splice($completed_points, -$max_length);
+        }
 
         $worker_count = $this->Workers->find()
             ->count();
 
         $this->out(__('Running workers: <info>{0}</info>', $worker_count));
 
-        $this->out(__('Created / s: <info>{0}</info> :: Peak <info>{1}</info>', implode(' ', $created_rate),
-            $this->peak_created_rate));
-        $this->out(__('Completed /s : <info>{0}</info> :: Peak <info>{1}</info>', implode(' ', $completed_rate),
-            $this->peak_completed_rate));
+        $this->helper('DelayedJobs.sparkline')->output([
+            'data' => $created_points,
+            'max' => $peak_created_rate,
+            'title' => 'Created / s',
+            'instant' => $created_rate[0],
+            'length' => $max_length
+        ]);
+        $this->out("\t\t" .
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info>', $created_rate[0], $created_rate[1],
+                $created_rate[2]));
+
+        $this->helper('DelayedJobs.sparkline')
+            ->output([
+                'data' => $completed_points,
+                'max' => $peak_completed_rate,
+                'title' => 'Completed / s',
+                'instant' => $completed_rate[0],
+                'length' => $max_length
+            ]);
+
+        $this->out("\t\t" . sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info>', $completed_rate[0],
+            $completed_rate[1], $completed_rate[2]));
         $this->out('');
 
         $data = [
@@ -58,7 +92,7 @@ class MonitorShell extends Shell
         ];
 
         foreach (self::STATUS_MAP as $status => $name) {
-            $data[1][] = isset($statuses[$status]) ? $statuses[$status] : 0;
+            $data[1][] = str_pad(isset($statuses[$status]) ? $statuses[$status] : 0, 8, ' ', STR_PAD_LEFT);
         }
 
         $this->helper('table')->output($data);
@@ -67,6 +101,10 @@ class MonitorShell extends Shell
     protected function _rabbitStats()
     {
         $rabbit_status = AmqpManager::queueStatus();
+        if (empty($rabbit_status)) {
+            return;
+        }
+
         $this->out('Rabbit stats');
         $this->nl();
         $this->helper('table')
@@ -183,25 +221,36 @@ class MonitorShell extends Shell
     {
         $this->loadModel('DelayedJobs.DelayedJobs');
 
-        $this->_io->styles('bold', ['bold' => true]);
-
+        $this->start_time = time();
+        $this->clear();
         while (true) {
-            $this->clear();
+            if ($this->param('only-basic')) {
+                $this->out("\e[0;0H");
+            } else {
+                $this->clear();
+            }
             $this->out(__('Delayed Jobs monitor - <info>{0}</info>', date('H:i:s')));
             $this->hr();
 
             $this->_basicStats();
-            $this->_rabbitStats();
-            $this->_historicJobs();
+            if (!$this->param('only-basic')) {
+                $this->_rabbitStats();
+                $this->_historicJobs();
 
-            if ($this->param('hide-jobs') === false) {
-                $this->_activeJobs();
+                if ($this->param('hide-jobs') === false) {
+                    $this->_activeJobs();
+                }
             }
 
             if ($this->param('snapshot')) {
                 break;
             }
             usleep(250000);
+
+            $this->loop_counter++;
+            if ($this->loop_counter > 1000) {
+                $this->loop_counter = 0;
+            }
         }
     }
 
@@ -216,9 +265,16 @@ class MonitorShell extends Shell
                 'boolean' => true,
                 'short' => 's'
             ])
+            ->addOption('only-basic', [
+                'help' => 'Show only basic information',
+                'boolean' => true,
+                'default' => false,
+                'short' => 'b'
+            ])
             ->addOption('hide-jobs', [
                 'help' => 'Hide active jobs',
                 'boolean' => true,
+                'default' => false,
                 'short' => 'j'
             ]);
 

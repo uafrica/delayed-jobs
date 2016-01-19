@@ -111,7 +111,7 @@ class WorkerShell extends Shell
         $this->nl();
     }
 
-    public function stopHammerTime(Event $event = null)
+    public function stopHammerTime()
     {
         $this->out('Shutting down...');
 
@@ -169,8 +169,20 @@ class WorkerShell extends Shell
     {
         cli_set_process_title(sprintf('DJ Worker :: %s :: %s', $this->_workerId, $this->__pulse ? 'O' : '-'));
 
+        if ($this->_worker === null) {
+            $this->stopHammerTime();
+
+            return;
+        }
+
         $this->__pulse = !$this->__pulse;
-        $this->_worker = $this->Workers->get($this->_worker->id);
+        try {
+            $this->_worker = $this->Workers->get($this->_worker->id);
+        } catch (RecordNotFoundException $e) {
+            $this->stopHammerTime();
+            return;
+        }
+
         $this->_worker->pulse = new Time();
         if ($job_ran) {
             $this->_worker->job_count++;
