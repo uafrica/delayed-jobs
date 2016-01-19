@@ -103,7 +103,7 @@ class MonitorShell extends Shell
         $worker_count = $this->Workers->find()
             ->count();
 
-        $this->out(__('Running workers: <info>{0}</info>', $worker_count));
+        $this->out(sprintf('Running workers: <info>%3f%</info>', $worker_count));
 
         $this->helper('DelayedJobs.Sparkline')
             ->output([
@@ -221,42 +221,32 @@ class MonitorShell extends Shell
                 'failed_at' => 'DESC'
             ])
             ->first();
-        $time_diff = $this->DelayedJobs->find()
-            ->func()
-            ->timeDiff([
-                'end_time' => 'literal',
-                'start_time' => 'literal'
-            ]);
-        $longest_running = $this->DelayedJobs->find()
-            ->select(['id', 'group', 'class', 'method', 'diff' => $time_diff])
-            ->where([
-                'status' => DelayedJobsTable::STATUS_SUCCESS
-            ])
-            ->orderDesc($time_diff)
-            ->first();
 
         $this->hr();
         $this->out('Historic jobs');
         $this->nl();
+        $output = [];
         if (!empty($last_completed)) {
-            $this->out(__('Last completed: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{3}</info> :: <info>{4}</info> seconds',
+            $output[] = __('Last completed: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{3}</info> :: <info>{4}</info> seconds',
                 $last_completed->id, $last_completed->class, $last_completed->method,
-                $last_completed->end_time->i18nFormat(), $last_completed->end_time->diffInSeconds($last_completed->start_time)));
+                $last_completed->end_time->i18nFormat(), $last_completed->end_time->diffInSeconds($last_completed->start_time));
         }
         if (!empty($last_failed)) {
-            $this->out(__('Last failed: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>',
+            $output[] = __('Last failed: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>',
                 $last_failed->id, $last_failed->class, $last_failed->method, $last_failed->last_message,
-                $last_failed->failed_at->i18nFormat()));
+                $last_failed->failed_at->i18nFormat());
         }
         if (!empty($last_buried)) {
-            $this->out(__('Last burried: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>>',
+            $output[] = __('Last burried: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>>',
                 $last_buried->id, $last_buried->class, $last_buried->method, $last_buried->last_message,
-                $last_buried->failed_at->i18nFormat()));
+                $last_buried->failed_at->i18nFormat());
         }
-        if (!empty($longest_running)) {
-            $this->out(__('Longest run: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{4}</info> :: <info>{3}</info>',
-                $longest_running->id, $longest_running->class, $longest_running->method, $longest_running->diff,
-                $last_completed->end_time->i18nFormat()));
+        $max_length = max(array_map(function ($item) {
+            return str_len($item);
+        }, $output));
+        array_pad($output, 5, '');
+        foreach ($output as $item) {
+            $this->out(str_pad($output, $max_length, ' '));
         }
     }
 
