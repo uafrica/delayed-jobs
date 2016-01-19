@@ -3,6 +3,7 @@
 namespace DelayedJobs\Amqp;
 
 use Cake\Core\Configure;
+use Cake\Core\Exception\Exception;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Network\Http\Client;
@@ -225,10 +226,14 @@ class AmqpManager
                 'password' => $config['pass']
             ]
         ]);
-        $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
-            Configure::read('dj.service.name') . '-queue'), [], [
-            'type' => 'json'
-        ]);
+        try {
+            $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
+                Configure::read('dj.service.name') . '-queue'), [], [
+                'type' => 'json'
+            ]);
+        } catch (Exception $e) {
+            return [];
+        }
         $data = $queue_data->json;
 
         if (!isset($data['messages'])) {
