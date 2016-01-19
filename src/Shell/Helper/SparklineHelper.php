@@ -18,7 +18,8 @@ class SparklineHelper extends Helper
         $default = [
             'data' => [],
             'length' => 10,
-            'title' => ''
+            'title' => '',
+            'formatter' => '%6.2f'
         ];
 
         $args = $args + $default;
@@ -34,7 +35,7 @@ class SparklineHelper extends Helper
         $current = end($args['data']);
         $max = max($args['data']);
         $min = min($args['data']);
-        $output .= sprintf(' Current: <info>%6.2f</info> :: Min: <info>%6.2f</info> :: Max: <info>%6.2f</info>', $current, $min, $max);
+        $output .= sprintf(" Current: <info>{$args['formatter']}</info> :: Min: <info>{$args['formatter']}</info> :: Max: <info>{$args['formatter']}</info>", $current, $min, $max);
 
         if (!empty($args['instant'])) {
             $current = $args['instant'];
@@ -63,7 +64,7 @@ class SparklineHelper extends Helper
         }
 
         if (count($ticks) < $data_count) {
-            $filler = array_fill(0, $data_count - count($ticks), self::TICKS[$tick_index]);
+            $filler = array_fill(0, $data_count - count($ticks), self::TICKS[0]);
             $ticks = array_merge($filler, $ticks);
         }
 

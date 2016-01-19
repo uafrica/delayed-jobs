@@ -29,13 +29,43 @@ class MonitorShell extends Shell
     public $modelClass = 'DelayedJobs.Workers';
 
     public $loop_counter;
-    public $peak_created_rate = 0;
-    public $peak_completed_rate = 0;
 
     protected function _basicStats()
     {
+        static $peak_created_rate = 0.0;
+        static $peak_completed_rate = 0.0;
+
+        $statuses = $this->DelayedJobs->statusStats();
+        $created_rate = $this->DelayedJobs->jobRates('created');
+        $completed_rate = $this->DelayedJobs->jobRates('end_time', DelayedJobsTable::STATUS_SUCCESS);
+        $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
+        $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
+
+        $this->out("Created / s:\t" .
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>', $created_rate[0], $created_rate[1],
+                $created_rate[2], $peak_created_rate));
+        $this->out("Completed / s:\t" .
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>', $completed_rate[0],
+                $completed_rate[1], $completed_rate[2], $peak_completed_rate));
+        $this->out('');
+
+        $data = [
+            0 => array_values(self::STATUS_MAP),
+            1 => []
+        ];
+
+        foreach (self::STATUS_MAP as $status => $name) {
+            $data[1][] = str_pad(isset($statuses[$status]) ? $statuses[$status] : 0, 8, ' ', STR_PAD_LEFT);
+        }
+
+        $this->helper('table')->output($data);
+    }
+
+    protected function _basicStatsWithCharts()
+    {
         static $created_points = [];
         static $completed_points = [];
+        static $status_points = [];
         static $peak_created_rate = 0.0;
         static $peak_completed_rate = 0.0;
 
@@ -50,11 +80,24 @@ class MonitorShell extends Shell
         if (empty($created_points) || $this->loop_counter % 4 === 0) {
             $created_points[] = $created_rate[0];
             $completed_points[] = $completed_rate[0];
+
+            foreach (self::STATUS_MAP as $status => $name) {
+                if (empty($status_points[$status])) {
+                    $status_points[$status] = [];
+                }
+                $status_points[$status][] = isset($statuses[$status]) ? $statuses[$status] : 0;
+            }
         }
 
         if (count($created_points) > $max_length) {
             array_splice($created_points, -$max_length);
             array_splice($completed_points, -$max_length);
+            foreach (self::STATUS_MAP as $status => $name) {
+                if (empty($status_points[$status])) {
+                    continue;
+                }
+                array_splice($status_points[$status], -$max_length);
+            }
         }
 
         $worker_count = $this->Workers->find()
@@ -62,40 +105,36 @@ class MonitorShell extends Shell
 
         $this->out(__('Running workers: <info>{0}</info>', $worker_count));
 
-        $this->helper('DelayedJobs.sparkline')->output([
-            'data' => $created_points,
-            'max' => $peak_created_rate,
-            'title' => 'Created / s',
-            'instant' => $created_rate[0],
-            'length' => $max_length
-        ]);
+        $this->helper('DelayedJobs.sparkline')
+            ->output([
+                'data' => $created_points,
+                'title' => 'Created / s',
+                'length' => $max_length
+            ]);
         $this->out("\t\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info>', $created_rate[0], $created_rate[1],
-                $created_rate[2]));
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $created_rate[0], $created_rate[1], $created_rate[2], $peak_created_rate));
 
         $this->helper('DelayedJobs.sparkline')
             ->output([
                 'data' => $completed_points,
-                'max' => $peak_completed_rate,
                 'title' => 'Completed / s',
-                'instant' => $completed_rate[0],
                 'length' => $max_length
             ]);
 
-        $this->out("\t\t" . sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info>', $completed_rate[0],
-            $completed_rate[1], $completed_rate[2]));
-        $this->out('');
-
-        $data = [
-            0 => array_values(self::STATUS_MAP),
-            1 => []
-        ];
+        $this->out("\t\t" .
+            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $completed_rate[0], $completed_rate[1], $completed_rate[2], $peak_completed_rate));
 
         foreach (self::STATUS_MAP as $status => $name) {
-            $data[1][] = str_pad(isset($statuses[$status]) ? $statuses[$status] : 0, 8, ' ', STR_PAD_LEFT);
+            $this->helper('DelayedJobs.sparkline')
+                ->output([
+                    'data' => $status_points[$status],
+                    'title' => $name . "\t",
+                    'length' => $max_length,
+                    'formatter' => '%7d'
+                ]);
         }
-
-        $this->helper('table')->output($data);
     }
 
     protected function _rabbitStats()
@@ -111,6 +150,43 @@ class MonitorShell extends Shell
             ->output([
                 ['Ready', 'Unacked'],
                 [$rabbit_status['messages_ready'], $rabbit_status['messages_unacknowledged']]
+            ]);
+    }
+
+    protected function _rabbitStatsWithCharts()
+    {
+        static $ready_points = [];
+        static $unacked_points = [];
+
+        $max_length = 50;
+
+        $rabbit_status = AmqpManager::queueStatus();
+        if (empty($rabbit_status)) {
+            return;
+        }
+
+        if (empty($ready_points) || $this->loop_counter % 4 === 0) {
+            $ready_points[] = $rabbit_status['messages_ready'];
+            $unacked_points[] = $rabbit_status['messages_unacknowledged'];
+        }
+
+        if (count($ready_points) > $max_length) {
+            array_splice($ready_points, -$max_length);
+            array_splice($unacked_points, -$max_length);
+        }
+
+        $this->helper('DelayedJobs.sparkline')
+            ->output([
+                'data' => $ready_points,
+                'title' => "MQ Ready",
+                'length' => $max_length
+            ]);
+
+        $this->helper('DelayedJobs.sparkline')
+            ->output([
+                'data' => $unacked_points,
+                'title' => 'MQ Unacked',
+                'length' => $max_length
             ]);
     }
 
@@ -224,7 +300,7 @@ class MonitorShell extends Shell
         $this->start_time = time();
         $this->clear();
         while (true) {
-            if ($this->param('only-basic')) {
+            if ($this->param('basic-stats')) {
                 $this->out("\e[0;0H");
             } else {
                 $this->clear();
@@ -232,8 +308,12 @@ class MonitorShell extends Shell
             $this->out(__('Delayed Jobs monitor - <info>{0}</info>', date('H:i:s')));
             $this->hr();
 
-            $this->_basicStats();
-            if (!$this->param('only-basic')) {
+            if ($this->param('basic-stats')) {
+                $this->_basicStatsWithCharts();
+                $this->_rabbitStatsWithCharts();
+                $this->_historicJobs();
+            } else {
+                $this->_basicStats();
                 $this->_rabbitStats();
                 $this->_historicJobs();
 
@@ -265,8 +345,8 @@ class MonitorShell extends Shell
                 'boolean' => true,
                 'short' => 's'
             ])
-            ->addOption('only-basic', [
-                'help' => 'Show only basic information',
+            ->addOption('basic-stats', [
+                'help' => 'Show basic information with sparklines',
                 'boolean' => true,
                 'default' => false,
                 'short' => 'b'
