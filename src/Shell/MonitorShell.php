@@ -58,7 +58,7 @@ class MonitorShell extends Shell
             $data[1][] = str_pad(isset($statuses[$status]) ? $statuses[$status] : 0, 8, ' ', STR_PAD_LEFT);
         }
 
-        $this->helper('table')->output($data);
+        $this->helper('Table')->output($data);
     }
 
     protected function _basicStatsWithCharts()
@@ -105,7 +105,7 @@ class MonitorShell extends Shell
 
         $this->out(__('Running workers: <info>{0}</info>', $worker_count));
 
-        $this->helper('DelayedJobs.sparkline')
+        $this->helper('DelayedJobs.Sparkline')
             ->output([
                 'data' => $created_points,
                 'title' => 'Created / s',
@@ -115,7 +115,7 @@ class MonitorShell extends Shell
             sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
                 $created_rate[0], $created_rate[1], $created_rate[2], $peak_created_rate));
 
-        $this->helper('DelayedJobs.sparkline')
+        $this->helper('DelayedJobs.Sparkline')
             ->output([
                 'data' => $completed_points,
                 'title' => 'Completed / s',
@@ -127,7 +127,7 @@ class MonitorShell extends Shell
                 $completed_rate[0], $completed_rate[1], $completed_rate[2], $peak_completed_rate));
 
         foreach (self::STATUS_MAP as $status => $name) {
-            $this->helper('DelayedJobs.sparkline')
+            $this->helper('DelayedJobs.Sparkline')
                 ->output([
                     'data' => $status_points[$status],
                     'title' => $name . "\t",
@@ -146,7 +146,7 @@ class MonitorShell extends Shell
 
         $this->out('Rabbit stats');
         $this->nl();
-        $this->helper('table')
+        $this->helper('Table')
             ->output([
                 ['Ready', 'Unacked'],
                 [$rabbit_status['messages_ready'], $rabbit_status['messages_unacknowledged']]
@@ -175,14 +175,14 @@ class MonitorShell extends Shell
             array_splice($unacked_points, -$max_length);
         }
 
-        $this->helper('DelayedJobs.sparkline')
+        $this->helper('DelayedJobs.Sparkline')
             ->output([
                 'data' => $ready_points,
                 'title' => "MQ Ready",
                 'length' => $max_length
             ]);
 
-        $this->helper('DelayedJobs.sparkline')
+        $this->helper('DelayedJobs.Sparkline')
             ->output([
                 'data' => $unacked_points,
                 'title' => 'MQ Unacked',
@@ -290,7 +290,7 @@ class MonitorShell extends Shell
             ];
             $data[] = $row;
         }
-        $this->helper('table')->output($data);
+        $this->helper('Table')->output($data);
     }
 
     public function main()
