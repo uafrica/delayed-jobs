@@ -392,7 +392,6 @@ class WatchdogShell extends Shell
             ])
             ->where([
                 'status in' => [DelayedJobsTable::STATUS_NEW, DelayedJobsTable::STATUS_FAILED],
-                'run_at <' => new Time(),
                 'sequence is not' => null
             ])
             ->order([
@@ -411,7 +410,6 @@ class WatchdogShell extends Shell
             ])
             ->where([
                 'status in' => [DelayedJobsTable::STATUS_NEW, DelayedJobsTable::STATUS_FAILED],
-                'run_at <' => new Time(),
                 'sequence is' => null
             ])
             ->order([
@@ -422,9 +420,13 @@ class WatchdogShell extends Shell
 
         $all_jobs = $sequences->append($no_sequences);
         foreach ($all_jobs as $job) {
+            /**
+             * @var \DelayedJobs\Model\Entity\DelayedJob $job
+             */
             if ($this->_io->level() < Shell::VERBOSE) {
                 $this->out('.', 0, Shell::QUIET);
             }
+
             $this->out(__(' - Queing job <info>{0}</info>', $job->id), 1, Shell::VERBOSE);
             $job->queue();
         }

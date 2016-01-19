@@ -423,7 +423,8 @@ class DelayedJobsTable extends Table
                 'sequence' => $dj->sequence,
             ])
             ->order([
-                'id' => 'ASC'
+                'priority' => 'ASC',
+                'id' => 'ASC',
             ])
             ->first();
 

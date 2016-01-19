@@ -223,6 +223,10 @@ class WorkerShell extends Shell
         } catch (InvalidPrimaryKeyException $e) {
             $this->dj_log(__('Invalid PK for {0}', $message->body));
             $this->_amqpManager->nack($message, false);
+        } catch (\Exception $e) {
+            $this->dj_log(__('General exception {0}', $e->getMessage()));
+            $this->_amqpManager->nack($message);
+            throw $e;
         }
 
         if ($this->_io->level() == Shell::NORMAL) {

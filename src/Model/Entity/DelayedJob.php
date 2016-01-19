@@ -11,6 +11,11 @@ use Cake\Core\Exception\Exception;
 use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
+/**
+ * Class DelayedJob
+ *
+ * @property \Cake\I18n\Time $run_at
+ */
 class DelayedJob extends Entity implements EventDispatcherInterface
 {
     use EventDispatcherTrait;
