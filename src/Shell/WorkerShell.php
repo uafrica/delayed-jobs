@@ -229,6 +229,8 @@ class WorkerShell extends Shell
             $this->_welcome();
         }
 
+        unset($job);
+
         pcntl_signal_dispatch();
     }
 
@@ -268,6 +270,7 @@ class WorkerShell extends Shell
         $this->_lastJob = $job->id;
         $this->_jobCount++;
         $this->out('');
+        unset($job);
 
         return true;
     }

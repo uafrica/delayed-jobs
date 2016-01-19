@@ -157,6 +157,8 @@ class AmqpManager
         $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->id, $exchange, $this->_serviceName, $delay, $args['priority']));
 
         $channel->wait_for_pending_acks();
+
+        return $message;
     }
 
     public function requeueMessage(AMQPMessage $message, $delay = 5000)
