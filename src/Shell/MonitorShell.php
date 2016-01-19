@@ -103,7 +103,7 @@ class MonitorShell extends Shell
         $worker_count = $this->Workers->find()
             ->count();
 
-        $this->out(sprintf('Running workers: <info>%3f%</info>', $worker_count));
+        $this->out(sprintf('Running workers: <info>%3d</info>', $worker_count));
 
         $this->helper('DelayedJobs.Sparkline')
             ->output([
@@ -242,11 +242,11 @@ class MonitorShell extends Shell
                 $last_buried->failed_at->i18nFormat());
         }
         $max_length = max(array_map(function ($item) {
-            return str_len($item);
+            return strlen($item);
         }, $output));
         array_pad($output, 5, '');
         foreach ($output as $item) {
-            $this->out(str_pad($output, $max_length, ' '));
+            $this->out(str_pad($item, $max_length, ' '));
         }
     }
 
