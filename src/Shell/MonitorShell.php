@@ -179,14 +179,16 @@ class MonitorShell extends Shell
             ->output([
                 'data' => $ready_points,
                 'title' => "MQ Ready",
-                'length' => $max_length
+                'length' => $max_length,
+                'formatter' => '%7d'
             ]);
 
         $this->helper('DelayedJobs.Sparkline')
             ->output([
                 'data' => $unacked_points,
                 'title' => 'MQ Unacked',
-                'length' => $max_length
+                'length' => $max_length,
+                'formatter' => '%7d'
             ]);
     }
 
