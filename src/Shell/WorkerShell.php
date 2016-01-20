@@ -6,17 +6,13 @@ use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\InvalidPrimaryKeyException;
 use Cake\Datasource\Exception\RecordNotFoundException;
-use Cake\Event\Event;
 use Cake\I18n\Number;
 use Cake\I18n\Time;
 use Cake\Log\Log;
-use Cake\Utility\Hash;
 use DelayedJobs\Amqp\AmqpManager;
-use DelayedJobs\Lock;
 use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\WorkersTable;
-use DelayedJobs\Process;
 use DelayedJobs\Traits\DebugTrait;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -52,6 +48,7 @@ class WorkerShell extends Shell
     protected $_startTime;
     protected $_jobCount = 0;
     protected $_lastJob;
+    protected $_myPID;
     private $__pulse = false;
 
     /**
@@ -60,6 +57,7 @@ class WorkerShell extends Shell
     public function startup()
     {
         $this->loadModel('DelayedJobs.Workers');
+        $this->_myPID = getmypid();
         $this->_hostName = php_uname('n');
         $this->_workerName = Configure::read('dj.service.name');
         $this->_startTime = time();
@@ -76,7 +74,7 @@ class WorkerShell extends Shell
             ->count();
         $this->_workerName .= '-' . $worker_count;
 
-        $this->_worker = $this->Workers->started($this->_hostName, $this->_workerName, getmypid());
+        $this->_worker = $this->Workers->started($this->_hostName, $this->_workerName, $this->_myPID);
 
         $this->_workerId = $this->_workerName . '.' . $this->_workerName;
 
@@ -99,7 +97,7 @@ class WorkerShell extends Shell
         $this->clear();
         $this->out(sprintf('Started at: <info>%s</info>', new Time($this->_startTime)));
         $this->out(sprintf('WorkerID: <info>%s</info>', $this->_workerId));
-        $this->out(sprintf('PID: <info>%s</info>', getmypid()));
+        $this->out(sprintf('PID: <info>%s</info>', $this->_myPID));
 
         if ($this->_io->level() == Shell::NORMAL && $this->_jobCount > 0) {
             $this->out(sprintf('Last job: <info>%d</info>', $this->_lastJob));
@@ -180,6 +178,13 @@ class WorkerShell extends Shell
             $this->_worker = $this->Workers->get($this->_worker->id);
         } catch (RecordNotFoundException $e) {
             $this->stopHammerTime();
+            return;
+        }
+
+        //This isn't us, we aren't supposed to be alive!
+        if ($this->_worker->pid !== $this->_myPID) {
+            $this->stopHammerTime();
+
             return;
         }
 
