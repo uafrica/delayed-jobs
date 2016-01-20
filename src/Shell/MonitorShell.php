@@ -222,9 +222,6 @@ class MonitorShell extends Shell
             ])
             ->first();
 
-        $this->hr();
-        $this->out('Historic jobs');
-        $this->nl();
         $output = [];
         if (!empty($last_completed)) {
             $output[] = __('Last completed: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{3}</info> :: <info>{4}</info> seconds',
@@ -241,6 +238,13 @@ class MonitorShell extends Shell
                 $last_buried->id, $last_buried->class, $last_buried->method, $last_buried->last_message,
                 $last_buried->failed_at->i18nFormat());
         }
+        if (empty($output)) {
+            return;
+        }
+        $this->hr();
+        $this->out('Historic jobs');
+        $this->nl();
+
         $max_length = max(array_map(function ($item) {
             return strlen($item);
         }, $output));
