@@ -240,7 +240,7 @@ class WatchdogShell extends Shell
         $base_path = self::BASEPATH;
 
         //## Host not found in database, start it
-        $process = new Process($base_path . ' -q');
+        $process = new Process($base_path . ' -q --qos ' . $this->param('qos'));
         sleep(2);
 
         if (!$process->status()) {
@@ -482,6 +482,10 @@ class WatchdogShell extends Shell
                         ]
                     ]
                 ]
+            ])
+            ->addOption('qos', [
+                'help' => 'Sets the QOS value for workers',
+                'default' => 1
             ])
             ->addOption('workers', [
                 'help' => 'Number of workers to run',

@@ -131,7 +131,7 @@ class WorkerShell extends Shell
     public function main()
     {
         $this->_amqpManager = new AmqpManager();
-        $this->_tag = $this->_amqpManager->listen([$this, 'runWorker']);
+        $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->param('qos'));
 
         $failure_count = 0;
 
@@ -293,6 +293,10 @@ class WorkerShell extends Shell
         $options->addSubcommand('worker', [
             'help' => 'Executes a job',
             'parser' => $this->Worker->getOptionParser(),
+        ])
+        ->addOption('qos', [
+            'help' => 'Sets the QOS value for AMQP',
+            'default' => 1
         ]);
         return $options;
     }
