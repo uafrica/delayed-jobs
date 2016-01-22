@@ -56,6 +56,9 @@ class WorkerShell extends Shell
      */
     public function startup()
     {
+        if ($this->command !== 'main') {
+            return;
+        }
         $this->loadModel('DelayedJobs.Workers');
         $this->_myPID = getmypid();
         $this->_hostName = php_uname('n');
