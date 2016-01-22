@@ -123,6 +123,6 @@ class DelayedJob extends Entity implements EventDispatcherInterface
         $this->start_time = null;
         $this->end_time = null;
         $this->pid = null;
+        $this->duration = null;
     }
-
 }

@@ -72,7 +72,8 @@ class WorkerTask extends Shell
 
             $this->dj_log(__('Done with: {0}', $job->id));
 
-            if ($this->DelayedJobs->completed($job, is_string($response) ? $response : null)) {
+            $duration = round((microtime(true) - $start) * 1000);
+            if ($this->DelayedJobs->completed($job, is_string($response) ? $response : null, $duration)) {
                 $this->dj_log(__('Marked as completed: {0}', $job->id));
             } else {
                 $this->dj_log(__('Not marked as completed: {0}', $job->id));

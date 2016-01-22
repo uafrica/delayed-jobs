@@ -73,7 +73,7 @@ class DelayedJobsTable extends Table
         return parent::_initializeSchema($table);
     }
 
-    public function completed(DelayedJob $job, $message = null)
+    public function completed(DelayedJob $job, $message = null, $duration = 0)
     {
         if ($message) {
             $job->last_message = $message;
@@ -81,6 +81,7 @@ class DelayedJobsTable extends Table
         $job->status = self::STATUS_SUCCESS;
         $job->pid = null;
         $job->end_time = new Time();
+        $job->duration = $duration;
 
         return $this->save($job);
     }

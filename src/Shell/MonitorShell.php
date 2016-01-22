@@ -195,7 +195,7 @@ class MonitorShell extends Shell
     protected function _historicJobs()
     {
         $last_completed = $this->DelayedJobs->find()
-            ->select(['id', 'last_message', 'end_time', 'class', 'method', 'start_time', 'end_time'])
+            ->select(['id', 'last_message', 'end_time', 'class', 'method', 'end_time', 'duration'])
             ->where([
                 'status' => DelayedJobsTable::STATUS_SUCCESS
             ])
@@ -226,7 +226,7 @@ class MonitorShell extends Shell
         if (!empty($last_completed)) {
             $output[] = __('Last completed: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{3}</info> :: <info>{4}</info> seconds',
                 $last_completed->id, $last_completed->class, $last_completed->method,
-                $last_completed->end_time->i18nFormat(), $last_completed->end_time->diffInSeconds($last_completed->start_time));
+                $last_completed->end_time->i18nFormat(), round($last_completed->duration / 1000, 2));
         }
         if (!empty($last_failed)) {
             $output[] = __('Last failed: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>',
@@ -296,7 +296,7 @@ class MonitorShell extends Shell
         $this->start_time = time();
         $this->clear();
         while (true) {
-            if ($this->param('basic-stats')) {
+            if ($this->param('basic-stats') && $this->loop_counter % 100 !== 0) {
                 $this->out("\e[0;0H");
             } else {
                 $this->clear();
