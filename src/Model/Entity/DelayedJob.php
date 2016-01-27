@@ -2,6 +2,7 @@
 namespace DelayedJobs\Model\Entity;
 
 use Cake\Console\Shell;
+use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
@@ -47,7 +48,12 @@ class DelayedJob extends Entity implements EventDispatcherInterface
 
     public function execute(Shell $shell)
     {
-        $class_name = $this->class;
+        $class_name = App::className($this->class, 'Worker', 'Worker');
+
+        if (!$class_name) {
+            $class_name = $this->class;
+        }
+
         if (!class_exists($class_name)) {
             throw new Exception("Worker class does not exists (" . $class_name . ")");
         }

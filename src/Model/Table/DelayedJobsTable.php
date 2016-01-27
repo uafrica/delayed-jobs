@@ -62,6 +62,21 @@ class DelayedJobsTable extends Table
     }
 
     /**
+     * @param \Cake\Validation\Validator $validator
+     * @return \Cake\Validation\Validator
+     */
+    public function validationManager (Validator $validator)
+    {
+        $validator
+            ->requirePresence('class')
+            ->notEmpty('class')
+            ->requirePresence('method')
+            ->notEmpty('method');
+
+        return $validator;
+    }
+
+    /**
      * @param \Cake\Database\Schema\Table $table Table schema
      * @return \Cake\Database\Schema\Table
      */
