@@ -6,6 +6,7 @@ use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Database\Schema\Table as Schema;
 use Cake\Datasource\ConnectionManager;
+use Cake\Datasource\EntityInterface;
 use Cake\Event\Event;
 use Cake\I18n\Time;
 use Cake\Log\Log;
@@ -317,9 +318,15 @@ class DelayedJobsTable extends Table
             '::' .
             ($all_fields ? 'all' : 'limit');
 
-        return Cache::remember($cache_key, function () use ($job_id, $options) {
+        $job = Cache::remember($cache_key, function () use ($job_id, $options) {
             return $this->get($job_id, $options);
         }, Configure::read('dj.service.cache'));
+
+        if ($job instanceof EntityInterface) {
+            $job->isNew(false);
+        }
+
+        return $job;
     }
 
     /**
