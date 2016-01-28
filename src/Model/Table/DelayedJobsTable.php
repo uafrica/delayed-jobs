@@ -2,7 +2,6 @@
 
 namespace DelayedJobs\Model\Table;
 
-use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Database\Schema\Table as Schema;
 use Cake\Datasource\ConnectionManager;
@@ -311,22 +310,7 @@ class DelayedJobsTable extends Table
             ];
         }
 
-        $cache_key = 'dj::' .
-            Configure::read('dj.service.name') .
-            '::' .
-            $job_id .
-            '::' .
-            ($all_fields ? 'all' : 'limit');
-
-        $job = Cache::remember($cache_key, function () use ($job_id, $options) {
-            return $this->get($job_id, $options);
-        }, Configure::read('dj.service.cache'));
-
-        if ($job instanceof EntityInterface) {
-            $job->isNew(false);
-        }
-
-        return $job;
+        return $this->get($job_id, $options);
     }
 
     /**
@@ -386,16 +370,6 @@ class DelayedJobsTable extends Table
      */
     protected function _processJobForQueue(DelayedJob $dj)
     {
-        $cache_key = 'dj::' . Configure::read('dj.service.name') . '::' . $dj->id;
-        Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
-        Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
-
-        if ($dj->has('payload')) {
-            Cache::write($cache_key . '::all', $dj, Configure::read('dj.service.cache'));
-        } else {
-            Cache::write($cache_key . '::limit', $dj, Configure::read('dj.service.cache'));
-        }
-
         if ($dj->isNew()) {
             $this->dj_log(__('Job {0} has been created', $dj->id));
         }
