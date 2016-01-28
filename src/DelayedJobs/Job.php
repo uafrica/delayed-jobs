@@ -3,6 +3,7 @@
 namespace DelayedJobs\DelayedJobs;
 
 use Cake\Core\App;
+use Cake\I18n\Time;
 use DelayedJobs\DelayedJobs\Exception\JobDataException;
 
 /**
@@ -213,20 +214,20 @@ class Job
      */
     public function getRunAt()
     {
-        if ($this->_run_at === null) {
-            $this->_run_at = new \DateTime();
+        if ($this->_runAt === null) {
+            $this->_runAt = new Time();
         }
 
-        return $this->_run_at;
+        return $this->_runAt;
     }
 
     /**
-     * @param \DateTime $run_at
+     * @param \Cake\I18n\Time $run_at
      * @return Job
      */
-    public function setRunAt(\DateTime $run_at = null)
+    public function setRunAt(Time $run_at = null)
     {
-        $this->_run_at = $run_at;
+        $this->_runAt = $run_at;
 
         return $this;
     }

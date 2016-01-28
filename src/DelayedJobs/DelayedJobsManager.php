@@ -4,6 +4,7 @@ namespace DelayedJobs\DelayedJobs;
 
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJobs\Exception\EnqueueException;
+use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
  * Class DelayedJobsManager
@@ -58,7 +59,7 @@ class DelayedJobsManager
     {
         $job_data = $job->getData();
 
-        $job_entity = $this->DelayedJobs->newEntity($job_data, [
+        $job_entity = $this->_delayedTable->newEntity($job_data, [
             'validate' => 'manager'
         ]);
         $job_entity->status = DelayedJobsTable::STATUS_NEW;
