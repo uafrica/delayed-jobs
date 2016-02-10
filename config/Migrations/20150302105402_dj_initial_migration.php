@@ -1,7 +1,7 @@
 <?php
 use Phinx\Migration\AbstractMigration;
 
-class InitialMigration extends AbstractMigration
+class DjInitialMigration extends AbstractMigration
 {
     public function up()
     {
