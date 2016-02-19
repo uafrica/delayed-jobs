@@ -60,6 +60,11 @@ class WatchdogShell extends Shell
      */
     public function main()
     {
+        if (file_exists(TMP . '/lockWatchdog')) {
+            $this->out('Lock file exists, quiting', 1, Shell::VERBOSE);
+            $this->_stop();
+        }
+
         $this->out('Starting Watchdog');
 
         if ($this->param('workers') > 0) {
