@@ -273,7 +273,6 @@ class DelayedJobsTable extends Table
             ->autoQuoting(true);
 
         $conditions = [
-            'group' => $job_details['group'],
             'class' => $job_details['class'],
             'method' => $job_details['method'],
             'status IN' => [
@@ -283,6 +282,10 @@ class DelayedJobsTable extends Table
                 self::STATUS_UNKNOWN
             ]
         ];
+
+        if (!empty($job_details['id'])) {
+            $conditions['id !='] = $job_details['id'];
+        }
 
         $exists = $this->exists($conditions);
 

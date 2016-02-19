@@ -82,9 +82,24 @@ class WorkerTask extends Shell
             $this->out(sprintf('<success> - Execution complete</success> :: <info>%s</info>', $response), 1, Shell::VERBOSE);
 
             //Recuring job
-            if ($response instanceof \DateTime) {
+            if ($response instanceof \DateTime && !$this->DelayedJobs->jobExists($job)) {
                 $recuring_job = clone $job;
-                $recuring_job->run_at = $response;
+                $recuring_job->set([
+                    'run_at' => $response,
+                    'status' => DelayedJobsTable::STATUS_NEW,
+                    'retries' => 0,
+                    'last_message' => null,
+                    'failed_at' => null,
+                    'locked_by' => null,
+                    'start_time' => null,
+                    'end_time' => null,
+                    'pid' => null,
+                    'duration' => null,
+                ]);
+                unset($recuring_job->id);
+                unset($recuring_job->created);
+                unset($recuring_job->modified);
+                $recuring_job->isNew(true);
                 $this->DelayedJobs->save($recuring_job);
             }
         } catch (\Exception $exc) {

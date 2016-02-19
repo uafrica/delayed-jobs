@@ -68,7 +68,7 @@ class WatchdogShell extends Shell
             $this->stopWorkers();
         }
 
-        $this->recuring();
+        $this->recurring();
         $this->clean();
 
         $this->out('<success>!! All done !!</success>');
@@ -172,10 +172,10 @@ class WatchdogShell extends Shell
         }
     }
 
-    public function recuring()
+    public function recurring()
     {
-        $this->out('Firing recuring event.');
-        $event = new Event('DelayedJobs.recuring');
+        $this->out('Firing recurring event.');
+        $event = new Event('DelayedJobs.recurring');
         $event->result = [];
         EventManager::instance()
             ->dispatch($event);
@@ -190,6 +190,7 @@ class WatchdogShell extends Shell
             }
 
             $dj_data = $job + [
+                    'group' => 'Recurring',
                     'priority' => 100,
                     'options' => ['max_retries' => 5],
                     'run_at' => new Time('+30 seconds')
@@ -463,8 +464,8 @@ class WatchdogShell extends Shell
             ->addSubcommand('clean', [
                 'help' => 'Cleans out jobs that are completed and older than 4 weeks'
             ])
-            ->addSubcommand('recuring', [
-                'help' => 'Fires the recuring event and creates the initial recuring job instance'
+            ->addSubcommand('recurring', [
+                'help' => 'Fires the recurring event and creates the initial recurring job instance'
             ])
             ->addSubcommand('reload', [
                 'help' => 'Restarts all running worker hosts'
