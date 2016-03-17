@@ -3,68 +3,86 @@
 namespace DelayedJobs\DelayedJobs;
 
 use Cake\Core\App;
+use Cake\Event\EventDispatcherInterface;
+use Cake\Event\EventDispatcherTrait;
 use Cake\I18n\Time;
+use Cake\Utility\Inflector;
 use DelayedJobs\DelayedJobs\Exception\JobDataException;
+use DelayedJobs\Worker\JobWorkerInterface;
 
 /**
  * Class Job
  */
-class Job
+class Job implements EventDispatcherInterface
 {
+    use EventDispatcherTrait;
 
     protected $_class;
-    protected $_method;
     protected $_group;
     protected $_priority = 100;
     protected $_payload = [];
     protected $_options = [];
     protected $_sequence;
     protected $_runAt;
+    protected $_id;
+    protected $_status;
+
+    /**
+     * Job constructor.
+     */
+    public function __construct(array $data = null)
+    {
+        if ($data) {
+            $this->setData($data);
+        }
+    }
 
     public function getData()
     {
         return [
+            'id' => $this->getId(),
             'class' => $this->getClass(),
-            'method' => $this->getMethod(),
             'group' => $this->getGroup(),
             'priority' => $this->getPriority(),
             'payload' => $this->getPayload(),
             'options' => $this->getOptions(),
             'sequence' => $this->getSequence(),
             'run_at' => $this->getRunAt(),
+            'status' => $this->getStatus()
         ];
     }
 
     /**
+     * @return int
+     */
+    public function getId()
+    {
+        return $this->_id;
+    }
+
+    /**
+     * @param int $id
+     * @return $this
+     */
+    public function setId($id)
+    {
+        $this->_id = $id;
+
+        return $this;
+    }
+
+    /**
      * @param array $data
-     * @return \DelayedJobs\DelayedJobs\Job
+     * @return $this
      * @throws \DelayedJobs\DelayedJobs\Exception\JobDataException
      */
     public function setData(array $data)
     {
-        if (isset($data['class'])) {
-            $this->setClass($data['class']);
-        }
-        if (isset($data['method'])) {
-            $this->setMethod($data['method']);
-        }
-        if (isset($data['group'])) {
-            $this->setGroup($data['group']);
-        }
-        if (isset($data['priority'])) {
-            $this->setPriority($data['priority']);
-        }
-        if (isset($data['payload'])) {
-            $this->setPayload($data['payload']);
-        }
-        if (isset($data['options'])) {
-            $this->setOptions($data['options']);
-        }
-        if (isset($data['sequence'])) {
-            $this->setSequence($data['sequence']);
-        }
-        if (isset($data['run_at'])) {
-            $this->setRunAt($data['run_at']);
+        foreach ($data as $key => $value) {
+            $methodName = 'set' . Inflector::camelize($key);
+            if (method_exists($this, $methodName) {
+                $this->{$methodName}($value);
+            }
         }
 
         return $this;
@@ -80,7 +98,7 @@ class Job
 
     /**
      * @param string $class
-     * @return Job
+     * @return $this
      */
     public function setClass($class)
     {
@@ -98,25 +116,6 @@ class Job
     /**
      * @return string
      */
-    public function getMethod()
-    {
-        return $this->_method;
-    }
-
-    /**
-     * @param string $method
-     * @return Job
-     */
-    public function setMethod($method)
-    {
-        $this->_method = $method;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
     public function getGroup()
     {
         return $this->_group;
@@ -124,7 +123,7 @@ class Job
 
     /**
      * @param string $group
-     * @return Job
+     * @return $this
      */
     public function setGroup($group)
     {
@@ -143,7 +142,7 @@ class Job
 
     /**
      * @param int $priority
-     * @return Job
+     * @return $this
      */
     public function setPriority($priority)
     {
@@ -161,8 +160,8 @@ class Job
     }
 
     /**
-     * @param array $payload
-     * @return Job
+     * @param mixed $payload
+     * @return $this
      */
     public function setPayload($payload)
     {
@@ -181,7 +180,7 @@ class Job
 
     /**
      * @param array $options
-     * @return Job
+     * @return $this
      */
     public function setOptions($options)
     {
@@ -200,7 +199,7 @@ class Job
 
     /**
      * @param string $sequence
-     * @return Job
+     * @return $this
      */
     public function setSequence($sequence = null)
     {
@@ -210,7 +209,7 @@ class Job
     }
 
     /**
-     * @return \DateTime
+     * @return \Cake\I18n\Time
      */
     public function getRunAt()
     {
@@ -223,7 +222,7 @@ class Job
 
     /**
      * @param \Cake\I18n\Time $run_at
-     * @return Job
+     * @return $this
      */
     public function setRunAt(Time $run_at = null)
     {
@@ -232,5 +231,49 @@ class Job
         return $this;
     }
 
+    /**
+     * @return int
+     */
+    public function getStatus()
+    {
+        return $this->_status;
+    }
 
+    /**
+     * @param int $status
+     * @return $this
+     */
+    public function setStatus($status)
+    {
+        $this->_status = $status;
+
+        return $this;
+    }
+
+    public function execute(Shell $shell = null)
+    {
+        $className = App::className($this->_class, 'Worker', 'Worker');
+
+        if (!class_exists($className)) {
+            throw new Exception("Worker does not exist (" . $className . ")");
+        }
+
+        $jobWorker = new $className();
+
+        $method = $this->method;
+        if (!$jobWorker instanceof JobWorkerInterface) {
+            throw new Exception("Worker class '{$className}' does not follow the required 'JobWorkerInterface");
+        }
+
+        $event = $this->dispatchEvent('DelayedJobs.beforeJobExecute', [$this]);
+        if ($event->isStopped()) {
+            return $event->result;
+        }
+
+        $result = $jobWorker($this, $shell);
+
+        $event = $this->dispatchEvent('DelayedJobs.afterJobExecute', [$this, $result]);
+
+        return $event->result ? $event->result : $result;
+    }
 }

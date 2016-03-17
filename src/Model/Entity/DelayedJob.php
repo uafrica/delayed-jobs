@@ -46,39 +46,6 @@ class DelayedJob extends Entity implements EventDispatcherInterface
         return $this->_getStream($payload, 'payload');
     }
 
-    public function execute(Shell $shell)
-    {
-        $class_name = App::className($this->class, 'Worker', 'Worker');
-
-        if (!$class_name) {
-            $class_name = $this->class;
-        }
-
-        if (!class_exists($class_name)) {
-            throw new Exception("Worker class does not exists (" . $class_name . ")");
-        }
-
-        $job_worker = new $class_name();
-
-        $method = $this->method;
-        if (!method_exists($job_worker, $method)) {
-            throw new Exception(
-                "Method does not exists ({$class_name}::{$method})"
-            );
-        }
-
-        $event = $this->dispatchEvent('DelayedJobs.beforeJobExecute', [$this]);
-        if ($event->isStopped()) {
-            return $event->result;
-        }
-
-        $result = $job_worker->{$method}($this->payload, $this, $shell);
-
-        $this->dispatchEvent('DelayedJobs.afterJobExecute', [$this, $result]);
-
-        return $result;
-    }
-
     public function queue()
     {
         if (Configure::read('dj.service.rabbit.disable') === true) {

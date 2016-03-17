@@ -2,6 +2,8 @@
 
 namespace DelayedJobs\DelayedJobs;
 
+use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\Datasource\RepositoryInterface;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJobs\Exception\EnqueueException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
@@ -11,6 +13,15 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
  */
 class DelayedJobsManager
 {
+    const STATUS_NEW = 1;
+    const STATUS_BUSY = 2;
+    const STATUS_BURRIED = 3;
+    const STATUS_SUCCESS = 4;
+    const STATUS_KICK = 5;
+    const STATUS_FAILED = 6;
+    const STATUS_UNKNOWN = 7;
+    const STATUS_TEST_JOB = 8;
+
     /**
      * The singleton instance
      *
@@ -19,16 +30,22 @@ class DelayedJobsManager
     protected static $_instance = null;
 
     /**
-     * @var \DelayedJobs\Model\Table\DelayedJobsTable
+     * @var \Cake\Datasource\RepositoryInterface
      */
-    protected $_delayedTable = null;
+    protected $_jobDatastore = null;
 
     /**
      * Constructor for class
+     *
+     * @param \Cake\Datasource\RepositoryInterface $jobDatastore
      */
-    public function __construct()
+    public function __construct(RepositoryInterface $jobDatastore = null)
     {
-        $this->_delayedTable = TableRegistry::get('DelayedJobs.DelayedJobs');
+        if ($jobDatastore === null) {
+            $this->_jobDatastore = TableRegistry::get('DelayedJobs.DelayedJobs');
+        } else {
+            $this->_jobDatastore = $jobDatastore;
+        }
     }
 
     /**
@@ -53,16 +70,19 @@ class DelayedJobsManager
 
     /**
      * @param \DelayedJobs\DelayedJobs\Job $job
-     * @return bool
+     * @return \DelayedJobs\DelayedJobs\Job
      */
     public function enqueueJob(Job $job)
     {
         $job_data = $job->getData();
 
-        $job_entity = $this->_delayedTable->newEntity($job_data, [
+        $job_entity = $this->_jobDatastore->newEntity($job_data, [
             'validate' => 'manager'
         ]);
-        $job_entity->status = DelayedJobsTable::STATUS_NEW;
+
+        if (!$job_entity->status) {
+            $job_entity->status = self::STATUS_NEW;
+        }
 
         $options = [
             'atomic' => !$this->_delayedTable->connection()->inTransaction()
@@ -74,6 +94,45 @@ class DelayedJobsManager
             throw new EnqueueException($job_entity->errors());
         }
 
-        return true;
+        $job->setId($job_entity->id);
+
+        return $job;
+    }
+
+    /**
+     * Gets the Job instance for a specific job
+     *
+     * @param int $jobId Job to fetch
+     * @return \DelayedJobs\DelayedJobs\Job
+     * @throws \DelayedJobs\DelayedJobs\JobNotFoundException
+     */
+    public function fetchJob($jobId)
+    {
+        try {
+            $job_entity = $this->_jobDatastore->get($jobId);
+        } catch (RecordNotFoundException $e) {
+            throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $jobId));
+        }
+
+        $job = new Job($job_entity->toArray());
+
+        return $job;
+    }
+
+    /**
+     * Gets the current status for a requested job
+     *
+     * @param int $jobId Job to get status for
+     * @return int
+     */
+    public function getStatus($jobId)
+    {
+        try {
+            $job_entity = $this->_jobDatastore->get($jobId);
+        } catch (RecordNotFoundException $e) {
+            return self::STATUS_UNKNOWN;
+        }
+
+        return $job_entity->status;
     }
 }
