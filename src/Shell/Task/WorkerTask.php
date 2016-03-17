@@ -105,9 +105,9 @@ class WorkerTask extends Shell
             }
         } catch (\Error $error) {
             //## Job Failed badly
-            $this->_failJob($job, $exc, true);
+            $this->_failJob($job, $error, true);
 
-            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->id, $exc->getMessage(), $exc->getTraceAsString()));
+            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->id, $error->getMessage(), $error->getTraceAsString()));
         } catch (\Exception $exc) {
             //## Job Failed
             $this->_failJob($job, $exc, false);
