@@ -79,7 +79,8 @@ class WorkerTask extends Shell
                 $this->dj_log(__('Not marked as completed: {0}', $job->id));
             }
 
-            $this->out(sprintf('<success> - Execution complete</success> :: <info>%s</info>', $response), 1, Shell::VERBOSE);
+            $this->out(sprintf('<success> - Execution complete</success> :: <info>%s</info>', $response), 1,
+                Shell::VERBOSE);
 
             //Recuring job
             if ($response instanceof \DateTime && !$this->DelayedJobs->jobExists($job)) {
@@ -102,17 +103,28 @@ class WorkerTask extends Shell
                 $recuring_job->isNew(true);
                 $this->DelayedJobs->save($recuring_job);
             }
+        } catch (\Error $error) {
+            //## Job Failed badly
+            $this->_failJob($job, $exc, true);
+
+            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->id, $exc->getMessage(), $exc->getTraceAsString()));
         } catch (\Exception $exc) {
             //## Job Failed
-            $this->DelayedJobs->failed($job, $exc->getMessage());
-            $this->out(sprintf('<error> - Execution completed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
-            $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
-
-            $this->dj_log(__('Failed {0} because {1}', $job->id, $exc->getMessage()));
+            $this->_failJob($job, $exc, false);
         } finally {
             $end = microtime(true);
             $this->out(sprintf(' - Took: %.2f seconds', $end - $start), 1, Shell::VERBOSE);
         }
+    }
+
+    protected function _failJob(DelayedJob $job, $exc, $hardFail = false)
+    {
+        $this->DelayedJobs->failed($job, $exc->getMessage(), $hardFail);
+        $this->out(sprintf('<error> - Execution completed</error> :: <info>%s</info>', $exc->getMessage()), 1,
+            Shell::VERBOSE);
+        $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
+
+        $this->dj_log(__('Failed {0} because {1}', $job->id, $exc->getMessage()));
     }
 
     /**

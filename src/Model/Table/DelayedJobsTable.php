@@ -101,12 +101,12 @@ class DelayedJobsTable extends Table
         return $this->save($job);
     }
 
-    public function failed(DelayedJob $job, $message = '')
+    public function failed(DelayedJob $job, $message = '', $immediateBurry = false)
     {
         $max_retries = isset($job->options['max_retries']) ? $job->options['max_retries'] : Configure::read('dj.max.retries');
 
         $job->status = self::STATUS_FAILED;
-        if ($job->retries + 1 > $max_retries) {
+        if ($immediateBurry === true || $job->retries + 1 > $max_retries) {
             $job->status = self::STATUS_BURRIED;
         }
 
