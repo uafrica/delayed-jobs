@@ -33,6 +33,7 @@ unset($findRoot);
 chdir($root);
 require_once 'vendor/cakephp/cakephp/src/basics.php';
 require_once 'vendor/autoload.php';
+require_once 'config/bootstrap.php';
 define('ROOT', $root . DS . 'tests' . DS . 'test_app' . DS);
 define('APP', ROOT . 'App' . DS);
 define('CONFIG', $root . DS . 'config' . DS);
