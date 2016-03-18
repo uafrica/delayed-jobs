@@ -13,6 +13,8 @@ use Cake\ORM\ResultSet;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 use DelayedJobs\Amqp\AmqpManager;
+use DelayedJobs\DelayedJob\DelayedJobDatastoreInterface;
+use DelayedJobs\DelayedJob\DelayedJob as Job;
 use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Traits\DebugTrait;
 
@@ -20,7 +22,7 @@ use DelayedJobs\Traits\DebugTrait;
  * DelayedJob Model
  *
  */
-class DelayedJobsTable extends Table
+class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
 {
     use DebugTrait;
 
@@ -47,36 +49,6 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * @param \Cake\Validation\Validator $validator
-     * @return \Cake\Validation\Validator
-     * @codeCoverageIgnore
-     */
-    public function validationDefault(Validator $validator)
-    {
-        $validator
-            ->notEmpty('group')
-            ->notEmpty('class')
-            ->notEmpty('method');
-
-        return $validator;
-    }
-
-    /**
-     * @param \Cake\Validation\Validator $validator
-     * @return \Cake\Validation\Validator
-     */
-    public function validationManager (Validator $validator)
-    {
-        $validator
-            ->requirePresence('class')
-            ->notEmpty('class')
-            ->requirePresence('method')
-            ->notEmpty('method');
-
-        return $validator;
-    }
-
-    /**
      * @param \Cake\Database\Schema\Table $table Table schema
      * @return \Cake\Database\Schema\Table
      */
@@ -86,52 +58,6 @@ class DelayedJobsTable extends Table
         $table->columnType('options', 'serialize');
 
         return parent::_initializeSchema($table);
-    }
-
-    public function completed(DelayedJob $job, $message = null, $duration = 0)
-    {
-        if ($message) {
-            $job->last_message = $message;
-        }
-        $job->status = self::STATUS_SUCCESS;
-        $job->pid = null;
-        $job->end_time = new Time();
-        $job->duration = $duration;
-
-        return $this->save($job);
-    }
-
-    public function failed(DelayedJob $job, $message = '', $immediateBurry = false)
-    {
-        $max_retries = isset($job->options['max_retries']) ? $job->options['max_retries'] : Configure::read('dj.max.retries');
-
-        $job->status = self::STATUS_FAILED;
-        if ($immediateBurry === true || $job->retries + 1 > $max_retries) {
-            $job->status = self::STATUS_BURRIED;
-        }
-
-        $growth_factor = 5 + ($job->retries + 1) ** 4;
-
-        $growth_factor_random = mt_rand(0, 100) % 2 ? -1 : +1;
-        $growth_factor_random = $growth_factor_random * ceil(log($growth_factor + mt_rand(0, $growth_factor)));
-
-        $growth_factor += $growth_factor_random;
-
-        $job->run_at = new Time("+{$growth_factor} seconds");
-        $job->last_message = $message;
-        $job->retries = $job->retries + 1;
-        $job->failed_at = new Time();
-        $job->pid = null;
-
-        return $this->save($job);
-    }
-
-    public function lock(DelayedJob $job, $host_name = '')
-    {
-        $job->start_time = new Time();
-        $job->status = self::STATUS_BUSY;
-        $job->host_name = $host_name;
-        $this->save($job);
     }
 
     public function release(DelayedJob $job)
@@ -274,7 +200,6 @@ class DelayedJobsTable extends Table
 
         $conditions = [
             'class' => $job_details['class'],
-            'method' => $job_details['method'],
             'status IN' => [
                 self::STATUS_BUSY,
                 self::STATUS_NEW,
@@ -317,57 +242,6 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * @return void
-     */
-    public function beforeSave(Event $event, DelayedJob $dj)
-    {
-        $this->quote = $this->connection()
-            ->driver()
-            ->autoQuoting();
-        $this->connection()
-            ->driver()
-            ->autoQuoting(true);
-
-        $options = (array)$dj->options;
-        if (!isset($options['max_retries'])) {
-            $options['max_retries'] = Configure::read('dj.max.retries');
-        }
-
-        if (!isset($options['max_execution_time'])) {
-            $options['max_execution_time'] = Configure::read('dj.max.execution.time');
-        }
-        $dj->options = $options;
-        if (isset($dj->priority) && !is_numeric($dj->priority)) {
-            $dj->priority = Configure::read('dj.service.rabbit.max_priority');
-        }
-    }
-
-    /**
-     * @return void
-     */
-    public function afterSave(Event $event, DelayedJob $dj, \ArrayObject $options)
-    {
-        /*
-         * Special case for jobs that are created within a parent transaction
-         */
-        if (!$options['atomic'] || !$options['_primary']) {
-            $this->_processJobForQueue($dj);
-        }
-
-        $this->connection()
-            ->driver()
-            ->autoQuoting($this->quote);
-    }
-
-    /**
-     * @return void
-     */
-    public function afterSaveCommit(Event $event, DelayedJob $dj)
-    {
-        $this->_processJobForQueue($dj);
-    }
-
-    /**
      * @param \DelayedJobs\Model\Entity\DelayedJob $dj
      * @return void
      */
@@ -386,12 +260,12 @@ class DelayedJobsTable extends Table
         }
     }
 
-    protected function _existingSequence(DelayedJob $dj)
+    public function currentlySequenced(Job $job)
     {
         return $this->exists([
-            'id <' => $dj->id,
-            'sequence' => $dj->sequence,
-            'status in' => [self::STATUS_NEW, self::STATUS_BUSY, self::STATUS_FAILED, self::STATUS_UNKNOWN]
+            'id <' => $job->getId(),
+            'sequence' => $job->getSequence(),
+            'status in' => [Job::STATUS_NEW, Job::STATUS_BUSY, Job::STATUS_FAILED, Job::STATUS_UNKNOWN]
         ]);
     }
 
@@ -490,5 +364,82 @@ class DelayedJobsTable extends Table
             ->count();
 
         return $statuses;
+    }
+
+    public function persistJob(Job $job)
+    {
+        $job_data = $job->getData();
+        $job_entity = $this->_jobDatastore->newEntity($job_data, [
+            'validate' => 'manager'
+        ]);
+
+        if (!$job_entity->status) {
+            $job_entity->status = DelayedJob::STATUS_NEW;
+        }
+
+        $options = [
+            'atomic' => !$this->_jobDatastore->connection()->inTransaction()
+        ];
+
+        $result = $this->_jobDatastore->save($job_entity, $options);
+
+        if (!$result) {
+            return false;
+        }
+
+        $job->setId($job_entity->id);
+
+        return $job;
+    }
+
+    public function fetchJob($jobId)
+    {
+        $job_entity = $this->find()
+            ->where(['id' => $jobId])
+            ->first();
+
+        if (!$job_entity) {
+            return null;
+        }
+
+        $job = new Job($job_entity->toArray());
+        return $job;
+    }
+
+    /**
+     * @param \DelayedJobs\DelayedJob\DelayedJob $job The job to fetch next sequence for
+     * @return bool
+     */
+    public function fetchNextSequence(Job $job)
+    {
+        if ($job->getSequence() === null) {
+            return false;
+        }
+
+        $next = $this->find()
+            ->select([
+                'id',
+                'sequence',
+                'priority',
+                'run_at'
+            ])
+            ->where([
+                'status' => Job::STATUS_NEW,
+                'sequence' => $job->getSequence(),
+            ])
+            ->order([
+                'priority' => 'ASC',
+                'id' => 'ASC',
+            ])
+            ->first();
+
+        if (!$next) {
+            $this->dj_log(__('No more sequenced jobs found for {0}', $job->getSequence()));
+
+            return false;
+        }
+
+        $job = new Job($next->toArray());
+        return $job;
     }
 }

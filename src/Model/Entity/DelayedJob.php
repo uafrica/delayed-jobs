@@ -45,30 +45,4 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     {
         return $this->_getStream($payload, 'payload');
     }
-
-    public function queue()
-    {
-        if (Configure::read('dj.service.rabbit.disable') === true) {
-            return;
-        }
-
-        try {
-            $event = $this->dispatchEvent('DelayedJobs.beforeJobQueue', [$this]);
-            if ($event->isStopped()) {
-                return $event->result;
-            }
-
-            $manager = AmqpManager::instance();
-            $message = $manager->queueJob($this);
-
-            $this->dispatchEvent('DelayedJobs.afterJobQueue', [$this, $message]);
-
-            return true;
-        } catch (\Exception $e) {
-            Log::emergency(__('RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
-                $e->getMessage(), get_class($e), $this->id));
-
-            return false;
-        }
-    }
 }

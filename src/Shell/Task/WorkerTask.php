@@ -2,12 +2,11 @@
 namespace DelayedJobs\Shell\Task;
 
 use Cake\Console\Shell;
-use Cake\Core\Exception\Exception;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\I18n\Time;
 use Cake\Log\Log;
-use DelayedJobs\Lock;
-use DelayedJobs\Model\Entity\DelayedJob;
+use DelayedJobs\DelayedJob\DelayedJob;
+use DelayedJobs\DelayedJob\DelayedJobManager;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Traits\DebugTrait;
 
@@ -68,15 +67,15 @@ class WorkerTask extends Shell
 
         $start = microtime(true);
         try {
-            $response = $job->execute($this);
+            $response = DelayedJobManager::instance()->execute($job, $this);
 
-            $this->dj_log(__('Done with: {0}', $job->id));
+            $this->dj_log(__('Done with: {0}', $job->getId()));
 
             $duration = round((microtime(true) - $start) * 1000);
-            if ($this->DelayedJobs->completed($job, is_string($response) ? $response : null, $duration)) {
-                $this->dj_log(__('Marked as completed: {0}', $job->id));
+            if (DelayedJobManager::instance()->completed($job, is_string($response) ? $response : null, $duration)) {
+                $this->dj_log(__('Marked as completed: {0}', $job->getId()));
             } else {
-                $this->dj_log(__('Not marked as completed: {0}', $job->id));
+                $this->dj_log(__('Not marked as completed: {0}', $job->getId()));
             }
 
             $this->out(sprintf('<success> - Execution complete</success> :: <info>%s</info>', $response), 1,
@@ -107,7 +106,7 @@ class WorkerTask extends Shell
             //## Job Failed badly
             $this->_failJob($job, $error, true);
 
-            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->id, $error->getMessage(), $error->getTraceAsString()));
+            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->getId(), $error->getMessage(), $error->getTraceAsString()));
         } catch (\Exception $exc) {
             //## Job Failed
             $this->_failJob($job, $exc, false);
@@ -119,12 +118,12 @@ class WorkerTask extends Shell
 
     protected function _failJob(DelayedJob $job, $exc, $hardFail = false)
     {
-        $this->DelayedJobs->failed($job, $exc->getMessage(), $hardFail);
+        DelayedJobManager::instance()->failed($job, $exc->getMessage(), $hardFail);
         $this->out(sprintf('<error> - Execution completed</error> :: <info>%s</info>', $exc->getMessage()), 1,
             Shell::VERBOSE);
         $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
 
-        $this->dj_log(__('Failed {0} because {1}', $job->id, $exc->getMessage()));
+        $this->dj_log(__('Failed {0} because {1}', $job->getId(), $exc->getMessage()));
     }
 
     /**
