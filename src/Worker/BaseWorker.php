@@ -6,7 +6,7 @@ use Cake\Datasource\ModelAwareTrait;
 /**
  * Class BaseWorker
  */
-abstract class BaseWorker
+abstract class BaseWorker implements JobWorkerInterface
 {
     use ModelAwareTrait;
 
