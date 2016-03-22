@@ -7,6 +7,7 @@ use Cake\I18n\Time;
 use Cake\Log\Log;
 use DelayedJobs\DelayedJob\DelayedJob;
 use DelayedJobs\DelayedJob\DelayedJobManager;
+use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Traits\DebugTrait;
 
@@ -33,37 +34,34 @@ class WorkerTask extends Shell
         $this->out('<info>Starting Job: ' . $job_id . '</info>', 1, Shell::VERBOSE);
 
         try {
-            $job = $this->DelayedJobs->getJob($job_id, true);
+            $job = DelayedJobManager::instance()->fetchJob($job_id);
             $this->out(' - Got job from DB', 1, Shell::VERBOSE);
-        } catch (RecordNotFoundException $e) {
+        } catch (JobNotFoundException $e) {
             $this->out('<fail>Job ' . $job_id . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
             $this->_stop(1);
             return;
         }
         //## First check if job is not locked
-        if (!$this->param('force') && $job->status == DelayedJobsTable::STATUS_SUCCESS) {
+        if (!$this->param('force') && $job->getStatus() == DelayedJob::STATUS_SUCCESS) {
             $this->out("<error>Job previously completed, Why is is being called again</error>");
             $this->_stop(2);
         }
 
-        if (!$this->param('force') && $job->status == DelayedJobsTable::STATUS_BURRIED) {
+        if (!$this->param('force') && $job->getStatus() == DelayedJob::STATUS_BURRIED) {
             $this->out("<error>Job Failed too many times, but why was it called again</error>");
             $this->_stop(3);
         }
 
-        $job->status = DelayedJobsTable::STATUS_BUSY;
-        $job->pid = getmypid();
-        $job->start_time = new Time();
-        $this->DelayedJobs->save($job);
+        DelayedJobManager::instance()->lock($job);
 
         $this->executeJob($job);
     }
 
     public function executeJob(DelayedJob $job)
     {
-        $this->out(sprintf(' - <info>%s::%s</info>', $job->class, $job->method), 1, Shell::VERBOSE);
+        $this->out(sprintf(' - <info>%s</info>', $job->getClass()), 1, Shell::VERBOSE);
         $this->out(' - Executing job', 1, Shell::VERBOSE);
-        $this->dj_log(__('Executing: {0}', $job->id));
+        $this->dj_log(__('Executing: {0}', $job->getId()));
 
         $start = microtime(true);
         try {

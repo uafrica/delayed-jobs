@@ -369,19 +369,17 @@ class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
     public function persistJob(Job $job)
     {
         $job_data = $job->getData();
-        $job_entity = $this->_jobDatastore->newEntity($job_data, [
-            'validate' => 'manager'
-        ]);
+        $job_entity = $this->newEntity($job_data);
 
         if (!$job_entity->status) {
             $job_entity->status = DelayedJob::STATUS_NEW;
         }
 
         $options = [
-            'atomic' => !$this->_jobDatastore->connection()->inTransaction()
+            'atomic' => !$this->connection()->inTransaction()
         ];
 
-        $result = $this->_jobDatastore->save($job_entity, $options);
+        $result = $this->save($job_entity, $options);
 
         if (!$result) {
             return false;
@@ -442,4 +440,60 @@ class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
         $job = new Job($next->toArray());
         return $job;
     }
+
+    /**
+     * Checks if there already is a job with the same class waiting
+     *
+     * @param \DelayedJobs\DelayedJob\DelayedJob $job Job to check
+     * @return bool
+     */
+    public function isSimilarJob(Job $job)
+    {
+        $quoting = $this->connection()
+            ->driver()
+            ->autoQuoting();
+        $this->connection()
+            ->driver()
+            ->autoQuoting(true);
+
+        $conditions = [
+            'class' => $job->getClass(),
+            'status IN' => [
+                self::STATUS_BUSY,
+                self::STATUS_NEW,
+                self::STATUS_FAILED,
+                self::STATUS_UNKNOWN
+            ]
+        ];
+
+        if (!empty($job->getId())) {
+            $conditions['id !='] = $job->getId();
+        }
+
+        $exists = $this->exists($conditions);
+
+        $this->connection()
+            ->driver()
+            ->autoQuoting($quoting);
+
+        return $exists;
+    }
+
+    public function beforeSave()
+    {
+        $this->_quote = $this->connection()
+            ->driver()
+            ->autoQuoting();
+        $this->connection()
+            ->driver()
+            ->autoQuoting(true);
+    }
+
+    public function afterSave()
+    {
+        $this->connection()
+            ->driver()
+            ->autoQuoting($this->_quote);
+    }
+
 }

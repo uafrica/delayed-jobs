@@ -154,7 +154,7 @@ class AmqpManager
 
         $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
         $channel->basic_publish($message, $exchange, $this->_serviceName);
-        $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->id, $exchange, $this->_serviceName, $delay, $args['priority']));
+        $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->getId(), $exchange, $this->_serviceName, $delay, $args['priority']));
 
         $channel->wait_for_pending_acks();
 

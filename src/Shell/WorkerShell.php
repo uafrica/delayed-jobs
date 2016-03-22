@@ -256,7 +256,7 @@ class WorkerShell extends Shell
             return false;
         }
 
-        cli_set_process_title(sprintf('DJ Worker :: %s :: Working %s', $this->_workerId, $job->id));
+        cli_set_process_title(sprintf('DJ Worker :: %s :: Working %s', $this->_workerId, $job->getId()));
 
         $this->out(__('<success>Starting job:</success> {0} :: ', $job->getId()), 1, Shell::VERBOSE);
 

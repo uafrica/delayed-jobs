@@ -1,7 +1,7 @@
 <?php
 use Migrations\AbstractMigration;
 
-class AddMaxRetriesToDelayedJobs extends AbstractMigration
+class RemoveMethodFromDelayedJobs extends AbstractMigration
 {
     /**
      * Change Method.
@@ -13,11 +13,7 @@ class AddMaxRetriesToDelayedJobs extends AbstractMigration
     public function change()
     {
         $table = $this->table('delayed_jobs');
-        $table->addColumn('max_retries', 'integer', [
-            'default' => null,
-            'limit' => 11,
-            'null' => false,
-        ]);
+        $table->removeColumn('method');
         $table->update();
     }
 }

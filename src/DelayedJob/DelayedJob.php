@@ -124,6 +124,8 @@ class DelayedJob
             'start_time' => $this->getStartTime(),
             'end_time' => $this->getEndTime(),
             'duration' => $this->getDuration(),
+            'max_retries' => $this->getMaxRetries(),
+            'retries' => $this->getRetries(),
         ];
     }
 
@@ -240,7 +242,11 @@ class DelayedJob
      */
     public function getGroup()
     {
-        return $this->_group;
+        if (!empty($this->_group)) {
+            return $this->_group;
+        } else {
+            return $this->_class;
+        }
     }
 
     /**
@@ -384,7 +390,7 @@ class DelayedJob
      * @param \Cake\I18n\Time $timeFailed
      * @return $this
      */
-    public function setTimeFailed(Time $timeFailed)
+    public function setTimeFailed(Time $timeFailed = null)
     {
         $this->_timeFailed = $timeFailed;
 
@@ -422,7 +428,7 @@ class DelayedJob
      * @param \Cake\I18n\Time $startTime
      * @return $this
      */
-    public function setStartTime(Time $startTime)
+    public function setStartTime(Time $startTime = null)
     {
         $this->_startTime = $startTime;
 
@@ -441,7 +447,7 @@ class DelayedJob
      * @param \Cake\I18n\Time $endTime
      * @return $this
      */
-    public function setEndTime(Time $endTime)
+    public function setEndTime(Time $endTime = null)
     {
         $this->_endTime = $endTime;
 

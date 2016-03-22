@@ -102,7 +102,7 @@ class DelayedJobManager implements EventDispatcherInterface
         $maxRetries = $job->getMaxRetries();
         $job->incrementRetries();
 
-        $status = ($burryJob === true || $job->getRetries() > $maxRetries) ? DelayedJob::STATUS_BURRIED : DelayedJob::STATUS_FAILED;
+        $status = ($burryJob === true || $job->getRetries() >= $maxRetries) ? DelayedJob::STATUS_BURRIED : DelayedJob::STATUS_FAILED;
 
         $growthFactor = 5 + $job->getRetries() ** 4;
 
@@ -120,6 +120,8 @@ class DelayedJobManager implements EventDispatcherInterface
             return $this->enqueue($job);
         } elseif ($job->getSequence() !== null) {
             $this->enqueueNextSequence($job);
+        } else {
+            $this->_persistToDatastore($job);
         }
 
         return $job;
@@ -178,7 +180,7 @@ class DelayedJobManager implements EventDispatcherInterface
         return $job->getStatus();
     }
 
-    public function lock(DelayedJob $job, $hostname)
+    public function lock(DelayedJob $job, $hostname = null)
     {
         $job->setStatus(DelayedJob::STATUS_BUSY)
             ->setStartTime(new Time())
@@ -201,20 +203,21 @@ class DelayedJobManager implements EventDispatcherInterface
             throw new JobExecuteException("Worker class '{$className}' does not follow the required 'JobWorkerInterface");
         }
 
-        $event = $this->dispatchEvent('DelayedJob.beforeJobExecute', [$this]);
+        $event = $this->dispatchEvent('DelayedJob.beforeJobExecute', [$job]);
         if ($event->isStopped()) {
             return $event->result;
         }
 
-        $result = $jobWorker($this, $shell);
+        $result = $jobWorker($job, $shell);
 
-        $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$this, $result]);
+        $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result]);
 
         return $event->result ? $event->result : $result;
     }
 
     public function enqueueNextSequence(DelayedJob $job)
     {
+        $this->_persistToDatastore($job);
         $nextJob = $this->_jobDatastore->fetchNextSequence($job);
 
         return $this->_pushToBroker($nextJob);
