@@ -8,6 +8,7 @@ use Cake\Log\Log;
 use DelayedJobs\DelayedJob\DelayedJob;
 use DelayedJobs\DelayedJob\DelayedJobManager;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
+use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Traits\DebugTrait;
 
@@ -65,12 +66,15 @@ class WorkerTask extends Shell
 
         $start = microtime(true);
         try {
-            $response = DelayedJobManager::instance()->execute($job, $this);
+            $response = DelayedJobManager::instance()
+                ->execute($job, $this);
 
             $this->dj_log(__('Done with: {0}', $job->getId()));
 
             $duration = round((microtime(true) - $start) * 1000);
-            if (DelayedJobManager::instance()->completed($job, is_string($response) ? $response : null, $duration)) {
+            if (DelayedJobManager::instance()
+                ->completed($job, is_string($response) ? $response : null, $duration)
+            ) {
                 $this->dj_log(__('Marked as completed: {0}', $job->getId()));
             } else {
                 $this->dj_log(__('Not marked as completed: {0}', $job->getId()));

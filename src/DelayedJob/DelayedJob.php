@@ -7,6 +7,7 @@ use Cake\Core\Configure;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
 use Cake\I18n\Time;
+use Cake\Utility\Hash;
 use Cake\Utility\Inflector;
 use DelayedJobs\DelayedJob\Exception\JobDataException;
 use DelayedJobs\DelayedJob\Exception\JobExecuteException;
@@ -280,20 +281,30 @@ class DelayedJob
     }
 
     /**
+     * @param string $key Hash get compatible key (or null for entire payload)
      * @return array
      */
-    public function getPayload()
+    public function getPayload($key = null)
     {
-        return $this->_payload;
+        if ($key === null) {
+            return $this->_payload;
+        } else {
+            return Hash::get($this->_payload, $key);
+        }
     }
 
     /**
-     * @param mixed $payload
+     * @param array $payload Payload array
+     * @param bool $defaults Use as defaults
      * @return $this
      */
-    public function setPayload($payload)
+    public function setPayload(array $payload, $defaults = false)
     {
-        $this->_payload = $payload;
+        if ($defaults === false) {
+            $this->_payload = $payload;
+        } else {
+            $this->_payload += $payload;
+        }
 
         return $this;
     }

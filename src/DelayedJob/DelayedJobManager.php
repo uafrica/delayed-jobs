@@ -208,7 +208,12 @@ class DelayedJobManager implements EventDispatcherInterface
             return $event->result;
         }
 
-        $result = $jobWorker($job, $shell);
+        try {
+            $result = $jobWorker($job, $shell);
+        } catch (NonRetryableException $exc) {
+            //Special case where something failed, but we still want to treat it as a 'success'.
+            $result = $exc->getMessage();
+        }
 
         $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result]);
 
