@@ -13,11 +13,11 @@ use DelayedJobs\DelayedJob\DelayedJob;
  */
 class TestDelayedJobManager implements DelayedJobManagerInterface
 {
-    protected $_jobs = [];
+    protected static $_jobs = [];
 
-    public function getJobs()
+    public static function getJobs()
     {
-        return $this->_jobs;
+        return self::$_jobs;
     }
 
     /**
@@ -28,7 +28,7 @@ class TestDelayedJobManager implements DelayedJobManagerInterface
     {
         $jobId = time() + mt_rand(0, time());
         $job->setId($jobId);
-        $this->_jobs[$jobId] = $job;
+        self::$_jobs[$jobId] = $job;
 
         return $job;
     }
@@ -64,8 +64,8 @@ class TestDelayedJobManager implements DelayedJobManagerInterface
      */
     public function fetchJob($jobId)
     {
-        if (isset($this->_jobs[$jobId])) {
-            return $this->_jobs[$jobId];
+        if (isset(self::$_jobs[$jobId])) {
+            return self::$_jobs[$jobId];
         } else {
             throw new JobNotFoundException();
         }
