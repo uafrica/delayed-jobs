@@ -20,7 +20,7 @@ use DelayedJobs\Worker\JobWorkerInterface;
 /**
  * Class DelayedJobsManager
  */
-class DelayedJobManager implements EventDispatcherInterface
+class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerInterface
 {
     use EventDispatcherTrait;
     use InstanceConfigTrait;
@@ -60,12 +60,12 @@ class DelayedJobManager implements EventDispatcherInterface
      *
      * If called with the first parameter, it will be set as the globally available instance
      *
-     * @param \DelayedJobs\DelayedJob\DelayedJobManager $manager Delayed jobs instance.
-     * @return \DelayedJobs\DelayedJob\DelayedJobManager the global delayed jobs manager
+     * @param \DelayedJobs\DelayedJob\DelayedJobManagerInterface $manager Delayed jobs instance.
+     * @return \DelayedJobs\DelayedJob\DelayedJobManagerInterface the global delayed jobs manager
      */
-    public static function instance(DelayedJobManager $manager = null)
+    public static function instance(DelayedJobManagerInterface $manager = null)
     {
-        if ($manager instanceof DelayedJobManager) {
+        if ($manager instanceof DelayedJobManagerInterface) {
             static::$_instance = $manager;
         }
         if (empty(static::$_instance)) {
