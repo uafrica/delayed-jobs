@@ -27,6 +27,3 @@ if (!Configure::check('dj.service.cache')) {
 }
 
 \Cake\Database\Type::map('serialize', 'DelayedJobs\Database\Type\SerializeType');
-
-$job_listener = new \DelayedJobs\Event\DelayedJobsListener();
-\Cake\Event\EventManager::instance()->on($job_listener);

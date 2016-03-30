@@ -15,9 +15,20 @@ class TestDelayedJobManager implements DelayedJobManagerInterface
 {
     protected static $_jobs = [];
 
+    /**
+     * @return array
+     */
     public static function getJobs()
     {
         return self::$_jobs;
+    }
+
+    /**
+     * @return void
+     */
+    public static function clearJobs()
+    {
+        self::$_jobs = [];
     }
 
     /**

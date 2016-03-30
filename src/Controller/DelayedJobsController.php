@@ -13,7 +13,7 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
  * @package DelayedJobs\Controller
  * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  */
-class DelayedJobsController extends AppController implements DelayedJobInterface
+class DelayedJobsController extends AppController 
 {
     use DelayedJobTrait;
 

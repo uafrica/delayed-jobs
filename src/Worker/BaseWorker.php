@@ -8,10 +8,15 @@ use DelayedJobs\DelayedJob\DelayedJobTrait;
 /**
  * Class BaseWorker
  */
-abstract class BaseWorker implements JobWorkerInterface, DelayedJobInterface
+abstract class BaseWorker implements JobWorkerInterface
 {
     use DelayedJobTrait;
     use ModelAwareTrait;
+
+    /**
+     * @var \Cake\Console\Shell
+     */
+    protected $_shell;
 
     /**
      * Construct the listener
@@ -21,5 +26,10 @@ abstract class BaseWorker implements JobWorkerInterface, DelayedJobInterface
     public function __construct(array $options = [])
     {
         $this->modelFactory('Table', ['Cake\ORM\TableRegistry', 'get']);
+
+        if (isset($options['shell'])) {
+            $this->_shell = $options['shell'];
+            unset($options['shell']);
+        }
     }
 }
