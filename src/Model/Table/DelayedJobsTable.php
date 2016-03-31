@@ -58,7 +58,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         $conditions = [
             'id !=' => $job['id'],
             'sequence' => $job['sequence'],
-            'status in' => [self::STATUS_BUSY, self::STATUS_FAILED]
+            'status in' => [Job::STATUS_BUSY, Job::STATUS_FAILED]
         ];
         $result = $this->exists($conditions);
 
@@ -73,7 +73,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     {
         $conditions = [
             'DelayedJobs.host_name' => $host_id,
-            'DelayedJobs.status' => self::STATUS_BUSY,
+            'DelayedJobs.status' => Job::STATUS_BUSY,
         ];
 
         $jobs = $this
@@ -96,7 +96,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     public function getRunning()
     {
         $conditions = [
-            'DelayedJobs.status' => self::STATUS_BUSY,
+            'DelayedJobs.status' => Job::STATUS_BUSY,
         ];
 
         $jobs = $this->find()
@@ -136,7 +136,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     public function clean()
     {
         return $this->deleteAll([
-            'status' => self::STATUS_SUCCESS,
+            'status' => Job::STATUS_SUCCESS,
             'modified <=' => new Time('-2 weeks')
         ]);
     }
@@ -186,19 +186,19 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                     ->count('id')
             ])
             ->where([
-                'not' => ['status' => self::STATUS_NEW]
+                'not' => ['status' => Job::STATUS_NEW]
             ])
             ->group(['status'])
             ->toArray();
         $statuses['waiting'] = $this->find()
             ->where([
-                'status' => self::STATUS_NEW,
+                'status' => Job::STATUS_NEW,
                 'run_at >' => new Time()
             ])
             ->count();
-        $statuses[self::STATUS_NEW] = $this->find()
+        $statuses[Job::STATUS_NEW] = $this->find()
             ->where([
-                'status' => self::STATUS_NEW,
+                'status' => Job::STATUS_NEW,
                 'run_at <=' => new Time()
             ])
             ->count();
@@ -299,10 +299,10 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         $conditions = [
             'worker' => $job->getWorker(),
             'status IN' => [
-                self::STATUS_BUSY,
-                self::STATUS_NEW,
-                self::STATUS_FAILED,
-                self::STATUS_UNKNOWN
+                Job::STATUS_BUSY,
+                Job::STATUS_NEW,
+                Job::STATUS_FAILED,
+                Job::STATUS_UNKNOWN
             ]
         ];
 

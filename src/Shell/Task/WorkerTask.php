@@ -84,25 +84,21 @@ class WorkerTask extends Shell
                 Shell::VERBOSE);
 
             //Recuring job
-            if ($response instanceof \DateTime && !$this->DelayedJobs->jobExists($job)) {
-                $recuring_job = clone $job;
-                $recuring_job->set([
-                    'run_at' => $response,
-                    'status' => DelayedJobsTable::STATUS_NEW,
+            if ($response instanceof \DateTime && !Manager::instance()->isSimilarJob($job)) {
+                $recuringJob = clone $job;
+                $recuringJob->setData([
+                    'runAt' => $response,
+                    'status' => Job::STATUS_NEW,
                     'retries' => 0,
-                    'last_message' => null,
-                    'failed_at' => null,
-                    'locked_by' => null,
-                    'start_time' => null,
-                    'end_time' => null,
-                    'pid' => null,
+                    'lastMessage' => null,
+                    'failedAt' => null,
+                    'lockedBy' => null,
+                    'startTime' => null,
+                    'endTime' => null,
                     'duration' => null,
+                    'id' => null
                 ]);
-                unset($recuring_job->id);
-                unset($recuring_job->created);
-                unset($recuring_job->modified);
-                $recuring_job->isNew(true);
-                $this->DelayedJobs->save($recuring_job);
+                Manager::instance()->enqueue($recuringJob);
             }
         } catch (\Error $error) {
             //## Job Failed badly

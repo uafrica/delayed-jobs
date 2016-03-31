@@ -5,20 +5,20 @@ namespace DelayedJobs\DelayedJob;
 trait EnqueueTrait
 {
     /**
-     * @param string|\DelayedJobs\DelayedJob\Job $class Class to enqueue (In CakePHP format), or a Job instance
+     * @param string|\DelayedJobs\DelayedJob\Job $worker Worker class to enqueue (In CakePHP format), or a Job instance
      * @param mixed $payload The payload for the job
-     * @param array $options
+     * @param array $options Array of options
      * @return \DelayedJobs\DelayedJob\Job
      * @throws \DelayedJobs\DelayedJob\Exception\JobDataException
      */
-    public function enqueue($class, $payload = null, array $options = [])
+    public function enqueue($worker, $payload = null, array $options = [])
     {
-        if ($class instanceof Job) {
-            $job = $class;
+        if ($worker instanceof Job) {
+            $job = $worker;
         } else {
             $job = new Job();
             $job
-                ->setWorker($class)
+                ->setWorker($worker)
                 ->setPayload($payload)
                 ->setData($options);
         }

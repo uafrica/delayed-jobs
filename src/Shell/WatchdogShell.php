@@ -206,7 +206,7 @@ class WatchdogShell extends Shell
 
             $this->enqueue($job);
 
-            $this->out(__('  <success>Queued:</success> {0}::{1}', $job['class'], $job['method']), 1, Shell::VERBOSE);
+            $this->out(__('  <success>Queued:</success> {0}', $job->getWorker()), 1, Shell::VERBOSE);
         }
     }
 

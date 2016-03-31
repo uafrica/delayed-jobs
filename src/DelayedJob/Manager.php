@@ -186,7 +186,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
      */
     public function fetchJob($jobId)
     {
-        $job = $this->$this->getDatastore()->fetchJob($jobId);
+        $job = $this->getDatastore()->fetchJob($jobId);
 
         if (!$job) {
             throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $jobId));
@@ -203,7 +203,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
      */
     public function getStatus($jobId)
     {
-        $job = $this->$this->getDatastore()->fetchJob($jobId);
+        $job = $this->getDatastore()->fetchJob($jobId);
         if (!$job) {
             return Job::STATUS_UNKNOWN;
         }
@@ -254,14 +254,14 @@ class Manager implements EventDispatcherInterface, ManagerInterface
     public function enqueueNextSequence(Job $job)
     {
         $this->_persistToDatastore($job);
-        $nextJob = $this->$this->getDatastore()->fetchNextSequence($job);
+        $nextJob = $this->getDatastore()->fetchNextSequence($job);
 
         return $this->_pushToBroker($nextJob);
     }
 
     public function isSimilarJob(Job $job)
     {
-        return $this->$this->getDatastore()->isSimilarJob($job);
+        return $this->getDatastore()->isSimilarJob($job);
     }
 
     /**
@@ -275,7 +275,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
             return $event->result;
         }
 
-        if (!$this->$this->getDatastore()->persistJob($job)) {
+        if (!$this->getDatastore()->persistJob($job)) {
             throw new EnqueueException('Job could not be persisted');
         }
 
@@ -304,9 +304,9 @@ class Manager implements EventDispatcherInterface, ManagerInterface
                 return $event->result;
             }
 
-            $this->getMessageBroker()->queueJob($job);
+            $this->getMessageBroker()->publishJob($job);
 
-            $this->dispatchEvent('DelayedJobs.afterJobQueue', [$job, $message]);
+            $this->dispatchEvent('DelayedJobs.afterJobQueue', [$job]);
 
             return true;
         } catch (\Exception $e) {
