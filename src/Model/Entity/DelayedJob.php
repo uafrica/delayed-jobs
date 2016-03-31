@@ -16,6 +16,8 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
  * Class DelayedJob
  *
  * @property \Cake\I18n\Time $run_at
+ *
+ * @internal
  */
 class DelayedJob extends Entity implements EventDispatcherInterface
 {

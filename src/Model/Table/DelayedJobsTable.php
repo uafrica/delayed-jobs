@@ -14,6 +14,7 @@ use DelayedJobs\Traits\DebugTrait;
 /**
  * DelayedJob Model
  *
+ * @internal
  */
 class DelayedJobsTable extends Table implements DatastoreInterface
 {
