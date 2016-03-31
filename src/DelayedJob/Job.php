@@ -189,6 +189,9 @@ class Job
         return $this;
     }
 
+    /**
+     * @return $this
+     */
     public function incrementRetries()
     {
         $this->_retries++;
