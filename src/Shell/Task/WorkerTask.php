@@ -5,8 +5,8 @@ use Cake\Console\Shell;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\I18n\Time;
 use Cake\Log\Log;
-use DelayedJobs\DelayedJob\DelayedJob;
-use DelayedJobs\DelayedJob\DelayedJobManager;
+use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\Manager;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
@@ -35,7 +35,7 @@ class WorkerTask extends Shell
         $this->out('<info>Starting Job: ' . $job_id . '</info>', 1, Shell::VERBOSE);
 
         try {
-            $job = DelayedJobManager::instance()->fetchJob($job_id);
+            $job = Manager::instance()->fetchJob($job_id);
             $this->out(' - Got job from DB', 1, Shell::VERBOSE);
         } catch (JobNotFoundException $e) {
             $this->out('<fail>Job ' . $job_id . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
@@ -43,36 +43,36 @@ class WorkerTask extends Shell
             return;
         }
         //## First check if job is not locked
-        if (!$this->param('force') && $job->getStatus() == DelayedJob::STATUS_SUCCESS) {
+        if (!$this->param('force') && $job->getStatus() == Job::STATUS_SUCCESS) {
             $this->out("<error>Job previously completed, Why is is being called again</error>");
             $this->_stop(2);
         }
 
-        if (!$this->param('force') && $job->getStatus() == DelayedJob::STATUS_BURRIED) {
+        if (!$this->param('force') && $job->getStatus() == Job::STATUS_BURRIED) {
             $this->out("<error>Job Failed too many times, but why was it called again</error>");
             $this->_stop(3);
         }
 
-        DelayedJobManager::instance()->lock($job);
+        Manager::instance()->lock($job);
 
         $this->executeJob($job);
     }
 
-    public function executeJob(DelayedJob $job)
+    public function executeJob(Job $job)
     {
-        $this->out(sprintf(' - <info>%s</info>', $job->getClass()), 1, Shell::VERBOSE);
+        $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
         $this->out(' - Executing job', 1, Shell::VERBOSE);
         $this->dj_log(__('Executing: {0}', $job->getId()));
 
         $start = microtime(true);
         try {
-            $response = DelayedJobManager::instance()
+            $response = Manager::instance()
                 ->execute($job, $this);
 
             $this->dj_log(__('Done with: {0}', $job->getId()));
 
             $duration = round((microtime(true) - $start) * 1000);
-            if (DelayedJobManager::instance()
+            if (Manager::instance()
                 ->completed($job, is_string($response) ? $response : null, $duration)
             ) {
                 $this->dj_log(__('Marked as completed: {0}', $job->getId()));
@@ -118,9 +118,9 @@ class WorkerTask extends Shell
         }
     }
 
-    protected function _failJob(DelayedJob $job, $exc, $hardFail = false)
+    protected function _failJob(Job $job, $exc, $hardFail = false)
     {
-        DelayedJobManager::instance()->failed($job, $exc->getMessage(), $hardFail);
+        Manager::instance()->failed($job, $exc->getMessage(), $hardFail);
         $this->out(sprintf('<error> - Execution completed</error> :: <info>%s</info>', $exc->getMessage()), 1,
             Shell::VERBOSE);
         $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);

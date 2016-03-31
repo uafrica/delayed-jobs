@@ -2,7 +2,7 @@
 
 namespace DelayedJobs\TestSuite;
 
-use DelayedJobs\DelayedJob\DelayedJob;
+use DelayedJobs\DelayedJob\Job;
 
 /**
  * Class JobAssertionTrait
@@ -15,12 +15,12 @@ trait JobAssertionTrait
 
     public function assertJobCount($count, $message = '')
     {
-        $this->assertCount($count, TestDelayedJobManager::getJobs(), $message);
+        $this->assertCount($count, TestManager::getJobs(), $message);
     }
 
     public function assertJob(callable $callback, $message = '')
     {
-        $jobs = TestDelayedJobManager::getJobs();
+        $jobs = TestManager::getJobs();
         foreach ($jobs as $job) {
             if ($callback($job)) {
                 $this->assertTrue(true);
@@ -33,7 +33,7 @@ trait JobAssertionTrait
 
     public function assertNotJob(callable $callback, $message = '')
     {
-        $jobs = TestDelayedJobManager::getJobs();
+        $jobs = TestManager::getJobs();
         foreach ($jobs as $job) {
             if ($callback($job)) {
                 $this->assertTrue(false, $message ?: 'Job matching the supplied callback.');
@@ -47,8 +47,8 @@ trait JobAssertionTrait
 
     public function assertJobWorker($worker, $message = '')
     {
-        $callback = function (DelayedJob $job) use ($worker) {
-            return $job->getClass() === $worker;
+        $callback = function (Job $job) use ($worker) {
+            return $job->getWorker() === $worker;
         };
 
         $this->assertJob($callback, $message ?: sprintf('No job using the "%s" worker was triggered.', $worker));
@@ -56,8 +56,8 @@ trait JobAssertionTrait
 
     public function assertNotJobWorker($worker, $message = '')
     {
-        $callback = function (DelayedJob $job) use ($worker) {
-            return $job->getClass() === $worker;
+        $callback = function (Job $job) use ($worker) {
+            return $job->getWorker() === $worker;
         };
 
         $this->assertNotJob($callback, $message ?: sprintf('A job using the "%s" worker was triggered.', $worker));

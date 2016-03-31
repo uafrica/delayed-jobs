@@ -7,7 +7,8 @@ use Cake\Core\Exception\Exception;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Network\Http\Client;
-use DelayedJobs\DelayedJob\DelayedJob;
+use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\MessageBrokerInterface;
 use DelayedJobs\Traits\DebugTrait;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
@@ -17,7 +18,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPAbstractCollection;
 use PhpAmqpLib\Wire\AMQPTable;
 
-class AmqpManager
+class AmqpManager implements MessageBrokerInterface
 {
     use DebugTrait;
 
@@ -131,7 +132,7 @@ class AmqpManager
         $channel->queue_bind($this->_serviceName . '-queue', $this->_serviceName . '-direct-exchange', $this->_serviceName);
     }
 
-    public function queueJob(DelayedJob $job)
+    public function publishJob(Job $job)
     {
         $channel = $this->_getChannel();
 

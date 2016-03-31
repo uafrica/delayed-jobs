@@ -5,7 +5,7 @@ namespace DelayedJobs\Controller;
 use App\Controller\AppController;
 use Cake\I18n\Time;
 use DelayedJobs\DelayedJob\DelayedJobInterface;
-use DelayedJobs\DelayedJob\DelayedJobTrait;
+use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
@@ -15,7 +15,7 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
  */
 class DelayedJobsController extends AppController 
 {
-    use DelayedJobTrait;
+    use EnqueueTrait;
 
     /**
      * @return void

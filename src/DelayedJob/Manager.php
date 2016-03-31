@@ -20,7 +20,7 @@ use DelayedJobs\Worker\JobWorkerInterface;
 /**
  * Class DelayedJobsManager
  */
-class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerInterface
+class Manager implements EventDispatcherInterface, ManagerInterface
 {
     use EventDispatcherTrait;
     use InstanceConfigTrait;
@@ -28,29 +28,36 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
     /**
      * The singleton instance
      *
-     * @var \DelayedJobs\DelayedJob\DelayedJobManager
+     * @var \DelayedJobs\DelayedJob\Manager
      */
     protected static $_instance = null;
 
     /**
-     * @var DelayedJobDatastoreInterface
+     * @var \DelayedJobs\DelayedJob\DatastoreInterface
      */
-    protected $_jobDatastore = null;
+    protected $_datastore = null;
 
     protected $_defaultConfig = [];
 
     /**
+     * @var \DelayedJobs\DelayedJob\MessageBrokerInterface
+     */
+    protected $_messageBroker;
+
+    /**
      * Constructor for class
      *
-     * @param \Cake\Datasource\RepositoryInterface $jobDatastore
+     * @param \DelayedJobs\DelayedJob\DatastoreInterface $datastore Datastore to inject
+     * @param \DelayedJobs\DelayedJob\MessageBrokerInterface $messageBroker Broker that handles message distribution
+     * @param array $config Config array
      */
-    public function __construct(DelayedJobDatastoreInterface $jobDatastore = null, array $config = [])
-    {
-        if ($jobDatastore === null) {
-            $this->_jobDatastore = TableRegistry::get('DelayedJobs.DelayedJobs');
-        } else {
-            $this->_jobDatastore = $jobDatastore;
-        }
+    public function __construct(
+        DatastoreInterface $datastore = null,
+        MessageBrokerInterface $messageBroker = null,
+        array $config = []
+    ) {
+        $this->_datastore = $datastore;
+        $this->_messageBroker = $messageBroker;
 
         $this->config($config);
     }
@@ -60,29 +67,53 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
      *
      * If called with the first parameter, it will be set as the globally available instance
      *
-     * @param \DelayedJobs\DelayedJob\DelayedJobManagerInterface $manager Delayed jobs instance.
-     * @return \DelayedJobs\DelayedJob\DelayedJobManagerInterface the global delayed jobs manager
+     * @param \DelayedJobs\DelayedJob\ManagerInterface $manager Delayed jobs instance.
+     * @return \DelayedJobs\DelayedJob\ManagerInterface the global delayed jobs manager
      */
-    public static function instance(DelayedJobManagerInterface $manager = null)
+    public static function instance(ManagerInterface $manager = null)
     {
-        if ($manager instanceof DelayedJobManagerInterface) {
+        if ($manager instanceof ManagerInterface) {
             static::$_instance = $manager;
         }
         if (empty(static::$_instance)) {
-            static::$_instance = new DelayedJobManager();
+            static::$_instance = new Manager();
         }
 
         return static::$_instance;
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job
-     * @return \DelayedJobs\DelayedJob\DelayedJob|bool
+     * @return \DelayedJobs\DelayedJob\DatastoreInterface
      */
-    public function enqueue(DelayedJob $job)
+    public function getDatastore()
+    {
+        if ($this->_datastore === null) {
+            $this->_datastore = TableRegistry::get('DelayedJobs.DelayedJobs');
+        }
+
+        return $this->_datastore;
+    }
+
+    /**
+     * @return \DelayedJobs\DelayedJob\MessageBrokerInterface
+     */
+    public function getMessageBroker()
+    {
+        if ($this->_messageBroker === null) {
+            $this->_messageBroker = AmqpManager::instance();
+        }
+
+        return $this->_messageBroker;
+    }
+
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job Job that needs to be enqueued
+     * @return \DelayedJobs\DelayedJob\Job|bool
+     */
+    public function enqueue(Job $job)
     {
         if ($this->_persistToDatastore($job)) {
-            if ($job->getSequence() && $this->_jobDatastore->currentlySequenced($job)) {
+            if ($job->getSequence() && $this->getDatastore()->currentlySequenced($job)) {
                 return true;
             }
             return $this->_pushToBroker($job);
@@ -92,17 +123,17 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job Job that failed
+     * @param \DelayedJobs\DelayedJob\Job $job Job that failed
      * @param string $message Message to store with the jbo
      * @param bool $burryJob Should the job be burried
-     * @return bool|\DelayedJobs\DelayedJob\DelayedJob
+     * @return bool|\DelayedJobs\DelayedJob\Job
      */
-    public function failed(DelayedJob $job, $message, $burryJob = false)
+    public function failed(Job $job, $message, $burryJob = false)
     {
         $maxRetries = $job->getMaxRetries();
         $job->incrementRetries();
 
-        $status = ($burryJob === true || $job->getRetries() >= $maxRetries) ? DelayedJob::STATUS_BURRIED : DelayedJob::STATUS_FAILED;
+        $status = ($burryJob === true || $job->getRetries() >= $maxRetries) ? Job::STATUS_BURRIED : Job::STATUS_FAILED;
 
         $growthFactor = 5 + $job->getRetries() ** 4;
 
@@ -116,7 +147,7 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
             ->setLastMessage($message)
             ->setTimeFailed(new Time());
 
-        if ($job->getStatus() === DelayedJob::STATUS_FAILED) {
+        if ($job->getStatus() === Job::STATUS_FAILED) {
             return $this->enqueue($job);
         } elseif ($job->getSequence() !== null) {
             $this->enqueueNextSequence($job);
@@ -128,18 +159,18 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job Job that has been completed
+     * @param \DelayedJobs\DelayedJob\Job $job Job that has been completed
      * @param string|null $message Message to store with job
      * @param int $duration How long execution took
-     * @return \DelayedJobs\DelayedJob\DelayedJob|bool
+     * @return \DelayedJobs\DelayedJob\Job|bool
      */
-    public function completed(DelayedJob $job, $message = null, $duration = 0)
+    public function completed(Job $job, $message = null, $duration = 0)
     {
         if ($message) {
             $job->setLastMessage($message);
         }
         $job
-            ->setStatus(DelayedJob::STATUS_SUCCESS)
+            ->setStatus(Job::STATUS_SUCCESS)
             ->setEndTime(new Time())
             ->setDuration($duration);
 
@@ -150,12 +181,12 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
      * Gets the Job instance for a specific job
      *
      * @param int $jobId Job to fetch
-     * @return \DelayedJobs\DelayedJob\DelayedJob
+     * @return \DelayedJobs\DelayedJob\Job
      * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
     public function fetchJob($jobId)
     {
-        $job = $this->_jobDatastore->fetchJob($jobId);
+        $job = $this->$this->getDatastore()->fetchJob($jobId);
 
         if (!$job) {
             throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $jobId));
@@ -172,26 +203,26 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
      */
     public function getStatus($jobId)
     {
-        $job = $this->_jobDatastore->fetchJob($jobId);
+        $job = $this->$this->getDatastore()->fetchJob($jobId);
         if (!$job) {
-            return DelayedJob::STATUS_UNKNOWN;
+            return Job::STATUS_UNKNOWN;
         }
 
         return $job->getStatus();
     }
 
-    public function lock(DelayedJob $job, $hostname = null)
+    public function lock(Job $job, $hostname = null)
     {
-        $job->setStatus(DelayedJob::STATUS_BUSY)
+        $job->setStatus(Job::STATUS_BUSY)
             ->setStartTime(new Time())
             ->setHostName($hostname);
 
         return $this->_persistToDatastore($job);
     }
 
-    public function execute(DelayedJob $job, Shell $shell = null)
+    public function execute(Job $job, Shell $shell = null)
     {
-        $className = App::className($job->getClass(), 'Worker', 'Worker');
+        $className = App::className($job->getWorker(), 'Worker', 'Worker');
 
         if (!class_exists($className)) {
             throw new JobExecuteException("Worker does not exist (" . $className . ")");
@@ -220,31 +251,31 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
         return $event->result ? $event->result : $result;
     }
 
-    public function enqueueNextSequence(DelayedJob $job)
+    public function enqueueNextSequence(Job $job)
     {
         $this->_persistToDatastore($job);
-        $nextJob = $this->_jobDatastore->fetchNextSequence($job);
+        $nextJob = $this->$this->getDatastore()->fetchNextSequence($job);
 
         return $this->_pushToBroker($nextJob);
     }
 
-    public function isSimilarJob(DelayedJob $job)
+    public function isSimilarJob(Job $job)
     {
-        return $this->_jobDatastore->isSimilarJob($job);
+        return $this->$this->getDatastore()->isSimilarJob($job);
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job Job being persisted
-     * @return \DelayedJobs\DelayedJob\DelayedJob|mixed
+     * @param \DelayedJobs\DelayedJob\Job $job Job being persisted
+     * @return \DelayedJobs\DelayedJob\Job|mixed
      */
-    protected function _persistToDatastore(DelayedJob $job)
+    protected function _persistToDatastore(Job $job)
     {
         $event = $this->dispatchEvent('DelayedJobs.beforePersist', [$job]);
         if ($event->isStopped()) {
             return $event->result;
         }
 
-        if (!$this->_jobDatastore->persistJob($job)) {
+        if (!$this->$this->getDatastore()->persistJob($job)) {
             throw new EnqueueException('Job could not be persisted');
         }
 
@@ -254,10 +285,10 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job Job being pushed to broker
+     * @param \DelayedJobs\DelayedJob\Job $job Job being pushed to broker
      * @return bool|mixed
      */
-    protected function _pushToBroker(DelayedJob $job)
+    protected function _pushToBroker(Job $job)
     {
         if ($job->getId() === null) {
             throw new EnqueueException('Job has not been persisted.');
@@ -273,16 +304,18 @@ class DelayedJobManager implements EventDispatcherInterface, DelayedJobManagerIn
                 return $event->result;
             }
 
-            //TODO: Move to an engine like interface
-            $manager = AmqpManager::instance();
-            $message = $manager->queueJob($job);
+            $this->getMessageBroker()->queueJob($job);
 
             $this->dispatchEvent('DelayedJobs.afterJobQueue', [$job, $message]);
 
             return true;
         } catch (\Exception $e) {
-            Log::emergency(__('RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
-                $e->getMessage(), get_class($e), $job->getId()));
+            Log::emergency(__(
+                'RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
+                $e->getMessage(),
+                get_class($e),
+                $job->getId()
+            ));
 
             throw new EnqueueException('Could not push job to broker.');
         }

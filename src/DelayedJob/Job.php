@@ -16,7 +16,7 @@ use DelayedJobs\Worker\JobWorkerInterface;
 /**
  * Class Job
  */
-class DelayedJob
+class Job
 {
     const STATUS_NEW = 1;
     const STATUS_BUSY = 2;
@@ -30,7 +30,7 @@ class DelayedJob
     /**
      * @var string
      */
-    protected $_class;
+    protected $_worker;
     /**
      * @var string
      */
@@ -108,11 +108,14 @@ class DelayedJob
         }
     }
 
+    /**
+     * @return array
+     */
     public function getData()
     {
         return [
             'id' => $this->getId(),
-            'class' => $this->getClass(),
+            'worker' => $this->getWorker(),
             'group' => $this->getGroup(),
             'priority' => $this->getPriority(),
             'payload' => $this->getPayload(),
@@ -215,25 +218,25 @@ class DelayedJob
     /**
      * @return mixed
      */
-    public function getClass()
+    public function getWorker()
     {
-        return $this->_class;
+        return $this->_worker;
     }
 
     /**
-     * @param string $class Class name
+     * @param string $worker Class name
      * @return $this
      * @throws JobDataException
      */
-    public function setClass($class)
+    public function setWorker($worker)
     {
-        $className = App::className($class, 'Worker', 'Worker');
+        $className = App::className($worker, 'Worker', 'Worker');
 
         if (!$className) {
-            throw new JobDataException(sprintf('Class name %s is not a valid Worker class', $class));
+            throw new JobDataException(sprintf('Worker name %s is not a valid Worker class', $worker));
         }
 
-        $this->_class = $class;
+        $this->_worker = $worker;
 
         return $this;
     }
@@ -246,7 +249,7 @@ class DelayedJob
         if (!empty($this->_group)) {
             return $this->_group;
         } else {
-            return $this->_class;
+            return $this->_worker;
         }
     }
 

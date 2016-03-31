@@ -10,6 +10,9 @@ use Cake\Event\EventManager;
 use Cake\I18n\Time;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\Amqp\AmqpManager;
+use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\Manager;
+use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Entity\Worker;
 use DelayedJobs\Model\Table\DelayedJobsTable;
@@ -24,6 +27,7 @@ use DelayedJobs\Process;
  */
 class WatchdogShell extends Shell
 {
+    use EnqueueTrait;
 
     const BASEPATH = ROOT . '/bin/cake DelayedJobs.worker ';
     public $Lock;
@@ -180,30 +184,28 @@ class WatchdogShell extends Shell
     public function recurring()
     {
         $this->out('Firing recurring event.');
-        $event = new Event('DelayedJobs.recurring');
+        $event = new Event('DelayedJobs.recurring', $this);
         $event->result = [];
-        EventManager::instance()
-            ->dispatch($event);
+        EventManager::instance()->dispatch($event);
 
-        $this->loadModel('DelayedJobs.DelayedJobs');
         $this->out(__('{0} jobs to queue', count($event->result)), 1, Shell::VERBOSE);
         foreach ($event->result as $job) {
-            if ($this->DelayedJobs->jobExists($job)) {
-                $this->out(__('  <error>Already queued:</error> {0}::{1}', $job['class'], $job['method']), 1,
-                    Shell::VERBOSE);
+            if (!$job instanceof Job) {
+                $job = new Job($job + [
+                        'group' => 'Recurring',
+                        'priority' => 100,
+                        'maxRetries' => 5,
+                        'runAt' => new Time('+30 seconds')
+                    ]);
+            }
+
+            if (Manager::instance()->isSimilarJob($job)) {
+                $this->out(__('  <error>Already queued:</error> {0}', $job->getWorker()), 1, Shell::VERBOSE);
                 continue;
             }
 
-            $dj_data = $job + [
-                    'group' => 'Recurring',
-                    'priority' => 100,
-                    'options' => ['max_retries' => 5],
-                    'run_at' => new Time('+30 seconds')
-                ];
+            $this->enqueue($job);
 
-            $job_event = new Event('DelayedJob.queue', $dj_data);
-            EventManager::instance()
-                ->dispatch($job_event);
             $this->out(__('  <success>Queued:</success> {0}::{1}', $job['class'], $job['method']), 1, Shell::VERBOSE);
         }
     }

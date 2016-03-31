@@ -10,8 +10,8 @@ use Cake\I18n\Number;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use DelayedJobs\Amqp\AmqpManager;
-use DelayedJobs\DelayedJob\DelayedJobManager;
-use DelayedJobs\DelayedJob\DelayedJob;
+use DelayedJobs\DelayedJob\Manager;
+use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\WorkersTable;
@@ -210,7 +210,7 @@ class WorkerShell extends Shell
         $body = json_decode($message->body, true);
         $jobId = $body['id'];
         try {
-            $job = DelayedJobManager::instance()->fetchJob($jobId);
+            $job = Manager::instance()->fetchJob($jobId);
             $this->_executeJob($job, $message);
         } catch (JobNotFoundException $e) {
             if (!isset($body['is-requeue'])) {
@@ -248,7 +248,7 @@ class WorkerShell extends Shell
         pcntl_signal_dispatch();
     }
 
-    protected function _executeJob(DelayedJob $job, AMQPMessage $message)
+    protected function _executeJob(Job $job, AMQPMessage $message)
     {
         if ($this->_worker && ($this->_worker->status === WorkersTable::STATUS_SHUTDOWN ||
             $this->_worker->status === WorkersTable::STATUS_TO_KILL)) {
@@ -260,20 +260,20 @@ class WorkerShell extends Shell
 
         $this->out(__('<success>Starting job:</success> {0} :: ', $job->getId()), 1, Shell::VERBOSE);
 
-        if ($job->getStatus() === DelayedJob::STATUS_SUCCESS || $job->getStatus() === DelayedJob::STATUS_BURRIED) {
+        if ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURRIED) {
             $this->out(__('Already processed'), 1, Shell::VERBOSE);
             $this->_amqpManager->ack($message);
             return true;
         }
 
-        if ($job->getStatus() === DelayedJob::STATUS_BUSY) {
+        if ($job->getStatus() === Job::STATUS_BUSY) {
             $this->out(__('Already being processed'), 1, Shell::VERBOSE);
             $this->_amqpManager->ack($message);
 
             return true;
         }
 
-        DelayedJobManager::instance()->lock($job, $this->_hostName);
+        Manager::instance()->lock($job, $this->_hostName);
         $this->Worker->executeJob($job);
         $this->_amqpManager->ack($message);
         $this->_lastJob = $job->getId();

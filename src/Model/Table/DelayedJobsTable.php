@@ -4,17 +4,10 @@ namespace DelayedJobs\Model\Table;
 
 use Cake\Core\Configure;
 use Cake\Database\Schema\Table as Schema;
-use Cake\Datasource\ConnectionManager;
-use Cake\Datasource\EntityInterface;
-use Cake\Event\Event;
 use Cake\I18n\Time;
-use Cake\Log\Log;
-use Cake\ORM\ResultSet;
 use Cake\ORM\Table;
-use Cake\Validation\Validator;
-use DelayedJobs\Amqp\AmqpManager;
-use DelayedJobs\DelayedJob\DelayedJobDatastoreInterface;
-use DelayedJobs\DelayedJob\DelayedJob as Job;
+use DelayedJobs\DelayedJob\DatastoreInterface;
+use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Traits\DebugTrait;
 
@@ -22,19 +15,9 @@ use DelayedJobs\Traits\DebugTrait;
  * DelayedJob Model
  *
  */
-class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
+class DelayedJobsTable extends Table implements DatastoreInterface
 {
     use DebugTrait;
-
-    const SEARCH_LIMIT = 10000;
-    const STATUS_NEW = 1;
-    const STATUS_BUSY = 2;
-    const STATUS_BURRIED = 3;
-    const STATUS_SUCCESS = 4;
-    const STATUS_KICK = 5;
-    const STATUS_FAILED = 6;
-    const STATUS_UNKNOWN = 7;
-    const STATUS_TEST_JOB = 8;
 
     /**
      * @param array $config Config array.
@@ -58,37 +41,6 @@ class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
         $table->columnType('options', 'serialize');
 
         return parent::_initializeSchema($table);
-    }
-
-    public function release(DelayedJob $job)
-    {
-        $job->status = self::STATUS_NEW;
-        $job->host_name = null;
-        $this->save($job);
-    }
-
-    public function isBusy($job_id)
-    {
-        $conditions = [
-            'DelayedJobs.status' => self::STATUS_BUSY,
-            'DelayedJobs.id' => $job_id
-        ];
-
-        return $this->exists($conditions);
-    }
-
-    public function setPid(DelayedJob $job, $pid = 0)
-    {
-        $job->pid = $pid;
-
-        return $this->save($job);
-    }
-
-    public function setStatus(DelayedJob $job, $status = self::STATUS_UNKNOWN)
-    {
-        $job->status = $status;
-
-        return $this->save($job);
     }
 
     /**
@@ -189,77 +141,6 @@ class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
         ]);
     }
 
-    public function jobExists($job_details)
-    {
-        $quoting = $this->connection()
-            ->driver()
-            ->autoQuoting();
-        $this->connection()
-            ->driver()
-            ->autoQuoting(true);
-
-        $conditions = [
-            'class' => $job_details['class'],
-            'status IN' => [
-                self::STATUS_BUSY,
-                self::STATUS_NEW,
-                self::STATUS_FAILED,
-                self::STATUS_UNKNOWN
-            ]
-        ];
-
-        if (!empty($job_details['id'])) {
-            $conditions['id !='] = $job_details['id'];
-        }
-
-        $exists = $this->exists($conditions);
-
-        $this->connection()
-            ->driver()
-            ->autoQuoting($quoting);
-
-        return $exists;
-    }
-
-    public function getJob($job_id, $all_fields = false)
-    {
-        $options = [];
-        if (!$all_fields) {
-            $options['fields'] = [
-                'id',
-                'pid',
-                'host_name',
-                'status',
-                'options',
-                'sequence',
-                'class',
-                'method',
-                'priority'
-            ];
-        }
-
-        return $this->get($job_id, $options);
-    }
-
-    /**
-     * @param \DelayedJobs\Model\Entity\DelayedJob $dj
-     * @return void
-     */
-    protected function _processJobForQueue(DelayedJob $dj)
-    {
-        if ($dj->isNew()) {
-            $this->dj_log(__('Job {0} has been created', $dj->id));
-        }
-
-        if ($dj->isNew() || $dj->status === self::STATUS_FAILED) {
-            $this->_queueJob($dj);
-        }
-
-        if ($dj->sequence && ($dj->status === self::STATUS_SUCCESS || $dj->status === self::STATUS_BURRIED)) {
-            $this->_queueNextSequence($dj);
-        }
-    }
-
     public function currentlySequenced(Job $job)
     {
         return $this->exists([
@@ -267,47 +148,6 @@ class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
             'sequence' => $job->getSequence(),
             'status in' => [Job::STATUS_NEW, Job::STATUS_BUSY, Job::STATUS_FAILED, Job::STATUS_UNKNOWN]
         ]);
-    }
-
-    protected function _queueJob(DelayedJob $dj, $check_sequence = true)
-    {
-        if ($check_sequence &&
-            $dj->status === self::STATUS_NEW &&
-            $dj->sequence &&
-            $this->_existingSequence($dj)
-        ) {
-            $this->dj_log(__('{0} will not be queued because sequence exists: {1}', $dj->id, $dj->sequence));
-            return;
-        }
-        $this->dj_log(__('{0} will be queued with sequence of {1}', $dj->id, $dj->sequence));
-        $dj->queue();
-    }
-
-    protected function _queueNextSequence(DelayedJob $dj)
-    {
-        $next = $this->find()
-            ->select([
-                'id',
-                'sequence',
-                'priority',
-                'run_at'
-            ])
-            ->where([
-                'status' => self::STATUS_NEW,
-                'sequence' => $dj->sequence,
-            ])
-            ->order([
-                'priority' => 'ASC',
-                'id' => 'ASC',
-            ])
-            ->first();
-
-        if (!$next) {
-            $this->dj_log(__('No more sequenced jobs found for {0}', $dj->sequence));
-            return;
-        }
-
-        $this->_queueJob($next, false);
     }
 
     public function jobRates($field, $status = null)
@@ -405,7 +245,7 @@ class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job The job to fetch next sequence for
+     * @param \DelayedJobs\DelayedJob\Job $job The job to fetch next sequence for
      * @return bool
      */
     public function fetchNextSequence(Job $job)
@@ -442,9 +282,9 @@ class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
     }
 
     /**
-     * Checks if there already is a job with the same class waiting
+     * Checks if there already is a job with the same worker waiting
      *
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job Job to check
+     * @param \DelayedJobs\DelayedJob\Job $job Job to check
      * @return bool
      */
     public function isSimilarJob(Job $job)
@@ -457,7 +297,7 @@ class DelayedJobsTable extends Table implements DelayedJobDatastoreInterface
             ->autoQuoting(true);
 
         $conditions = [
-            'class' => $job->getClass(),
+            'worker' => $job->getWorker(),
             'status IN' => [
                 self::STATUS_BUSY,
                 self::STATUS_NEW,

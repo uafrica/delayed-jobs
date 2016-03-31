@@ -3,14 +3,14 @@ namespace DelayedJobs\Worker;
 
 use Cake\Datasource\ModelAwareTrait;
 use DelayedJobs\DelayedJob\DelayedJobInterface;
-use DelayedJobs\DelayedJob\DelayedJobTrait;
+use DelayedJobs\DelayedJob\EnqueueTrait;
 
 /**
  * Class BaseWorker
  */
 abstract class BaseWorker implements JobWorkerInterface
 {
-    use DelayedJobTrait;
+    use EnqueueTrait;
     use ModelAwareTrait;
 
     /**

@@ -4,14 +4,14 @@ namespace DelayedJobs\TestSuite;
 
 use Cake\Utility\Text;
 use Cake\Console\Shell;
-use DelayedJobs\DelayedJob\DelayedJobManagerInterface;
+use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
-use DelayedJobs\DelayedJob\DelayedJob;
+use DelayedJobs\DelayedJob\Job;
 
 /**
  * Class TestDelayedJobManager
  */
-class TestDelayedJobManager implements DelayedJobManagerInterface
+class TestManager implements ManagerInterface
 {
     protected static $_jobs = [];
 
@@ -32,10 +32,10 @@ class TestDelayedJobManager implements DelayedJobManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job
-     * @return \DelayedJobs\DelayedJob\DelayedJob|bool
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return \DelayedJobs\DelayedJob\Job|bool
      */
-    public function enqueue(DelayedJob $job)
+    public function enqueue(Job $job)
     {
         $jobId = time() + mt_rand(0, time());
         $job->setId($jobId);
@@ -45,23 +45,23 @@ class TestDelayedJobManager implements DelayedJobManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job Job that failed
+     * @param \DelayedJobs\DelayedJob\Job $job Job that failed
      * @param string $message Message to store with the jbo
      * @param bool $burryJob Should the job be burried
-     * @return bool|\DelayedJobs\DelayedJob\DelayedJob
+     * @return bool|\DelayedJobs\DelayedJob\Job
      */
-    public function failed(DelayedJob $job, $message, $burryJob = false)
+    public function failed(Job $job, $message, $burryJob = false)
     {
         return $job;
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job Job that has been completed
+     * @param \DelayedJobs\DelayedJob\Job $job Job that has been completed
      * @param string|null $message Message to store with job
      * @param int $duration How long execution took
-     * @return \DelayedJobs\DelayedJob\DelayedJob|bool
+     * @return \DelayedJobs\DelayedJob\Job|bool
      */
-    public function completed(DelayedJob $job, $message = null, $duration = 0)
+    public function completed(Job $job, $message = null, $duration = 0)
     {
         return $job;
     }
@@ -70,7 +70,7 @@ class TestDelayedJobManager implements DelayedJobManagerInterface
      * Gets the Job instance for a specific job
      *
      * @param int $jobId Job to fetch
-     * @return \DelayedJobs\DelayedJob\DelayedJob
+     * @return \DelayedJobs\DelayedJob\Job
      * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
     public function fetchJob($jobId)
@@ -93,22 +93,22 @@ class TestDelayedJobManager implements DelayedJobManagerInterface
         return $this->fetchJob($jobId)->getStatus();
     }
 
-    public function lock(DelayedJob $job, $hostname = null)
+    public function lock(Job $job, $hostname = null)
     {
         return $job;
     }
 
-    public function execute(DelayedJob $job, Shell $shell = null)
+    public function execute(Job $job, Shell $shell = null)
     {
         return $job;
     }
 
-    public function enqueueNextSequence(DelayedJob $job)
+    public function enqueueNextSequence(Job $job)
     {
         return null;
     }
 
-    public function isSimilarJob(DelayedJob $job)
+    public function isSimilarJob(Job $job)
     {
         return false;
     }

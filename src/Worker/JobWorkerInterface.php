@@ -3,7 +3,7 @@
 namespace DelayedJobs\Worker;
 
 use Cake\Console\Shell;
-use DelayedJobs\DelayedJob\DelayedJob;
+use DelayedJobs\DelayedJob\Job;
 
 /**
  * Interface for delayed job workers
@@ -11,8 +11,8 @@ use DelayedJobs\DelayedJob\DelayedJob;
 interface JobWorkerInterface
 {
     /**
-     * @param \DelayedJobs\DelayedJob\DelayedJob $job The job that is being run.
+     * @param \DelayedJobs\DelayedJob\Job $job The job that is being run.
      * @return null|bool|\Cake\I18n\Time|string
      */
-    public function __invoke(DelayedJob $job);
+    public function __invoke(Job $job);
 }
