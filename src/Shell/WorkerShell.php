@@ -162,9 +162,6 @@ class WorkerShell extends Shell
 
             $ran_job = $this->_amqpManager->wait(self::TIMEOUT);
             $this->_heartbeat($ran_job);
-
-            $this->out(sprintf('Memory usage: <info>%s</info>', Number::toReadableSize(memory_get_usage(true))), 1, Shell::VERBOSE);
-            $this->out(sprintf('Peak memory usage: <info>%s</info>', Number::toReadableSize(memory_get_peak_usage(true))), 1, Shell::VERBOSE);
         }
     }
 

@@ -174,7 +174,13 @@ class Manager implements EventDispatcherInterface, ManagerInterface
             ->setEndTime(new Time())
             ->setDuration($duration);
 
-        return $this->_persistToDatastore($job);
+        if ($job->getSequence() !== null) {
+            $this->enqueueNextSequence($job);
+        } else {
+            $this->_persistToDatastore($job);
+        }
+
+        return $job;
     }
 
     /**
@@ -228,7 +234,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
             throw new JobExecuteException("Worker does not exist (" . $className . ")");
         }
 
-        $jobWorker = new $className();
+        $jobWorker = new $className(['shell' => $shell]);
 
         if (!$jobWorker instanceof JobWorkerInterface) {
             throw new JobExecuteException("Worker class '{$className}' does not follow the required 'JobWorkerInterface");
@@ -240,7 +246,10 @@ class Manager implements EventDispatcherInterface, ManagerInterface
         }
 
         try {
-            $result = $jobWorker($job, $shell);
+            if ($shell) {
+                $shell->out('  :: Worker execution starting now', 1, Shell::VERBOSE);
+            }
+            $result = $jobWorker($job);
         } catch (NonRetryableException $exc) {
             //Special case where something failed, but we still want to treat it as a 'success'.
             $result = $exc->getMessage();
@@ -256,7 +265,9 @@ class Manager implements EventDispatcherInterface, ManagerInterface
         $this->_persistToDatastore($job);
         $nextJob = $this->getDatastore()->fetchNextSequence($job);
 
-        return $this->_pushToBroker($nextJob);
+        if ($nextJob) {
+            return $this->_pushToBroker($nextJob);
+        }
     }
 
     public function isSimilarJob(Job $job)

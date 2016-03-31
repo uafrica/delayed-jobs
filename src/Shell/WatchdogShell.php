@@ -371,7 +371,7 @@ class WatchdogShell extends Shell
         $job = TableRegistry::get('DelayedJobs.DelayedJobs')
             ->get($this->args[0]);
 
-        if ($job->status === DelayedJobsTable::STATUS_NEW || $job->status === DelayedJobsTable::STATUS_FAILED) {
+        if ($job->status === Job::STATUS_NEW || $job->status === Job::STATUS_FAILED) {
             $job->queue();
             $this->out(__('<success>{0} has been queued</success>', $job->id));
         } else {
@@ -399,7 +399,7 @@ class WatchdogShell extends Shell
                 'run_at'
             ])
             ->where([
-                'status in' => [DelayedJobsTable::STATUS_NEW, DelayedJobsTable::STATUS_FAILED],
+                'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
                 'sequence is not' => null
             ])
             ->order([
@@ -417,7 +417,7 @@ class WatchdogShell extends Shell
                 'run_at'
             ])
             ->where([
-                'status in' => [DelayedJobsTable::STATUS_NEW, DelayedJobsTable::STATUS_FAILED],
+                'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
                 'sequence is' => null
             ])
             ->order([
@@ -436,7 +436,8 @@ class WatchdogShell extends Shell
             }
 
             $this->out(__(' - Queing job <info>{0}</info>', $job->id), 1, Shell::VERBOSE);
-            $job->queue();
+            $job = new Job($job->toArray());
+            Manager::instance()->getMessageBroker($job);
         }
     }
 

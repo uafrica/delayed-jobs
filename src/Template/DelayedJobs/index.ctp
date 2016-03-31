@@ -39,7 +39,7 @@
                 <tr>
                     <th><?php echo $this->Paginator->sort('id'); ?></th>
                     <th><?php echo $this->Paginator->sort('group'); ?></th>
-                    <th><?php echo $this->Paginator->sort('method'); ?></th>
+                    <th><?php echo $this->Paginator->sort('worker'); ?></th>
                     <th><?php echo $this->Paginator->sort('status'); ?></th>
                     <th><?php echo $this->Paginator->sort('retries'); ?></th>
                     <th><?php echo $this->Paginator->sort('priority'); ?></th>
@@ -87,7 +87,7 @@
                         <td><?php echo h($delayedJob->id); ?>&nbsp;</td>
                         <td><?php echo h($delayedJob->group); ?>&nbsp;</td>
                         <td><?php echo h(
-                                $delayedJob->class . "::" . $delayedJob->method
+                                $delayedJob->worker
                             ); ?>&nbsp;</td>
                         <td><?php echo h($status_display); ?>&nbsp;</td>
                         <td><?php echo h($delayedJob->retries); ?>&nbsp;</td>
