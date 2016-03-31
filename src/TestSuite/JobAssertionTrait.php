@@ -18,6 +18,20 @@ trait JobAssertionTrait
         $this->assertCount($count, TestManager::getJobs(), $message);
     }
 
+    public function assertEachJob(callable $callback, $message = '')
+    {
+        $jobs = TestManager::getJobs();
+        foreach ($jobs as $job) {
+            if (!$callback($job)) {
+                $this->assertTrue(false, $message ?: 'Job found that doesn\'t match the supplied callback.');
+
+                return;
+            }
+        }
+
+        $this->assertTrue(true);
+    }
+
     public function assertJob(callable $callback, $message = '')
     {
         $jobs = TestManager::getJobs();
