@@ -20,7 +20,7 @@ class TestWorker implements JobWorkerInterface
     {
         sleep(2);
         $time = (new Time())->i18nFormat();
-        if ($job->getPayload()['type'] === 'success') {
+        if ($job->getPayload('type') === 'success') {
             return 'Successful test at ' . $time;
         } else {
             throw new \Exception('Failing test at ' . $time . ' because ' . $job->getPayload()['type']);

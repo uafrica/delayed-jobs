@@ -2,6 +2,7 @@
 namespace DelayedJobs\Shell;
 
 use Cake\Cache\Cache;
+use Cake\Console\Exception\StopException;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\InvalidPrimaryKeyException;
@@ -135,17 +136,19 @@ class WorkerShell extends Shell
         $this->_amqpManager = new AmqpManager();
         $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->param('qos'));
 
-        $failure_count = 0;
+        $failureCount = 0;
 
         $this->_heartbeat();
 
-        while ($failure_count <= self::MAXFAIL) {
+        while ($failureCount <= self::MAXFAIL) {
             try {
                 $this->_mainLoop();
                 break;
+            } catch (StopException $e) {
+                throw $e;
             } catch (\Exception $e) {
                 Log::emergency('Delayed job error: ' . $e->getMessage());
-                $failure_count++;
+                $failureCount++;
             }
         }
 
