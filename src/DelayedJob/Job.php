@@ -288,7 +288,7 @@ class Job
 
     /**
      * @param string $key Hash get compatible key (or null for entire payload)
-     * @return array
+     * @return mixed
      */
     public function getPayload($key = null)
     {
