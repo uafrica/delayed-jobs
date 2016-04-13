@@ -16,7 +16,7 @@ if (!Configure::check('dj.max.workers')) {
     Configure::write("dj.max.workers", 10);
 }
 if (!Configure::check('dj.max.retries')) {
-    Configure::write("dj.max.retries", 25);
+    Configure::write("dj.max.retries", 5);
 }
 if (!Configure::check('dj.max.execution.time')) {
     Configure::write("dj.max.execution.time", 6 * 60 * 60); // 6 Hours
