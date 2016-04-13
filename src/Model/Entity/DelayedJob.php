@@ -16,6 +16,8 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
  * Class DelayedJob
  *
  * @property \Cake\I18n\Time $run_at
+ *
+ * @internal
  */
 class DelayedJob extends Entity implements EventDispatcherInterface
 {
@@ -44,64 +46,5 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     protected function _getPayload($payload)
     {
         return $this->_getStream($payload, 'payload');
-    }
-
-    public function execute(Shell $shell)
-    {
-        $class_name = App::className($this->class, 'Worker', 'Worker');
-
-        if (!$class_name) {
-            $class_name = $this->class;
-        }
-
-        if (!class_exists($class_name)) {
-            throw new Exception("Worker class does not exists (" . $class_name . ")");
-        }
-
-        $job_worker = new $class_name();
-
-        $method = $this->method;
-        if (!method_exists($job_worker, $method)) {
-            throw new Exception(
-                "Method does not exists ({$class_name}::{$method})"
-            );
-        }
-
-        $event = $this->dispatchEvent('DelayedJobs.beforeJobExecute', [$this]);
-        if ($event->isStopped()) {
-            return $event->result;
-        }
-
-        $result = $job_worker->{$method}($this->payload, $this, $shell);
-
-        $this->dispatchEvent('DelayedJobs.afterJobExecute', [$this, $result]);
-
-        return $result;
-    }
-
-    public function queue()
-    {
-        if (Configure::read('dj.service.rabbit.disable') === true) {
-            return;
-        }
-
-        try {
-            $event = $this->dispatchEvent('DelayedJobs.beforeJobQueue', [$this]);
-            if ($event->isStopped()) {
-                return $event->result;
-            }
-
-            $manager = AmqpManager::instance();
-            $message = $manager->queueJob($this);
-
-            $this->dispatchEvent('DelayedJobs.afterJobQueue', [$this, $message]);
-
-            return true;
-        } catch (\Exception $e) {
-            Log::emergency(__('RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
-                $e->getMessage(), get_class($e), $this->id));
-
-            return false;
-        }
     }
 }

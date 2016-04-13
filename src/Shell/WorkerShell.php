@@ -2,6 +2,7 @@
 namespace DelayedJobs\Shell;
 
 use Cake\Cache\Cache;
+use Cake\Console\Exception\StopException;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\InvalidPrimaryKeyException;
@@ -10,7 +11,9 @@ use Cake\I18n\Number;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use DelayedJobs\Amqp\AmqpManager;
-use DelayedJobs\Model\Entity\DelayedJob;
+use DelayedJobs\DelayedJob\Manager;
+use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\WorkersTable;
 use DelayedJobs\Traits\DebugTrait;
@@ -133,17 +136,19 @@ class WorkerShell extends Shell
         $this->_amqpManager = new AmqpManager();
         $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->param('qos'));
 
-        $failure_count = 0;
+        $failureCount = 0;
 
         $this->_heartbeat();
 
-        while ($failure_count <= self::MAXFAIL) {
+        while ($failureCount <= self::MAXFAIL) {
             try {
                 $this->_mainLoop();
                 break;
+            } catch (StopException $e) {
+                throw $e;
             } catch (\Exception $e) {
                 Log::emergency('Delayed job error: ' . $e->getMessage());
-                $failure_count++;
+                $failureCount++;
             }
         }
 
@@ -160,9 +165,6 @@ class WorkerShell extends Shell
 
             $ran_job = $this->_amqpManager->wait(self::TIMEOUT);
             $this->_heartbeat($ran_job);
-
-            $this->out(sprintf('Memory usage: <info>%s</info>', Number::toReadableSize(memory_get_usage(true))), 1, Shell::VERBOSE);
-            $this->out(sprintf('Peak memory usage: <info>%s</info>', Number::toReadableSize(memory_get_peak_usage(true))), 1, Shell::VERBOSE);
         }
     }
 
@@ -206,17 +208,17 @@ class WorkerShell extends Shell
             $this->out('Got work');
         }
         $body = json_decode($message->body, true);
-        $job_id = $body['id'];
+        $jobId = $body['id'];
         try {
-            $job = $this->DelayedJobs->getJob($job_id, true);
-            $result = $this->_executeJob($job, $message);
-        } catch (RecordNotFoundException $e) {
+            $job = Manager::instance()->fetchJob($jobId);
+            $this->_executeJob($job, $message);
+        } catch (JobNotFoundException $e) {
             if (!isset($body['is-requeue'])) {
                 $this->out(__('<error>Job {0} does not exist in the DB - could be a transaction delay - we try once more!</error>',
-                    $job_id), 1, Shell::VERBOSE);
+                    $jobId), 1, Shell::VERBOSE);
 
                 //We do not want to cache the empty result
-                $cache_key = 'dj::' . Configure::read('dj.service.name') . '::' . $job_id;
+                $cache_key = 'dj::' . Configure::read('dj.service.name') . '::' . $jobId;
                 Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
                 Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
                 $this->_amqpManager->ack($message);
@@ -225,7 +227,7 @@ class WorkerShell extends Shell
                 return;
             }
             $this->out(__('<error>Job {0} does not exist in the DB!</error>',
-                $job_id), 1, Shell::VERBOSE);
+                $jobId), 1, Shell::VERBOSE);
 
             $this->_amqpManager->nack($message, false);
         } catch (InvalidPrimaryKeyException $e) {
@@ -246,7 +248,7 @@ class WorkerShell extends Shell
         pcntl_signal_dispatch();
     }
 
-    protected function _executeJob(DelayedJob $job, AMQPMessage $message)
+    protected function _executeJob(Job $job, AMQPMessage $message)
     {
         if ($this->_worker && ($this->_worker->status === WorkersTable::STATUS_SHUTDOWN ||
             $this->_worker->status === WorkersTable::STATUS_TO_KILL)) {
@@ -254,32 +256,27 @@ class WorkerShell extends Shell
             return false;
         }
 
-        cli_set_process_title(sprintf('DJ Worker :: %s :: Working %s', $this->_workerId, $job->id));
+        cli_set_process_title(sprintf('DJ Worker :: %s :: Working %s', $this->_workerId, $job->getId()));
 
-        $this->out(__('<success>Starting job:</success> {0} :: ', $job->id), 1, Shell::VERBOSE);
+        $this->out(__('<success>Starting job:</success> {0} :: ', $job->getId()), 1, Shell::VERBOSE);
 
-        if ($this->DelayedJobs->nextSequence($job)) {
-            $this->out(__(' - Sequence <comment>{0}</comment> is already busy', $job->sequence), 1, Shell::VERBOSE);
-            $this->dj_log(__('Sequence {0} is already busy', $job->sequence));
-            $this->_amqpManager->nack($message, false);
-            return false;
-        }
-
-        if ($job->status === DelayedJobsTable::STATUS_SUCCESS || $job->status === DelayedJobsTable::STATUS_BURRIED) {
+        if ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURRIED) {
             $this->out(__('Already processed'), 1, Shell::VERBOSE);
             $this->_amqpManager->ack($message);
             return true;
         }
 
-        $default = [
-            'max_execution_time' => 25 * 60
-        ];
-        $options = (array)$job->options + $default;
+        if ($job->getStatus() === Job::STATUS_BUSY) {
+            $this->out(__('Already being processed'), 1, Shell::VERBOSE);
+            $this->_amqpManager->ack($message);
 
-        $this->DelayedJobs->lock($job, $this->_hostName);
+            return true;
+        }
+
+        Manager::instance()->lock($job, $this->_hostName);
         $this->Worker->executeJob($job);
         $this->_amqpManager->ack($message);
-        $this->_lastJob = $job->id;
+        $this->_lastJob = $job->getId();
         $this->_jobCount++;
         $this->out('');
         unset($job);

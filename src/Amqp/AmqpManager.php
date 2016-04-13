@@ -7,7 +7,8 @@ use Cake\Core\Exception\Exception;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Network\Http\Client;
-use DelayedJobs\Model\Entity\DelayedJob;
+use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\MessageBrokerInterface;
 use DelayedJobs\Traits\DebugTrait;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
@@ -17,7 +18,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPAbstractCollection;
 use PhpAmqpLib\Wire\AMQPTable;
 
-class AmqpManager
+class AmqpManager implements MessageBrokerInterface
 {
     use DebugTrait;
 
@@ -131,15 +132,15 @@ class AmqpManager
         $channel->queue_bind($this->_serviceName . '-queue', $this->_serviceName . '-direct-exchange', $this->_serviceName);
     }
 
-    public function queueJob(DelayedJob $job)
+    public function publishJob(Job $job)
     {
         $channel = $this->_getChannel();
 
-        $delay = $job->run_at->isFuture() ? (new Time())->diffInSeconds($job->run_at, false) * 1000 : 0;
+        $delay = $job->getRunAt()->isFuture() ? (new Time())->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
         $args = [
             'delivery_mode' => 2,
-            'priority' => Configure::read('dj.service.rabbit.max_priority') - $job->priority,
+            'priority' => Configure::read('dj.service.rabbit.max_priority') - $job->getPriority(),
         ];
         if ($args['priority'] < 0) {
             $args['priority'] = 0;
@@ -150,11 +151,11 @@ class AmqpManager
             $args['application_headers'] = $headers;
         }
 
-        $message = new AMQPMessage(json_encode(['id' => $job->id]), $args);
+        $message = new AMQPMessage(json_encode(['id' => $job->getId()]), $args);
 
         $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
         $channel->basic_publish($message, $exchange, $this->_serviceName);
-        $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->id, $exchange, $this->_serviceName, $delay, $args['priority']));
+        $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->getId(), $exchange, $this->_serviceName, $delay, $args['priority']));
 
         $channel->wait_for_pending_acks();
 

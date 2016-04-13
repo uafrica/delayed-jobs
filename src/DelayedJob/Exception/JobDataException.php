@@ -1,6 +1,6 @@
 <?php
 
-namespace DelayedJobs\DelayedJobs\Exception;
+namespace DelayedJobs\DelayedJob\Exception;
 
 /**
  * Class JobDataException

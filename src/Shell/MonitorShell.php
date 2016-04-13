@@ -7,6 +7,7 @@ use Cake\Core\Configure;
 use Cake\I18n\Time;
 use Cake\Network\Http\Client;
 use DelayedJobs\Amqp\AmqpManager;
+use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
@@ -17,13 +18,13 @@ class MonitorShell extends Shell
 {
     const STATUS_MAP = [
         'waiting' => 'Waiting',
-        DelayedJobsTable::STATUS_NEW => 'New',
-        DelayedJobsTable::STATUS_BUSY => 'Busy',
-        DelayedJobsTable::STATUS_BURRIED => 'Buried',
-        DelayedJobsTable::STATUS_SUCCESS => 'Success',
-        DelayedJobsTable::STATUS_KICK => 'Kicked',
-        DelayedJobsTable::STATUS_FAILED => 'Failed',
-        DelayedJobsTable::STATUS_UNKNOWN => 'Unknown',
+        Job::STATUS_NEW => 'New',
+        Job::STATUS_BUSY => 'Busy',
+        Job::STATUS_BURRIED => 'Buried',
+        Job::STATUS_SUCCESS => 'Success',
+        Job::STATUS_KICK => 'Kicked',
+        Job::STATUS_FAILED => 'Failed',
+        Job::STATUS_UNKNOWN => 'Unknown',
     ];
 
     public $modelClass = 'DelayedJobs.Workers';
@@ -37,7 +38,7 @@ class MonitorShell extends Shell
 
         $statuses = $this->DelayedJobs->statusStats();
         $created_rate = $this->DelayedJobs->jobRates('created');
-        $completed_rate = $this->DelayedJobs->jobRates('end_time', DelayedJobsTable::STATUS_SUCCESS);
+        $completed_rate = $this->DelayedJobs->jobRates('end_time', Job::STATUS_SUCCESS);
         $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
         $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
 
@@ -73,7 +74,7 @@ class MonitorShell extends Shell
 
         $statuses = $this->DelayedJobs->statusStats();
         $created_rate = $this->DelayedJobs->jobRates('created');
-        $completed_rate = $this->DelayedJobs->jobRates('end_time', DelayedJobsTable::STATUS_SUCCESS);
+        $completed_rate = $this->DelayedJobs->jobRates('end_time', Job::STATUS_SUCCESS);
         $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
         $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
 
@@ -195,27 +196,27 @@ class MonitorShell extends Shell
     protected function _historicJobs()
     {
         $last_completed = $this->DelayedJobs->find()
-            ->select(['id', 'last_message', 'end_time', 'class', 'method', 'end_time', 'duration'])
+            ->select(['id', 'last_message', 'end_time', 'worker',  'end_time', 'duration'])
             ->where([
-                'status' => DelayedJobsTable::STATUS_SUCCESS
+                'status' => Job::STATUS_SUCCESS
             ])
             ->order([
                 'end_time' => 'DESC'
             ])
             ->first();
         $last_failed = $this->DelayedJobs->find()
-            ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
+            ->select(['id', 'last_message', 'failed_at', 'worker'])
             ->where([
-                'status' => DelayedJobsTable::STATUS_FAILED
+                'status' => Job::STATUS_FAILED
             ])
             ->order([
                 'failed_at' => 'DESC'
             ])
             ->first();
         $last_buried = $this->DelayedJobs->find()
-            ->select(['id', 'last_message', 'failed_at', 'class', 'method'])
+            ->select(['id', 'last_message', 'failed_at', 'worker'])
             ->where([
-                'status' => DelayedJobsTable::STATUS_BURRIED
+                'status' => Job::STATUS_BURRIED
             ])
             ->order([
                 'failed_at' => 'DESC'
@@ -224,18 +225,18 @@ class MonitorShell extends Shell
 
         $output = [];
         if (!empty($last_completed)) {
-            $output[] = __('Last completed: <info>{0}</info> (<comment>{1}::{2}</comment>) @ <info>{3}</info> :: <info>{4}</info> seconds',
-                $last_completed->id, $last_completed->class, $last_completed->method,
+            $output[] = __('Last completed: <info>{0}</info> (<comment>{1}</comment>) @ <info>{2}</info> :: <info>{3}</info> seconds',
+                $last_completed->id, $last_completed->worker,
                 $last_completed->end_time->i18nFormat(), round($last_completed->duration / 1000, 2));
         }
         if (!empty($last_failed)) {
-            $output[] = __('Last failed: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>',
-                $last_failed->id, $last_failed->class, $last_failed->method, $last_failed->last_message,
+            $output[] = __('Last failed: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>',
+                $last_failed->id, $last_failed->worker, $last_failed->last_message,
                 $last_failed->failed_at->i18nFormat());
         }
         if (!empty($last_buried)) {
-            $output[] = __('Last burried: <info>{0}</info> (<comment>{1}::{2}</comment>) :: <info>{3}</info> @ <info>{4}</info>>',
-                $last_buried->id, $last_buried->class, $last_buried->method, $last_buried->last_message,
+            $output[] = __('Last burried: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>>',
+                $last_buried->id, $last_buried->worker, $last_buried->last_message,
                 $last_buried->failed_at->i18nFormat());
         }
         if (empty($output)) {
@@ -261,12 +262,11 @@ class MonitorShell extends Shell
                 'id',
                 'group',
                 'host_name',
-                'class',
-                'method',
+                'worker',
                 'start_time'
             ])
             ->where([
-                'status' => DelayedJobsTable::STATUS_BUSY
+                'status' => Job::STATUS_BUSY
             ])
             ->order([
                 'start_time' => 'ASC'
@@ -275,13 +275,13 @@ class MonitorShell extends Shell
         $this->hr();
         $this->out('Running jobs');
         $data = [
-            ['Id', 'Host', 'Method', 'Run time']
+            ['Id', 'Host',  'Run time']
         ];
         foreach ($running_jobs as $running_job) {
             $row = [
                 $running_job->id,
                 $running_job->host_name,
-                $running_job->class . '::' . $running_job->method,
+                $running_job->worker,
                 $running_job->start_time->diffInSeconds()
             ];
             $data[] = $row;

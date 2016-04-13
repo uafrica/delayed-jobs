@@ -4,7 +4,9 @@ namespace DelayedJobs\Shell;
 use Cake\Console\Shell;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
-use DelayedJobs\Lock;
+use DelayedJobs\DelayedJob\EnqueueTrait;
+use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\Manager;
 
 /**
  * Class TestShell
@@ -13,7 +15,8 @@ use DelayedJobs\Lock;
  */
 class TestShell extends Shell
 {
-    public $Lock;
+    use EnqueueTrait;
+    
     public $modelClass = 'DelayedJobs.DelayedJobs';
 
     /**
@@ -22,75 +25,44 @@ class TestShell extends Shell
      */
     public function main()
     {
-        $this->Lock = new Lock();
-        if (!$this->Lock->lock('DelayedJobs.TestShell.main')) {
-            $this->_stop(1);
-        }
-
         $this->out('<info>Started up</info>', 1, Shell::VERBOSE);
 
-        //** Loading Job that will succeed */
-        $dj_data = [
-            'group' => 'DelayedJobs.Tester',
-            'class' => 'DelayedJobs\Model\Table\DelayedJobsTable',
-            'method' => 'tester',
-            'payload' => ["success" => true],
-            'priority' => 1,
-            'options' => ['max_retries' => 1],
-        ];
-        $job_event = new Event('DelayedJob.queue', $dj_data);
-        EventManager::instance()->dispatch($job_event);
+        $job = $this->enqueue('DelayedJobs.Test', ['type' => 'success']);
 
-        $result = $job_event->result;
-
-        $job_id = $result->id;
-
-        if (!$result) {
+        if (!$job) {
             throw new \Exception("Success Job could not be loaded");
         }
 
         $this->out(
-            '<success>Loaded Successful Job: Waiting 15 seconds to check if it was successfull</success>',
+            '<success>Loaded Successful Job: Waiting 15 seconds to check if it was successful</success>',
             1,
             Shell::VERBOSE
         );
 
         sleep(10);
 
-        $job = $this->DelayedJobs->get($job_id);
+        $job = Manager::instance()->fetchJob($job->getId());
 
-        if ($job->status != 4) {
-            throw new \Exception("Successful job was not successfull");
+        if ($job->getStatus() !== Job::STATUS_SUCCESS) {
+            throw new \Exception("Successful job was not successful");
         }
 
         $this->out('<success>Test Success</success>', 1, Shell::VERBOSE);
 
         //** Loading Job that will fail */
-        $dj_data = [
-            'group' => 'DelayedJobs.Tester',
-            'class' => 'DelayedJobs\Model\Table\DelayedJobsTable',
-            'method' => 'tester',
-            'payload' => ["success" => false],
-            'priority' => 1,
-            'options' => ['max_retries' => 1],
-        ];
-        $job_event = new Event('DelayedJob.queue', $dj_data);
-        EventManager::instance()->dispatch($job_event);
+        $job = $this->enqueue('DelayedJobs.Test', ['type' => 'fail'], ['maxRetries' => 1]);
 
-        $result = $job_event->result;
-        if (!$result) {
+        if (!$job) {
             throw new \Exception("Failed Job could not be loaded");
         }
-
-        $job_id = $result->id;
 
         $this->out('<success>Loaded Failed Job: Waiting 15 seconds to check if it failed</success>', 1, Shell::VERBOSE);
 
         sleep(10);
 
-        $job = $this->DelayedJobs->get($job_id);
+        $job = Manager::instance()->fetchJob($job->getId());
 
-        if ($job->status != 6) {
+        if ($job->getStatus() !== Job::STATUS_BURRIED) {
             throw new \Exception("Failed Job did not fail");
         }
 
@@ -100,6 +72,4 @@ class TestShell extends Shell
 
         return true;
     }
-
-
 }

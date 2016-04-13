@@ -4,6 +4,8 @@ namespace DelayedJobs\Controller;
 
 use App\Controller\AppController;
 use Cake\I18n\Time;
+use DelayedJobs\DelayedJob\DelayedJobInterface;
+use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
@@ -11,8 +13,9 @@ use DelayedJobs\Model\Table\DelayedJobsTable;
  * @package DelayedJobs\Controller
  * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  */
-class DelayedJobsController extends AppController
+class DelayedJobsController extends AppController 
 {
+    use EnqueueTrait;
 
     /**
      * @return void
@@ -82,19 +85,12 @@ class DelayedJobsController extends AppController
         $number_jobs = $this->request->query('count') ?: 1;
 
         for ($i = 0; $i < $number_jobs; $i++) {
-            $delayed_job = $this->DelayedJobs->newEntity([
-                'group' => 'test',
-                'class' => 'DelayedJobs\\Worker\\TestWorker',
-                'method' => 'test',
-                'payload' => [
-                    'type' => $this->request->query('type') ?: 'success'
-                ],
-                'options' => [],
+            $this->enqueue('DelayedJobs.Test', [
+                'type' => $this->request->query('type') ?: 'success'
+            ], [
                 'priority' => rand(1, 9) * 10 + 100,
-                'run_at' => new Time('+10 seconds'),
-                'status' => DelayedJobsTable::STATUS_NEW,
+                'run_at' => new Time('+10 seconds')
             ]);
-            $this->DelayedJobs->save($delayed_job);
         }
 
         return $this->redirect([

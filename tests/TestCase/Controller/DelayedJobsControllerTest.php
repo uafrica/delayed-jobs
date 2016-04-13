@@ -2,7 +2,7 @@
 namespace DelayedJobs\Test\TestCase\Controller;
 
 use Cake\ORM\TableRegistry;
-use Crud\TestSuite\IntegrationTestCase;
+use Cake\TestSuite\IntegrationTestCase;
 use DelayedJobs\Model\Table\DelayedJobsTable;
 use Fabricate\Fabricate;
 
