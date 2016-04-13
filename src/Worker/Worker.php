@@ -2,15 +2,18 @@
 namespace DelayedJobs\Worker;
 
 use Cake\Datasource\ModelAwareTrait;
+use Cake\Event\EventDispatcherInterface;
+use Cake\Event\EventDispatcherTrait;
 use DelayedJobs\DelayedJob\DelayedJobInterface;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 
 /**
  * Class BaseWorker
  */
-abstract class BaseWorker implements JobWorkerInterface
+abstract class Worker implements JobWorkerInterface, EventDispatcherInterface
 {
     use EnqueueTrait;
+    use EventDispatcherTrait;
     use ModelAwareTrait;
 
     /**
