@@ -4,6 +4,7 @@ namespace DelayedJobs\Database\Type;
 
 use Cake\Database\Driver;
 use Cake\Database\Type;
+use Cake\Log\Log;
 use PDO;
 
 /**
@@ -25,7 +26,13 @@ class SerializeType extends Type
             return null;
         }
 
-        return unserialize($value);
+        $unserialized = unserialize($value);
+        if ($unserialized === false) {
+            Log::error(__('Could not unserialize payload:'));
+            Log::error($value);
+            $unserialized = [];
+        }
+        return $unserialized;
     }
 
     /**

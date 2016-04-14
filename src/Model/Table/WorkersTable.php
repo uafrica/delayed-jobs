@@ -29,7 +29,6 @@ class WorkersTable extends Table
         parent::initialize($config);
     }
 
-
     public function validationDefault(Validator $validator)
     {
         $validator
