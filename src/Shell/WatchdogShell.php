@@ -424,9 +424,9 @@ class WatchdogShell extends Shell
             $this->out(__(' - Queing job <info>{0}</info>', $job->id), 0, Shell::VERBOSE);
             $job = new Job($job->toArray());
             if (Manager::instance()->enqueue($job)) {
-                $this->out(' <success>√</success>'), 1, Shell::VERBOSE);
+                $this->out(' <success>√</success>', 1, Shell::VERBOSE);
             } else {
-                $this->out(' <error>X</error>'), 1, Shell::VERBOSE);
+                $this->out(' <error>X</error>', 1, Shell::VERBOSE);
             }
         }
     }
