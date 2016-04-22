@@ -391,13 +391,6 @@ class WatchdogShell extends Shell
         $this->loadModel('DelayedJobs.DelayedJobs');
         $sequences = $this->DelayedJobs->find()
             ->distinct(['sequence'])
-            ->select([
-                'id',
-                'status',
-                'priority',
-                'sequence',
-                'run_at'
-            ])
             ->where([
                 'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
                 'sequence is not' => null
@@ -409,13 +402,6 @@ class WatchdogShell extends Shell
             ->all();
 
         $no_sequences = $this->DelayedJobs->find()
-            ->select([
-                'id',
-                'status',
-                'priority',
-                'sequence',
-                'run_at'
-            ])
             ->where([
                 'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
                 'sequence is' => null
