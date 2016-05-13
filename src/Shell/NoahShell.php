@@ -2,10 +2,10 @@
 
 namespace DelayedJobs\Shell;
 
-use Cake\Console\Shell;
+use App\Shell\AppShell;
 use DelayedJobs\Traits\QueueJobTrait;
 
-class NoahShell extends Shell
+class NoahShell extends AppShell
 {
     use QueueJobTrait;
 

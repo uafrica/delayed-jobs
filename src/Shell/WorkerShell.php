@@ -1,6 +1,7 @@
 <?php
 namespace DelayedJobs\Shell;
 
+use App\Shell\AppShell;
 use Cake\Cache\Cache;
 use Cake\Console\Exception\StopException;
 use Cake\Console\Shell;
@@ -25,7 +26,7 @@ use PhpAmqpLib\Message\AMQPMessage;
  * @property \DelayedJobs\Shell\Task\WorkerTask $Worker
  * @property \DelayedJobs\Shell\Task\ProcessManagerTask $ProcessManager
  */
-class WorkerShell extends Shell
+class WorkerShell extends AppShell
 {
     use DebugTrait;
 

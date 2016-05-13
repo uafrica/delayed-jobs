@@ -2,6 +2,7 @@
 
 namespace DelayedJobs\Shell;
 
+use App\Shell\AppShell;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
@@ -24,7 +25,7 @@ use DelayedJobs\Process;
  * @property \DelayedJobs\Model\Table\WorkersTable $Workers
  * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  */
-class WatchdogShell extends Shell
+class WatchdogShell extends AppShell
 {
     use EnqueueTrait;
 

@@ -2,7 +2,7 @@
 
 namespace DelayedJobs\Shell;
 
-use Cake\Console\Shell;
+use App\Shell\AppShell;
 use Cake\Core\Configure;
 use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\DelayedJob\Job;
@@ -11,7 +11,7 @@ use DelayedJobs\DelayedJob\Job;
  * Class MonitorShell
  * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  */
-class MonitorShell extends Shell
+class MonitorShell extends AppShell
 {
     const STATUS_MAP = [
         'waiting' => 'Waiting',

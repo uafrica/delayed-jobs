@@ -1,6 +1,7 @@
 <?php
 namespace DelayedJobs\Shell;
 
+use App\Shell\AppShell;
 use Cake\Console\Shell;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
@@ -11,7 +12,7 @@ use DelayedJobs\DelayedJob\Manager;
  * @package DelayedJobs\Shell
  * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  */
-class TestShell extends Shell
+class TestShell extends AppShell
 {
     use EnqueueTrait;
     
