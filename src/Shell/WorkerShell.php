@@ -59,6 +59,7 @@ class WorkerShell extends AppShell
     public function startup()
     {
         if ($this->command !== 'main') {
+            parent::startup();
             return;
         }
         $this->loadModel('DelayedJobs.Workers');

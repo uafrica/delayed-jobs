@@ -253,10 +253,10 @@ class Manager implements EventDispatcherInterface, ManagerInterface
         } catch (NonRetryableException $exc) {
             //Special case where something failed, but we still want to treat it as a 'success'.
             $result = $exc->getMessage();
+        } finally {
+            $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result]);
         }
-
-        $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result]);
-
+        
         return $event->result ? $event->result : $result;
     }
 
