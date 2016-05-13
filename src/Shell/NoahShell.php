@@ -3,7 +3,6 @@
 namespace DelayedJobs\Shell;
 
 use Cake\Console\Shell;
-use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Traits\QueueJobTrait;
 
 class NoahShell extends Shell

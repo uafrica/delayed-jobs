@@ -15,7 +15,6 @@ use DelayedJobs\DelayedJob\Manager;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Entity\Worker;
-use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Model\Table\WorkersTable;
 use DelayedJobs\Process;
 

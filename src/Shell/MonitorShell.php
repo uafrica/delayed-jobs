@@ -4,11 +4,8 @@ namespace DelayedJobs\Shell;
 
 use Cake\Console\Shell;
 use Cake\Core\Configure;
-use Cake\I18n\Time;
-use Cake\Network\Http\Client;
 use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
  * Class MonitorShell

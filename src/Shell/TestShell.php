@@ -2,8 +2,6 @@
 namespace DelayedJobs\Shell;
 
 use Cake\Console\Shell;
-use Cake\Event\Event;
-use Cake\Event\EventManager;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\Manager;
