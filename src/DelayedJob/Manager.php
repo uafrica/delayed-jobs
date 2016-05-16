@@ -245,6 +245,8 @@ class Manager implements EventDispatcherInterface, ManagerInterface
             return $event->result;
         }
 
+        $event = null;
+        $result = false;
         try {
             if ($shell) {
                 $shell->out('  :: Worker execution starting now', 1, Shell::VERBOSE);
