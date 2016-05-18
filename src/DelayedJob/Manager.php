@@ -247,6 +247,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
 
         $event = null;
         $result = false;
+        $start = microtime(true);
         try {
             if ($shell) {
                 $shell->out('  :: Worker execution starting now', 1, Shell::VERBOSE);
@@ -256,9 +257,10 @@ class Manager implements EventDispatcherInterface, ManagerInterface
             //Special case where something failed, but we still want to treat it as a 'success'.
             $result = $exc->getMessage();
         } finally {
-            $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result]);
+            $duration = round((microtime(true) - $start) * 1000);
+            $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result, $duration]);
         }
-        
+
         return $event->result ? $event->result : $result;
     }
 
