@@ -263,6 +263,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 'run_at'
             ])
             ->where([
+                'id !=' => $job->getId(),
                 'status' => Job::STATUS_NEW,
                 'sequence' => $job->getSequence(),
             ])
