@@ -135,10 +135,15 @@ class Manager implements EventDispatcherInterface, ManagerInterface
 
         $status = ($burryJob === true || $job->getRetries() >= $maxRetries) ? Job::STATUS_BURRIED : Job::STATUS_FAILED;
 
-        $growthFactor = 5 + $job->getRetries() ** 4;
+        $jobRetries = $job->getRetries();
+        if (Configure::check('dj.retryTimes.' . $jobRetries)) {
+            $growthFactor = Configure::read('dj.retryTimes.' . $jobRetries);
+        } else {
+            $growthFactor = 5 + $job->getRetries() ** 4;
+        }
 
-        $growthFactorRandom = mt_rand(0, 100) % 2 ? -1 : +1;
-        $growthFactorRandom = $growthFactorRandom * ceil(\log($growthFactor + mt_rand(0, $growthFactor)));
+        $growthFactorRandom = mt_rand(1, 2) === 2 ? -1 : +1;
+        $growthFactorRandom = $growthFactorRandom * ceil(\log($growthFactor + mt_rand($growthFactor / 2, $growthFactor)));
 
         $growthFactor += $growthFactorRandom;
 

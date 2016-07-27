@@ -34,6 +34,12 @@ class DelayedJobsController extends AppController
         if (!$this->components()->has('Flash')) {
             $this->loadComponent('Flash');
         }
+
+        $this->paginate = [
+            'order' => [
+                'id desc'
+            ],
+        ];
     }
 
     /**

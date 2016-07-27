@@ -204,7 +204,7 @@ class Job
      */
     public function getMaxRetries()
     {
-        return $this->_maxRetries !== null ? $this->_maxRetries : Configure::read('dj.max.retries');
+        return $this->_maxRetries !== null ? $this->_maxRetries : Configure::read('dj.default.retries');
     }
 
     /**
@@ -213,7 +213,7 @@ class Job
      */
     public function setMaxRetries($maxRetries)
     {
-        $this->_maxRetries = $maxRetries;
+        $this->_maxRetries = min($maxRetries, Configure::read('dj.max.retries'));
 
         return $this;
     }
