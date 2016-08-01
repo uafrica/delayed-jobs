@@ -65,7 +65,7 @@ class WatchdogShell extends AppShell
     public function main()
     {
         if (file_exists(TMP . '/lockWatchdog')) {
-            $this->out('Lock file exists, quiting', 1, Shell::VERBOSE);
+            $this->out('Lock file exists, quiting');
             $this->_stop();
         }
 
