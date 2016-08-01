@@ -17,6 +17,14 @@ interface ManagerInterface
     public function enqueue(Job $job);
 
     /**
+     * Enqueues a batch of jobs
+     *
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs Array of jobs to enqueue
+     * @return bool
+     */
+    public function enqueueBatch(array $jobs);
+
+    /**
      * @param \DelayedJobs\DelayedJob\Job $job Job that failed
      * @param string $message Message to store with the jbo
      * @param bool $burryJob Should the job be burried

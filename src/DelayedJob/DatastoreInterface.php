@@ -13,6 +13,8 @@ interface DatastoreInterface
      */
     public function persistJob(Job $job);
 
+    public function persistJobs(array $jobs);
+
     /**
      * @param int $jobId The job to get
      * @return \DelayedJobs\DelayedJob\Job|null

@@ -231,6 +231,56 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         return $job;
     }
 
+    public function persistJobs(array $jobs)
+    {
+        $query = $this->query()
+            ->insert([
+                'worker',
+                'group',
+                'priority',
+                'payload',
+                'options',
+                'sequence',
+                'run_at',
+                'status',
+                'failed_at',
+                'last_message',
+                'start_time',
+                'end_time',
+                'duration',
+                'max_retries',
+                'retries',
+            ]);
+
+        $batchData = [];
+        foreach ($jobs as $job) {
+            $jobData = $job->getData();
+            unset($jobData['id']);
+            $query->values($jobData);
+        }
+
+        $connection = $this->connection();
+        $quote = $connection
+            ->driver()
+            ->autoQuoting();
+        $connection
+            ->driver()
+            ->autoQuoting(true);
+        $connection->transactional(function () use ($query, &$jobs) {
+            $statement = $query->execute();
+            $firstId = $statement->lastInsertId($this->table(), 'id');
+            foreach ($jobs as $job) {
+                $job->setId($firstId++);
+            }
+
+            return true;
+        });
+
+        $connection->driver()
+            ->autoQuoting($quote);
+        return true;
+    }
+
     public function fetchJob($jobId)
     {
         $job_entity = $this->find()

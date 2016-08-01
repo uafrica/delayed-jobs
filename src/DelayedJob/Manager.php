@@ -122,6 +122,37 @@ class Manager implements EventDispatcherInterface, ManagerInterface
         return false;
     }
 
+    public function enqueueBatch(array $jobs)
+    {
+        if (!$this->getDatastore()->persistJobs($jobs) ) {
+            throw new EnqueueException('Job batch could not be persisted');
+        }
+
+        $sequenceMap = [];
+
+        collection($jobs)
+            ->filter(function (Job $job) use (&$sequenceMap) {
+                $jobSequence = $job->getSequence();
+                if (!$jobSequence) {
+                    return true;
+                }
+
+                if (isset($sequenceMap[$jobSequence])) {
+                    return false;
+                }
+
+                $currentlySequenced = $this->getDatastore() ->currentlySequenced($job);
+                $sequenceMap[$jobSequence] = $currentlySequenced;
+
+                return !$currentlySequenced;
+            })
+            ->each(function (Job $job) {
+                $this->_pushToBroker($job);
+            });
+
+        return true;
+    }
+
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job that failed
      * @param string $message Message to store with the jbo
