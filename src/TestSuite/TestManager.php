@@ -44,6 +44,15 @@ class TestManager implements ManagerInterface
         return $job;
     }
 
+    public function enqueueBatch(array $jobs)
+    {
+        foreach ($jobs as $job) {
+            $this->enqueue($job);
+        }
+
+        return $jobs;
+    }
+
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job that failed
      * @param string $message Message to store with the jbo
