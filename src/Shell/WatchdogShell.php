@@ -77,9 +77,6 @@ class WatchdogShell extends AppShell
             $this->stopWorkers();
         }
 
-        $this->recurring();
-        $this->clean();
-
         $this->out('<success>!! All done !!</success>');
     }
 
