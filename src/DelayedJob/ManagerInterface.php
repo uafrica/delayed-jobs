@@ -38,7 +38,7 @@ interface ManagerInterface
      * @param int $duration How long execution took
      * @return \DelayedJobs\DelayedJob\Job|bool
      */
-    public function completed(Job $job, $message = null, $duration = 0);
+    public function completed(Job $job, $result = null, $duration = 0);
 
     /**
      * Gets the Job instance for a specific job

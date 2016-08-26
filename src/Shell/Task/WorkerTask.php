@@ -66,59 +66,22 @@ class WorkerTask extends Shell
 
         $start = microtime(true);
         try {
-            $response = Manager::instance()
-                ->execute($job, $this);
+            $response = Manager::instance()->execute($job, $this);
 
             $this->dj_log(__('Done with: {0}', $job->getId()));
 
-            $duration = round((microtime(true) - $start) * 1000);
-            if (Manager::instance()
-                ->completed($job, is_string($response) ? $response : null, $duration)
-            ) {
-                $this->dj_log(__('Marked as completed: {0}', $job->getId()));
-            } else {
-                $this->dj_log(__('Not marked as completed: {0}', $job->getId()));
-            }
-
-            $this->out(sprintf('<success> - Execution complete</success> :: <info>%s</info>', $response), 1,
-                Shell::VERBOSE);
-
-            //Recuring job
-            if ($response instanceof \DateTime && !Manager::instance()->isSimilarJob($job)) {
-                $recuringJob = clone $job;
-                $recuringJob->setData([
-                    'runAt' => $response,
-                    'status' => Job::STATUS_NEW,
-                    'retries' => 0,
-                    'lastMessage' => null,
-                    'failedAt' => null,
-                    'lockedBy' => null,
-                    'startTime' => null,
-                    'endTime' => null,
-                    'duration' => null,
-                    'id' => null
-                ]);
-                Manager::instance()->enqueue($recuringJob);
-            }
-        } catch (\Error $error) {
-            //## Job Failed badly
-            $this->_failJob($job, $error, true);
-
-            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->getId(), $error->getMessage(), $error->getTraceAsString()));
-        } catch (\Exception $exc) {
-            //## Job Failed
-            $this->_failJob($job, $exc, false);
+            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response), 1, Shell::VERBOSE);
+        } catch (\Throwable $e) {
+            $this->_failedJob($job, $e);
         } finally {
             $end = microtime(true);
             $this->out(sprintf(' - Took: %.2f seconds', $end - $start), 1, Shell::VERBOSE);
         }
     }
 
-    protected function _failJob(Job $job, $exc, $hardFail = false)
+    protected function _failedJob(Job $job, $exc)
     {
-        Manager::instance()->failed($job, $exc->getMessage(), $hardFail);
-        $this->out(sprintf('<error> - Execution completed</error> :: <info>%s</info>', $exc->getMessage()), 1,
-            Shell::VERBOSE);
+        $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
         $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
 
         $this->dj_log(__('Failed {0} because {1}', $job->getId(), $exc->getMessage()));

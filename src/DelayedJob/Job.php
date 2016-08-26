@@ -272,7 +272,7 @@ class Job
      */
     public function getPriority()
     {
-        return $this->_priority;
+        return $this->_priority ?? 1;
     }
 
     /**
@@ -423,11 +423,15 @@ class Job
     }
 
     /**
-     * @param string $lastMessage
+     * @param string|\Throwable $lastMessage
      * @return $this
      */
     public function setLastMessage($lastMessage)
     {
+        if ($lastMessage instanceof \Throwable) {
+            $lastMessage = $lastMessage->getMessage();
+        }
+
         $this->_lastMessage = $lastMessage;
 
         return $this;

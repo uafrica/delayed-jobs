@@ -141,7 +141,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
                     return false;
                 }
 
-                $currentlySequenced = $this->getDatastore() ->currentlySequenced($job);
+                $currentlySequenced = $this->getDatastore()->currentlySequenced($job);
                 $sequenceMap[$jobSequence] = $currentlySequenced;
 
                 return !$currentlySequenced;
@@ -155,7 +155,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job that failed
-     * @param string $message Message to store with the jbo
+     * @param string|\Throwable $message Message to store with the jbo
      * @param bool $burryJob Should the job be burried
      * @return bool|\DelayedJobs\DelayedJob\Job
      */
@@ -184,26 +184,28 @@ class Manager implements EventDispatcherInterface, ManagerInterface
             ->setTimeFailed(new Time());
 
         if ($job->getStatus() === Job::STATUS_FAILED) {
-            return $this->enqueue($job);
+            $this->enqueue($job);
         } elseif ($job->getSequence() !== null) {
             $this->enqueueNextSequence($job);
         } else {
             $this->_persistToDatastore($job);
         }
 
+        $this->dispatchEvent('DelayedJob.jobFailed', [$job, $message]);
+
         return $job;
     }
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job that has been completed
-     * @param string|null $message Message to store with job
+     * @param string|null|\Cake\I18n\Time $result Message to store with job
      * @param int $duration How long execution took
      * @return \DelayedJobs\DelayedJob\Job|bool
      */
-    public function completed(Job $job, $message = null, $duration = 0)
+    public function completed(Job $job, $result = null, $duration = 0)
     {
-        if ($message) {
-            $job->setLastMessage($message);
+        if (is_string($result)) {
+            $job->setLastMessage($result);
         }
         $job
             ->setStatus(Job::STATUS_SUCCESS)
@@ -216,7 +218,38 @@ class Manager implements EventDispatcherInterface, ManagerInterface
             $this->_persistToDatastore($job);
         }
 
+        $event = $this->dispatchEvent('DelayedJob.jobCompleted', [$job, $result]);
+
+        $this->_enqueueFollowup($job, $event->result ? $event->result : $result);
+
         return $job;
+    }
+
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param $result
+     * @return void
+     */
+    protected function _enqueueFollowup(Job $job, $result)
+    {
+        //Recuring job
+        if ($result instanceof \DateTime && !$this->isSimilarJob($job)
+        ) {
+            $recuringJob = clone $job;
+            $recuringJob->setData([
+                'runAt' => $result,
+                'status' => Job::STATUS_NEW,
+                'retries' => 0,
+                'lastMessage' => null,
+                'failedAt' => null,
+                'lockedBy' => null,
+                'startTime' => null,
+                'endTime' => null,
+                'duration' => null,
+                'id' => null
+            ]);
+            $this->enqueue($recuringJob);
+        }
     }
 
     /**
@@ -289,15 +322,33 @@ class Manager implements EventDispatcherInterface, ManagerInterface
                 $shell->out('  :: Worker execution starting now', 1, Shell::VERBOSE);
             }
             $result = $jobWorker($job);
+
+            $duration = round((microtime(true) - $start) * 1000);
+            $this->completed($job, $result, $duration);
         } catch (NonRetryableException $exc) {
             //Special case where something failed, but we still want to treat it as a 'success'.
             $result = $exc->getMessage();
+        } catch (\Error $error) {
+            //## Job Failed badly
+            $result = $error;
+            $this->failed($job, $error, true);
+            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->getId(), $error->getMessage(), $error->getTraceAsString()));
+        } catch (\Exception $exc) {
+            //## Job Failed
+            $result = $exc;
+            $this->failed($job, $exc, false);
         } finally {
-            $duration = round((microtime(true) - $start) * 1000);
+            $duration = $duration ?? round((microtime(true) - $start) * 1000);
             $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result, $duration]);
         }
 
-        return $event->result ? $event->result : $result;
+        $result = $event->result ? $event->result : $result;
+
+        if ($result instanceof \Throwable) {
+            throw $result;
+        }
+
+        return $result;
     }
 
     public function enqueueNextSequence(Job $job)
