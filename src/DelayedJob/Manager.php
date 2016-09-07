@@ -15,6 +15,7 @@ use DelayedJobs\Amqp\AmqpManager;
 use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Exception\JobExecuteException;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
+use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Worker\JobWorkerInterface;
 
 /**
@@ -325,9 +326,6 @@ class Manager implements EventDispatcherInterface, ManagerInterface
 
             $duration = round((microtime(true) - $start) * 1000);
             $this->completed($job, $result, $duration);
-        } catch (NonRetryableException $exc) {
-            //Special case where something failed, but we still want to treat it as a 'success'.
-            $result = $exc->getMessage();
         } catch (\Error $error) {
             //## Job Failed badly
             $result = $error;
@@ -336,7 +334,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
         } catch (\Exception $exc) {
             //## Job Failed
             $result = $exc;
-            $this->failed($job, $exc, false);
+            $this->failed($job, $exc, $exc instanceof NonRetryableException);
         } finally {
             $duration = $duration ?? round((microtime(true) - $start) * 1000);
             $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result, $duration]);
