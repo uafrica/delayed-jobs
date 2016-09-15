@@ -250,12 +250,16 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 'duration',
                 'max_retries',
                 'retries',
+                'created',
+                'modified',
             ]);
 
         $batchData = [];
         foreach ($jobs as $job) {
             $jobData = $job->getData();
             unset($jobData['id']);
+            $jobData['created'] = date('Y-m-d H:i:s');
+            $jobData['modified'] = date('Y-m-d H:i:s');
             $query->values($jobData);
         }
 
