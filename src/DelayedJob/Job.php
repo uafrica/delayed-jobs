@@ -6,6 +6,7 @@ use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
+use Cake\I18n\FrozenTime;
 use Cake\I18n\Time;
 use Cake\Utility\Hash;
 use Cake\Utility\Inflector;
@@ -95,6 +96,10 @@ class Job
      * @var string
      */
     protected $_hostName;
+    /**
+     * @var array
+     */
+    protected $_history = [];
 
     /**
      * Job constructor.
@@ -130,6 +135,7 @@ class Job
             'duration' => $this->getDuration(),
             'max_retries' => $this->getMaxRetries(),
             'retries' => $this->getRetries(),
+            'history' => $this->getHistory(),
         ];
     }
 
@@ -509,6 +515,45 @@ class Job
     public function setHostName($hostName)
     {
         $this->_hostName = $hostName;
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getHistory()
+    {
+        return $this->_history;
+    }
+
+    /**
+     * @param array $history
+     * @return $this
+     */
+    public function setHistory($history)
+    {
+        $this->_history = (array)$history;
+
+        return $this;
+    }
+
+    /**
+     * Adds a history item
+     *
+     * @param string $message The message
+     * @return $this
+     */
+    public function addHistory($message = '')
+    {
+        if ($message instanceof \Throwable) {
+            $message = $message->getMessage();
+        }
+
+        array_push($this->_history, [
+            'timestamp' => new FrozenTime(),
+            'message' => $message ?: ''
+        ]);
 
         return $this;
     }
