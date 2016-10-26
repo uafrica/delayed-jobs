@@ -294,6 +294,11 @@ class WorkerShell extends AppShell
         ->addOption('qos', [
             'help' => 'Sets the QOS value for AMQP',
             'default' => 1
+        ])
+        ->addOption('debug', [
+            'help' => 'Debug mode, will quit on error',
+            'boolean' => true,
+            'default' => false
         ]);
         return $options;
     }

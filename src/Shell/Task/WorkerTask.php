@@ -81,6 +81,10 @@ class WorkerTask extends Shell
 
     protected function _failedJob(Job $job, $exc)
     {
+        if ($this->param('debug')) {
+            throw $exc;
+        }
+
         $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
         $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
 

@@ -331,10 +331,18 @@ class Manager implements EventDispatcherInterface, ManagerInterface
             $result = $error;
             $this->failed($job, $error, true);
             Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->getId(), $error->getMessage(), $error->getTraceAsString()));
+
+            if ($shell->param('debug')) {
+                throw $error;
+            }
         } catch (\Exception $exc) {
             //## Job Failed
             $result = $exc;
             $this->failed($job, $exc, $exc instanceof NonRetryableException);
+
+            if ($shell->param('debug')) {
+                throw $exc;
+            }
         } finally {
             $duration = $duration ?? round((microtime(true) - $start) * 1000);
             $event = $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result, $duration]);
