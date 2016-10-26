@@ -181,6 +181,7 @@ class Manager implements EventDispatcherInterface, ManagerInterface
 
         $job->setStatus($status)
             ->setRunAt(new Time("+{$growthFactor} seconds"))
+            ->addHistory($message)
             ->setLastMessage($message)
             ->setTimeFailed(new Time());
 
@@ -211,7 +212,8 @@ class Manager implements EventDispatcherInterface, ManagerInterface
         $job
             ->setStatus(Job::STATUS_SUCCESS)
             ->setEndTime(new Time())
-            ->setDuration($duration);
+            ->setDuration($duration)
+            ->addHistory($result);
 
         if ($job->getSequence() !== null) {
             $this->enqueueNextSequence($job);

@@ -40,6 +40,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     {
         $table->columnType('payload', 'serialize');
         $table->columnType('options', 'serialize');
+        $table->columnType('history', 'json');
 
         return parent::_initializeSchema($table);
     }
