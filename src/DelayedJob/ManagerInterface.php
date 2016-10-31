@@ -17,6 +17,13 @@ interface ManagerInterface
     public function enqueue(Job $job);
 
     /**
+     * @param int $id The ID to enqueue
+     * @param int $priority The priority of the job
+     * @return bool
+     */
+    public function enqueuePersisted($id, $priority);
+
+    /**
      * Enqueues a batch of jobs
      *
      * @param \DelayedJobs\DelayedJob\Job[] $jobs Array of jobs to enqueue

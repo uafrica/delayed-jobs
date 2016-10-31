@@ -387,26 +387,39 @@ class WatchdogShell extends AppShell
 
         $this->loadModel('DelayedJobs.DelayedJobs');
         $sequences = $this->DelayedJobs->find()
-            ->distinct(['sequence'])
+            ->select([
+                'sequence',
+            ])
+            ->group('sequence')
             ->where([
                 'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
+                'run_at <=' => Time::now(),
                 'sequence is not' => null
             ])
-            ->order([
-                'priority' => 'asc',
-                'id' => 'asc'
-            ])
-            ->all();
+            ->hydrate(false)
+            ->map(function ($sequence) {
+                return $this->DelayedJobs->find()
+                    ->select(['id', 'priority'])
+                    ->where([
+                        'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
+                        'run_at <=' => Time::now(),
+                        'sequence' => $sequence['sequence']
+                    ])
+                    ->order([
+                        'id' => 'ASC'
+                    ])
+                    ->hydrate(false)
+                    ->first();
+            });
 
         $no_sequences = $this->DelayedJobs->find()
+            ->select(['id', 'priority'])
             ->where([
                 'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
+                'run_at <=' => Time::now(),
                 'sequence is' => null
             ])
-            ->order([
-                'priority' => 'asc',
-                'id' => 'asc'
-            ])
+            ->hydrate(false)
             ->all();
 
         $all_jobs = $sequences->append($no_sequences);
@@ -418,12 +431,11 @@ class WatchdogShell extends AppShell
                 $this->out('.', 0, Shell::QUIET);
             }
 
-            $this->out(__(' - Queing job <info>{0}</info>', $job->id), 0, Shell::VERBOSE);
-            $job = new Job($job->toArray());
-            if (Manager::instance()->enqueue($job)) {
-                $this->out(' <success>√</success>', 1, Shell::VERBOSE);
+            $this->out(__(' - Queing job <info>{0}</info>', $job['id']), 0, Shell::VERBOSE);
+            if (Manager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
+                $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
             } else {
-                $this->out(' <error>X</error>', 1, Shell::VERBOSE);
+                $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);
             }
         }
     }

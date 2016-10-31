@@ -123,6 +123,19 @@ class Manager implements EventDispatcherInterface, ManagerInterface
         return false;
     }
 
+    /**
+     * @param int $id The ID to enqueue
+     * @param int $priority The priority of the job
+     * @return bool
+     */
+    public function enqueuePersisted($id, $priority)
+    {
+        $job = new Job(compact('id', 'priority'));
+
+        return $this->getMessageBroker()
+            ->publishJob($job);
+    }
+
     public function enqueueBatch(array $jobs)
     {
         if (!$this->getDatastore()->persistJobs($jobs) ) {
