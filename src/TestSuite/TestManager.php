@@ -20,7 +20,7 @@ class TestManager implements ManagerInterface
      */
     public static function getJobs()
     {
-        return self::$_jobs;
+        return static::$_jobs;
     }
 
     /**
@@ -28,7 +28,7 @@ class TestManager implements ManagerInterface
      */
     public static function clearJobs()
     {
-        self::$_jobs = [];
+        static::$_jobs = [];
     }
 
     /**
@@ -39,9 +39,21 @@ class TestManager implements ManagerInterface
     {
         $jobId = time() + mt_rand(0, time());
         $job->setId($jobId);
-        self::$_jobs[$jobId] = $job;
+        static::$_jobs[$jobId] = $job;
 
         return $job;
+    }
+
+    /**
+     * @param int $id The ID to enqueue
+     * @param int $priority The priority of the job
+     * @return bool
+     */
+    public function enqueuePersisted($id, $priority)
+    {
+        static::$_jobs[$id] = new Job(compact('id', 'priority'));
+
+        return static::$_jobs[$id];
     }
 
     public function enqueueBatch(array $jobs)
@@ -84,8 +96,8 @@ class TestManager implements ManagerInterface
      */
     public function fetchJob($jobId)
     {
-        if (isset(self::$_jobs[$jobId])) {
-            return self::$_jobs[$jobId];
+        if (isset(static::$_jobs[$jobId])) {
+            return static::$_jobs[$jobId];
         } else {
             throw new JobNotFoundException();
         }
