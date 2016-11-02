@@ -23,7 +23,7 @@ trait EnqueueTrait
                 ->setData($options);
         }
 
-        return Manager::instance()->enqueue($job);
+        return JobManager::instance()->enqueue($job);
     }
 
     /**
@@ -54,6 +54,6 @@ trait EnqueueTrait
             $jobs[] = $job;
         }
 
-        return Manager::instance()->enqueueBatch($jobs);
+        return JobManager::instance()->enqueueBatch($jobs);
     }
 }

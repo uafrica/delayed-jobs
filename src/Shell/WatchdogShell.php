@@ -10,9 +10,9 @@ use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\Time;
 use Cake\ORM\TableRegistry;
-use DelayedJobs\Amqp\AmqpManager;
+use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\DelayedJob\Manager;
+use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Entity\Worker;
@@ -196,7 +196,7 @@ class WatchdogShell extends AppShell
                     ]);
             }
 
-            if (Manager::instance()->isSimilarJob($job)) {
+            if (JobManager::instance()->isSimilarJob($job)) {
                 $this->out(__('  <error>Already queued:</error> {0}', $job->getWorker()), 1, Shell::VERBOSE);
                 continue;
             }
@@ -378,7 +378,7 @@ class WatchdogShell extends AppShell
 
     public function revive()
     {
-        $stats = AmqpManager::queueStatus();
+        $stats = PhpAmqpLibBroker::queueStatus();
         if ($stats['messages'] > 0) {
             $this->out(__('<error>There are {0} messages currently queued</error>', $stats['messages']));
             $this->out('We cannot reliablily determine which messages to requeue unless the RabbitMQ queue is empty.');
@@ -432,7 +432,7 @@ class WatchdogShell extends AppShell
             }
 
             $this->out(__(' - Queing job <info>{0}</info>', $job['id']), 0, Shell::VERBOSE);
-            if (Manager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
+            if (JobManager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
                 $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
             } else {
                 $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);

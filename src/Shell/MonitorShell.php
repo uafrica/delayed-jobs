@@ -3,8 +3,7 @@
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
-use Cake\Core\Configure;
-use DelayedJobs\Amqp\AmqpManager;
+use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\Job;
 
 /**
@@ -137,7 +136,7 @@ class MonitorShell extends AppShell
 
     protected function _rabbitStats()
     {
-        $rabbit_status = AmqpManager::queueStatus();
+        $rabbit_status = PhpAmqpLibBroker::queueStatus();
         if (empty($rabbit_status)) {
             return;
         }
@@ -158,7 +157,7 @@ class MonitorShell extends AppShell
 
         $max_length = 50;
 
-        $rabbit_status = AmqpManager::queueStatus();
+        $rabbit_status = PhpAmqpLibBroker::queueStatus();
         if (empty($rabbit_status)) {
             return;
         }

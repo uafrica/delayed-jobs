@@ -1,13 +1,15 @@
 <?php
 
-namespace DelayedJobs\Amqp;
+namespace DelayedJobs\Broker\Driver;
 
 use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
+use Cake\Core\InstanceConfigTrait;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Network\Http\Client;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\MessageBrokerInterface;
 use DelayedJobs\Traits\DebugTrait;
 use PhpAmqpLib\Channel\AMQPChannel;
@@ -18,23 +20,10 @@ use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPAbstractCollection;
 use PhpAmqpLib\Wire\AMQPTable;
 
-class AmqpManager implements MessageBrokerInterface
+class PhpAmqpLibDriver
 {
     use DebugTrait;
-
-    /**
-     * The globally available instance
-     *
-     * @var \DelayedJobs\Amqp\AmqpManager
-     */
-    protected static $_generalManager = null;
-
-    /**
-     * Internal flag to distinguish a common manager from the singleton
-     *
-     * @var bool
-     */
-    protected $_isGlobal = false;
+    use InstanceConfigTrait;
 
     /**
      * @var \PhpAmqpLib\Connection\AbstractConnection
@@ -48,38 +37,18 @@ class AmqpManager implements MessageBrokerInterface
 
     protected $_serviceName;
 
-    /**
-     * Returns the globally available instance of a the AmqpManager
-     *
-     * @param \DelayedJobs\Amqp\AmqpManager $manager AMQP manager instance.
-     * @return \DelayedJobs\Amqp\AmqpManager the global AMQP manager
-     */
-    public static function instance($manager = null)
-    {
-        if ($manager instanceof AmqpManager) {
-            static::$_generalManager = $manager;
-        }
-        if (empty(static::$_generalManager)) {
-            static::$_generalManager = new AmqpManager();
-        }
-
-        static::$_generalManager->_isGlobal = true;
-
-        return static::$_generalManager;
-    }
+    protected $_defaultConfig;
 
     /**
      * @param \PhpAmqpLib\Connection\AbstractConnection|null $connection
      */
-    public function __construct(AbstractConnection $connection = null)
+    public function __construct(array $config = [], AbstractConnection $connection = null)
     {
-        $config = Configure::read('dj.service.rabbit.server');
-        if ($connection === null && !empty($config['host'])) {
-            $connection = new AMQPLazyConnection($config['host'], $config['port'], $config['user'], $config['pass'], $config['path']);
-        }
+        $this->config($config);
 
-        $this->_connection = $connection;
-        $this->_serviceName = Configure::read('dj.service.name');
+        if ($connection) {
+            $this->_connection = $connection;
+        }
     }
 
     public function __destroy()
@@ -87,84 +56,90 @@ class AmqpManager implements MessageBrokerInterface
         if ($this->_channel) {
             $this->_channel->close();
         }
-        if ($this->_connection && $this->_connection->isConnected()) {
-            $this->_connection->close();
+        if ($this->getConnection && $this->getConnection->isConnected()) {
+            $this->getConnection->close();
         }
     }
 
-    protected function _getChannel()
+    public function getConnection()
+    {
+        if ($this->_connection) {
+            return $this->_connection;
+        }
+
+        $config = $this->config();
+        $this->_connection = new AMQPLazyConnection($config['host'], $config['port'], $config['user'], $config['pass'], $config['path']);
+
+        return $this->_connection;
+    }
+
+    public function getChannel()
     {
         if ($this->_channel) {
             return $this->_channel;
         }
 
-        $this->_channel = $this->_connection->channel();
+        $this->_channel = $this->getConnection->channel();
 
-        $this->_ensureQueue($this->_channel);
-        $this->_channel->confirm_select();
-
-        $this->_channel->set_ack_handler(function (AMQPMessage $message) {
-            $this->dj_log("Message acked with content " . $message->body);
-        });
-        $this->_channel->set_nack_handler(function (AMQPMessage $message) {
-            $this->dj_log("Message nacked with content " . $message->body);
-        });
         return $this->_channel;
     }
 
-    protected function _ensureQueue(AMQPChannel $channel)
+    public function declareExchange($prefix)
     {
-        $channel->exchange_declare($this->_serviceName . '-direct-exchange', 'direct', false, true, false, false, false);
-        $channel->exchange_declare($this->_serviceName . '-delayed-exchange', 'x-delayed-message', false, true, false, false, false, [
+        $channel = $this->getChannel();
+
+        $channel->exchange_declare($prefix . 'direct-exchange', 'direct', false, true, false, false, false);
+        $channel->exchange_declare($prefix . 'delayed-exchange', 'x-delayed-message', false, true, false, false, false, [
             'x-delayed-type' => [
                 'S',
                 'direct'
             ]
         ]);
-        $channel->queue_declare($this->_serviceName . '-queue', false, true, false, false, false, [
-            'x-max-priority' => [
-                's',
-                Configure::read('dj.service.rabbit.max_priority')
-            ]
-        ]);
-
-        $channel->queue_bind($this->_serviceName . '-queue', $this->_serviceName . '-delayed-exchange', $this->_serviceName);
-        $channel->queue_bind($this->_serviceName . '-queue', $this->_serviceName . '-direct-exchange', $this->_serviceName);
     }
 
-    public function publishJob(Job $job)
+    public function declareQueue($prefix, $maximumPriority)
     {
-        $channel = $this->_getChannel();
+        $channel = $this->getChannel();
 
-        $delay = $job->getRunAt()->isFuture() ? (new Time())->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
+        $channel->queue_declare($prefix . '-queue', false, true, false, false, false, [
+            'x-max-priority' => ['s', $maximumPriority]
+        ]);
+    }
 
-        $args = [
+    public function bind($prefix, $routingKey)
+    {
+        $channel = $this->getChannel();
+
+        $channel->queue_bind($prefix . 'queue', $routingKey . 'delayed-exchange', $this->config('routingKey'));
+        $channel->queue_bind($prefix . 'queue', $routingKey . 'direct-exchange', $this->config('routingKey'));
+    }
+
+    public function publishJob($jobData, $prefix, $routingKey)
+    {
+        $channel = $this->getChannel();
+
+        $messageProperties = [
             'delivery_mode' => 2,
-            'priority' => Configure::read('dj.service.rabbit.max_priority') - $job->getPriority(),
+            'priority' => $jobData['priority']
         ];
-        if ($args['priority'] < 0) {
-            $args['priority'] = 0;
-        }
-        if ($delay > 0) {
+
+        if ($jobData['delay'] > 0) {
             $headers = new AMQPTable();
-            $headers->set('x-delay', $delay);
-            $args['application_headers'] = $headers;
+            $headers->set('x-delay', $jobData['delay']);
+            $messageProperties['application_headers'] = $headers;
         }
 
-        $message = new AMQPMessage(json_encode(['id' => $job->getId()]), $args);
+        $message = new AMQPMessage(json_encode($jobData['payload']), $messageProperties);
 
-        $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
-        $channel->basic_publish($message, $exchange, $this->_serviceName);
-        $this->dj_log(__('Job {0} has been queued to {1} with routing key {2}, a delay of {3} and a priority of {4}', $job->getId(), $exchange, $this->_serviceName, $delay, $args['priority']));
-
-        $channel->wait_for_pending_acks();
+        $exchange = $prefix . ($jobData['delay'] > 0 ? 'delayed-exchange' : 'direct-exchange');
+        $channel->basic_publish($message, $exchange, $routingKey);
 
         return $message;
     }
 
     public function requeueMessage(AMQPMessage $message, $delay = 5000)
     {
-        $channel = $this->_getChannel();
+        $channel = $this->getChannel();
 
         if ($delay > 0) {
             $headers = new AMQPTable();
@@ -185,20 +160,20 @@ class AmqpManager implements MessageBrokerInterface
 
     public function listen($callback, $qos = 1)
     {
-        $channel = $this->_getChannel();
+        $channel = $this->getChannel();
         $channel->basic_qos(null, $qos, null);
         return $channel->basic_consume($this->_serviceName . '-queue', '', false, false, false, false, $callback);
     }
 
     public function stopListening($tag)
     {
-        $channel = $this->_getChannel();
+        $channel = $this->getChannel();
         $channel->basic_cancel($tag);
     }
 
     public function wait($timeout = 1)
     {
-        $channel = $this->_getChannel();
+        $channel = $this->getChannel();
         try {
             $channel->wait(null, true, $timeout);
             return true;

@@ -6,7 +6,7 @@ use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\DelayedJob\Manager;
+use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
@@ -35,7 +35,7 @@ class WorkerTask extends Shell
         $this->out('<info>Starting Job: ' . $job_id . '</info>', 1, Shell::VERBOSE);
 
         try {
-            $job = Manager::instance()->fetchJob($job_id);
+            $job = JobManager::instance()->fetchJob($job_id);
             $this->out(' - Got job from DB', 1, Shell::VERBOSE);
         } catch (JobNotFoundException $e) {
             $this->out('<fail>Job ' . $job_id . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
@@ -53,7 +53,7 @@ class WorkerTask extends Shell
             $this->_stop(3);
         }
 
-        Manager::instance()->lock($job);
+        JobManager::instance()->lock($job);
 
         $this->executeJob($job);
     }
@@ -66,7 +66,7 @@ class WorkerTask extends Shell
 
         $start = microtime(true);
         try {
-            $response = Manager::instance()->execute($job, $this);
+            $response = JobManager::instance()->execute($job, $this);
 
             $this->dj_log(__('Done with: {0}', $job->getId()));
 

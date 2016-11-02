@@ -8,10 +8,11 @@ use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\InvalidPrimaryKeyException;
 use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\Event\Event;
 use Cake\I18n\Time;
 use Cake\Log\Log;
-use DelayedJobs\Amqp\AmqpManager;
-use DelayedJobs\DelayedJob\Manager;
+use DelayedJobs\Broker\PhpAmqpLibBroker;
+use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Model\Table\WorkersTable;
@@ -43,9 +44,13 @@ class WorkerShell extends AppShell
      */
     protected $_worker;
     /**
-     * @var \DelayedJobs\Amqp\AmqpManager
+     * @var \DelayedJobs\Broker\BrokerInterface
      */
-    protected $_amqpManager;
+    protected $_broker;
+    /**
+     * @var \DelayedJobs\DelayedJob\JobManager
+     */
+    protected $_manager;
     protected $_tag;
     protected $_startTime;
     protected $_jobCount = 0;
@@ -119,10 +124,7 @@ class WorkerShell extends AppShell
     {
         $this->out('Shutting down...');
 
-        if ($this->_tag) {
-            $this->_amqpManager->stopListening($this->_tag);
-            $this->_tag = null;
-        }
+        $this->_manager->stopConsuming();
 
         if ($this->_worker) {
             $this->Workers->delete($this->_worker);
@@ -133,39 +135,26 @@ class WorkerShell extends AppShell
 
     public function main()
     {
-        $this->_amqpManager = new AmqpManager();
-        $this->_tag = $this->_amqpManager->listen([$this, 'runWorker'], $this->param('qos'));
-
-        $failureCount = 0;
-
         $this->_heartbeat();
 
-        while ($failureCount <= self::MAXFAIL) {
-            try {
-                $this->_mainLoop();
-                break;
-            } catch (StopException $e) {
-                throw $e;
-            } catch (\Exception $e) {
-                Log::emergency('Delayed job error: ' . $e->getMessage());
-                $failureCount++;
-            }
-        }
+        $this->_manager = JobManager::instance();
+        $this->_manager->eventManager()->on('DelayedJob.beforeJobExecute', [$this, 'beforeExecute']);
+        $this->_manager->eventManager()->on('DelayedJob.afterJobExecute', [$this, 'afterExecute']);
 
-        $this->stopHammerTime();
-    }
+        $this->_manager->startConsuming();
 
-    protected function _mainLoop()
-    {
         while (true) {
             if ($this->_worker && $this->_worker->status === WorkersTable::STATUS_SHUTDOWN) {
                 $this->stopHammerTime();
+
                 return;
             }
 
-            $ran_job = $this->_amqpManager->wait(self::TIMEOUT);
+            $ran_job = $this->_broker->wait(self::TIMEOUT);
             $this->_heartbeat($ran_job);
         }
+
+        $this->stopHammerTime();
     }
 
     protected function _heartbeat($job_ran = false)
@@ -203,6 +192,7 @@ class WorkerShell extends AppShell
 
     public function runWorker(AMQPMessage $message)
     {
+        //@TODO: Move code into job manager
         $this->out('');
         if ($this->_io->level() == Shell::NORMAL) {
             $this->out('Got work');
@@ -210,32 +200,26 @@ class WorkerShell extends AppShell
         $body = json_decode($message->body, true);
         $jobId = $body['id'];
         try {
-            $job = Manager::instance()->fetchJob($jobId);
+            $job = $this->_manager->fetchJob($jobId);
             $this->_executeJob($job, $message);
         } catch (JobNotFoundException $e) {
             if (!isset($body['is-requeue'])) {
-                $this->out(__('<error>Job {0} does not exist in the DB - could be a transaction delay - we try once more!</error>',
-                    $jobId), 1, Shell::VERBOSE);
+                Log::debug(__('Job {0} does not exist in the datasource - could be a transaction delay - we try once more!', $jobId));
 
-                //We do not want to cache the empty result
-                $cache_key = 'dj::' . Configure::read('dj.service.name') . '::' . $jobId;
-                Cache::delete($cache_key . '::all', Configure::read('dj.service.cache'));
-                Cache::delete($cache_key . '::limit', Configure::read('dj.service.cache'));
-                $this->_amqpManager->ack($message);
-                $this->_amqpManager->requeueMessage($message);
+                $this->_broker->ack($message);
+                $this->_broker->requeueMessage($message);
 
                 return;
             }
-            $this->out(__('<error>Job {0} does not exist in the DB!</error>',
-                $jobId), 1, Shell::VERBOSE);
+            $this->out(__('<error>Job {0} does not exist in the DB!</error>', $jobId), 1, Shell::VERBOSE);
 
-            $this->_amqpManager->nack($message, false);
+            $this->_broker->nack($message);
         } catch (InvalidPrimaryKeyException $e) {
             $this->dj_log(__('Invalid PK for {0}', $message->body));
-            $this->_amqpManager->nack($message, false);
+            $this->_broker->nack($message);
         } catch (\Exception $e) {
             $this->dj_log(__('General exception {0}', $e->getMessage()));
-            $this->_amqpManager->nack($message);
+            $this->_broker->nack($message, true);
             throw $e;
         }
 
@@ -248,11 +232,11 @@ class WorkerShell extends AppShell
         pcntl_signal_dispatch();
     }
 
-    protected function _executeJob(Job $job, AMQPMessage $message)
+    public function beforeExecute(Event $event, Job $job)
     {
-        if ($this->_worker && ($this->_worker->status === WorkersTable::STATUS_SHUTDOWN ||
-            $this->_worker->status === WorkersTable::STATUS_TO_KILL)) {
-            $this->_amqpManager->nack($message);
+        if ($this->_worker && ($this->_worker->status === WorkersTable::STATUS_SHUTDOWN || $this->_worker->status === WorkersTable::STATUS_TO_KILL)) {
+            $event->stopPropagation();
+
             return false;
         }
 
@@ -260,28 +244,47 @@ class WorkerShell extends AppShell
 
         $this->out(__('<success>Starting job:</success> {0} :: ', $job->getId()), 1, Shell::VERBOSE);
 
+        $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
+        $this->out(' - Executing job', 1, Shell::VERBOSE);
+
+        //@TODO: Move to job manager
         if ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURRIED) {
             $this->out(__('Already processed'), 1, Shell::VERBOSE);
-            $this->_amqpManager->ack($message);
             return true;
         }
 
         if ($job->getStatus() === Job::STATUS_BUSY) {
             $this->out(__('Already being processed'), 1, Shell::VERBOSE);
-            $this->_amqpManager->ack($message);
 
             return true;
         }
 
-        Manager::instance()->lock($job, $this->_hostName);
-        $this->Worker->executeJob($job);
-        $this->_amqpManager->ack($message);
+        //@TODO: Move locker into executor
+        JobManager::instance()->lock($job, $this->_hostName);
+        $this->_manager->execute($job);
+
         $this->_lastJob = $job->getId();
         $this->_jobCount++;
         $this->out('');
         unset($job);
 
         return true;
+    }
+
+    public function afterExecute(Event $event, Job $job, $result, $duration)
+    {
+        $this->_lastJob = $job->getId();
+        $this->_jobCount++;
+        $this->out('');
+
+        if ($result instanceof \Throwable) {
+            $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
+            $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
+        } else {
+            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $result), 1, Shell::VERBOSE);
+        }
+
+        $this->out(sprintf(' - Took: %.2f seconds', $duration), 1, Shell::VERBOSE);
     }
 
     public function getOptionParser()

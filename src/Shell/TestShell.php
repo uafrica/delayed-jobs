@@ -5,7 +5,7 @@ use App\Shell\AppShell;
 use Cake\Console\Shell;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\DelayedJob\Manager;
+use DelayedJobs\DelayedJob\JobManager;
 
 /**
  * Class TestShell
@@ -40,7 +40,7 @@ class TestShell extends AppShell
 
         sleep(10);
 
-        $job = Manager::instance()->fetchJob($job->getId());
+        $job = JobManager::instance()->fetchJob($job->getId());
 
         if ($job->getStatus() !== Job::STATUS_SUCCESS) {
             throw new \Exception("Successful job was not successful");
@@ -59,7 +59,7 @@ class TestShell extends AppShell
 
         sleep(10);
 
-        $job = Manager::instance()->fetchJob($job->getId());
+        $job = JobManager::instance()->fetchJob($job->getId());
 
         if ($job->getStatus() !== Job::STATUS_BURRIED) {
             throw new \Exception("Failed Job did not fail");

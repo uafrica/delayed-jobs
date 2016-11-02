@@ -100,6 +100,12 @@ class Job
      * @var array
      */
     protected $_history = [];
+    /**
+     * Internal storage for the broker message object.
+     *
+     * @var object
+     */
+    protected $_brokerMessage;
 
     /**
      * Job constructor.
@@ -556,5 +562,21 @@ class Job
         ]);
 
         return $this;
+    }
+
+    /**
+     * @return object
+     */
+    public function getBrokerMessage()
+    {
+        return $this->_brokerMessage;
+    }
+
+    /**
+     * @param object $brokerMessage The broker message
+     */
+    public function setBrokerMessage($brokerMessage)
+    {
+        $this->_brokerMessage = $brokerMessage;
     }
 }

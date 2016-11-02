@@ -41,7 +41,7 @@ interface ManagerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job that has been completed
-     * @param string|null $message Message to store with job
+     * @param string|null $result Result to store with job
      * @param int $duration How long execution took
      * @return \DelayedJobs\DelayedJob\Job|bool
      */
@@ -66,9 +66,15 @@ interface ManagerInterface
 
     public function lock(Job $job, $hostname = null);
 
-    public function execute(Job $job, Shell $shell = null);
+    public function execute(Job $job);
 
     public function enqueueNextSequence(Job $job);
 
     public function isSimilarJob(Job $job);
+
+    public function startConsuming();
+
+    public function stopConsuming();
+
+    public function requeueJob(Job $job);
 }
