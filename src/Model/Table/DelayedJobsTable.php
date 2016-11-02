@@ -326,6 +326,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 'priority' => 'ASC',
                 'id' => 'ASC',
             ])
+            ->from([$this->table() . ' ' . $this->alias() . ' FORCE INDEX (status_2)'])
             ->first();
 
         if (!$next) {
