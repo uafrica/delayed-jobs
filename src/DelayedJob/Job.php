@@ -561,6 +561,10 @@ class Job
             'message' => $message ?: ''
         ]);
 
+        if (is_string($message)) {
+            $this->setLastMessage($message);
+        }
+
         return $this;
     }
 

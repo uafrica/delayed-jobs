@@ -64,7 +64,7 @@ interface ManagerInterface
      */
     public function getStatus($jobId);
 
-    public function lock(Job $job, $hostname = null);
+    public function lock(Job $job);
 
     public function execute(Job $job);
 

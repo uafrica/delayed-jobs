@@ -3,6 +3,7 @@
 namespace DelayedJobs\Datasource;
 
 use Cake\ORM\TableRegistry;
+use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\DelayedJob\Job;
 
 /**
@@ -42,7 +43,13 @@ class TableDatasource extends BaseDatasource
      */
     public function fetchJob($jobId)
     {
-        return $this->_table()->fetchJob($jobId);
+        $job = $this->_table()->fetchJob($jobId);
+
+        if (!$job) {
+            throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $jobId));
+        }
+
+        return $job;
     }
 
     /**
@@ -75,7 +82,20 @@ class TableDatasource extends BaseDatasource
      */
     public function isSimilarJob(Job $job)
     {
-        $this->_table()->isSimilarJob($job);
+        return $this->_table()->isSimilarJob($job);
     }
 
+    public function loadJob(Job $job)
+    {
+        $jobData = $this->_table()->find()
+            ->where(['id' => $job->getId()])
+            ->hydrate(false)
+            ->first();
+
+        if ($jobData === null) {
+            throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $job->getId()));
+        }
+
+        return $job->setData($jobData);
+    }
 }

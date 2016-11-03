@@ -3,6 +3,7 @@
 namespace DelayedJobs\Broker;
 
 use Cake\Core\InstanceConfigTrait;
+use Cake\I18n\Time;
 use DelayedJobs\Broker\Driver\PhpAmqpLibDriver;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\ManagerInterface;
@@ -15,7 +16,10 @@ class RabbitMqBroker implements BrokerInterface
     use InstanceConfigTrait;
 
     protected $_defaultConfig = [
-        'driver' => PhpAmqpLibDriver::class
+        'driver' => PhpAmqpLibDriver::class,
+        'prefix' => '',
+        'routingKey' => '',
+        'qos' => 1
     ];
 
     protected $_driver;
@@ -39,7 +43,7 @@ class RabbitMqBroker implements BrokerInterface
         }
 
         $config = $this->config();
-        $this->_driver = new $config['driver']($config);
+        $this->_driver = new $config['driver']($config, $this->_manager);
 
         return $this->_driver;
     }
@@ -51,9 +55,6 @@ class RabbitMqBroker implements BrokerInterface
     public function publishJob(Job $job)
     {
         $driver = $this->getDriver();
-        $driver->declareExchange($this->config('prefix'));
-        $driver->declareQueue($this->config('prefix'), $this->_manager->config('maximumPriority'));
-        $driver->bindQueue($this->config('prefix'), $this->config(['routingKey']));
 
         $delay = $job->getRunAt()->isFuture() ? Time::now()->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
@@ -68,27 +69,28 @@ class RabbitMqBroker implements BrokerInterface
             $jobData['priority'] = 0;
         }
 
-        $driver->publish($jobData, $this->config('prefix'), $this->config('routingKey'));
+        $driver->publishJob($jobData);
     }
 
-    public function consume(callable $callback, array $options)
+    public function consume(callable $callback, callable $heartbeat)
     {
-        // TODO: Implement consume() method.
+       $this->getDriver()->consume($callback, $heartbeat);
     }
 
     public function stopConsuming()
     {
-        // TODO: Implement stopConsuming() method.
+        $this->getDriver()->stopConsuming();
     }
 
     public function ack(Job $job)
     {
-        // TODO: Implement ack() method.
+        $this->getDriver()->ack($job);
     }
 
     public function nack(Job $job, $requeue = false)
     {
-        // TODO: Implement nack() method.
+        $this->getDriver()
+            ->nack($job, $requeue);
     }
 
 }

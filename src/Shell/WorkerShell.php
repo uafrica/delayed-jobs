@@ -56,7 +56,7 @@ class WorkerShell extends AppShell
     protected $_jobCount = 0;
     protected $_lastJob;
     protected $_myPID;
-    private $__pulse = false;
+    private $_pulse = false;
 
     /**
      * @inheritDoc
@@ -135,31 +135,22 @@ class WorkerShell extends AppShell
 
     public function main()
     {
-        $this->_heartbeat();
+        $this->heartbeat();
 
         $this->_manager = JobManager::instance();
         $this->_manager->eventManager()->on('DelayedJob.beforeJobExecute', [$this, 'beforeExecute']);
         $this->_manager->eventManager()->on('DelayedJob.afterJobExecute', [$this, 'afterExecute']);
+        $this->_manager->eventManager()->on('DelayedJob.heartbeat', [$this, 'heartbeat']);
 
         $this->_manager->startConsuming();
-
-        while (true) {
-            if ($this->_worker && $this->_worker->status === WorkersTable::STATUS_SHUTDOWN) {
-                $this->stopHammerTime();
-
-                return;
-            }
-
-            $ran_job = $this->_broker->wait(self::TIMEOUT);
-            $this->_heartbeat($ran_job);
-        }
 
         $this->stopHammerTime();
     }
 
-    protected function _heartbeat($job_ran = false)
+    public function heartbeat()
     {
-        cli_set_process_title(sprintf('DJ Worker :: %s :: %s', $this->_workerId, $this->__pulse ? 'O' : '-'));
+        cli_set_process_title(sprintf('DJ Worker :: %s :: %s', $this->_workerId, $this->_pulse ? 'O' : '-'));
+        $this->_pulse = !$this->_pulse;
 
         if ($this->_worker === null) {
             $this->stopHammerTime();
@@ -167,7 +158,6 @@ class WorkerShell extends AppShell
             return;
         }
 
-        $this->__pulse = !$this->__pulse;
         try {
             $this->_worker = $this->Workers->get($this->_worker->id);
         } catch (RecordNotFoundException $e) {
@@ -182,53 +172,16 @@ class WorkerShell extends AppShell
             return;
         }
 
-        $this->_worker->pulse = new Time();
-        if ($job_ran) {
-            $this->_worker->job_count++;
+        if ($this->_worker && $this->_worker->status === WorkersTable::STATUS_SHUTDOWN) {
+            $this->stopHammerTime();
+
+            return;
         }
+
+        $this->_worker->pulse = new Time();
+        $this->_worker->job_count = $this->_jobCount;
 
         $this->Workers->save($this->_worker);
-    }
-
-    public function runWorker(AMQPMessage $message)
-    {
-        //@TODO: Move code into job manager
-        $this->out('');
-        if ($this->_io->level() == Shell::NORMAL) {
-            $this->out('Got work');
-        }
-        $body = json_decode($message->body, true);
-        $jobId = $body['id'];
-        try {
-            $job = $this->_manager->fetchJob($jobId);
-            $this->_executeJob($job, $message);
-        } catch (JobNotFoundException $e) {
-            if (!isset($body['is-requeue'])) {
-                Log::debug(__('Job {0} does not exist in the datasource - could be a transaction delay - we try once more!', $jobId));
-
-                $this->_broker->ack($message);
-                $this->_broker->requeueMessage($message);
-
-                return;
-            }
-            $this->out(__('<error>Job {0} does not exist in the DB!</error>', $jobId), 1, Shell::VERBOSE);
-
-            $this->_broker->nack($message);
-        } catch (InvalidPrimaryKeyException $e) {
-            $this->dj_log(__('Invalid PK for {0}', $message->body));
-            $this->_broker->nack($message);
-        } catch (\Exception $e) {
-            $this->dj_log(__('General exception {0}', $e->getMessage()));
-            $this->_broker->nack($message, true);
-            throw $e;
-        }
-
-        if ($this->_io->level() == Shell::NORMAL) {
-            $this->_welcome();
-        }
-
-        unset($job);
-
         pcntl_signal_dispatch();
     }
 
@@ -247,26 +200,9 @@ class WorkerShell extends AppShell
         $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
         $this->out(' - Executing job', 1, Shell::VERBOSE);
 
-        //@TODO: Move to job manager
-        if ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURRIED) {
-            $this->out(__('Already processed'), 1, Shell::VERBOSE);
-            return true;
-        }
+        $job->setHostName($this->_hostName);
 
-        if ($job->getStatus() === Job::STATUS_BUSY) {
-            $this->out(__('Already being processed'), 1, Shell::VERBOSE);
-
-            return true;
-        }
-
-        //@TODO: Move locker into executor
-        JobManager::instance()->lock($job, $this->_hostName);
-        $this->_manager->execute($job);
-
-        $this->_lastJob = $job->getId();
-        $this->_jobCount++;
-        $this->out('');
-        unset($job);
+        pcntl_signal_dispatch();
 
         return true;
     }
@@ -278,13 +214,14 @@ class WorkerShell extends AppShell
         $this->out('');
 
         if ($result instanceof \Throwable) {
-            $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
-            $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
+            $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
+            $this->out($result->getTraceAsString(), 1, Shell::VERBOSE);
         } else {
             $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $result), 1, Shell::VERBOSE);
         }
 
-        $this->out(sprintf(' - Took: %.2f seconds', $duration), 1, Shell::VERBOSE);
+        $this->out(sprintf(' - Took: %.2f seconds', $duration / 1000), 1, Shell::VERBOSE);
+        pcntl_signal_dispatch();
     }
 
     public function getOptionParser()

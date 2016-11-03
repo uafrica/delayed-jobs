@@ -10,11 +10,13 @@ use Cake\Log\Log;
 use Cake\Network\Http\Client;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
+use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\MessageBrokerInterface;
 use DelayedJobs\Traits\DebugTrait;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazyConnection;
+use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPAbstractCollection;
@@ -24,6 +26,8 @@ class PhpAmqpLibDriver
 {
     use DebugTrait;
     use InstanceConfigTrait;
+
+    const TIMEOUT = 5; //In seconds
 
     /**
      * @var \PhpAmqpLib\Connection\AbstractConnection
@@ -37,18 +41,25 @@ class PhpAmqpLibDriver
 
     protected $_serviceName;
 
-    protected $_defaultConfig;
+    protected $_defaultConfig = [];
+
+    /**
+     * @var \DelayedJobs\DelayedJob\ManagerInterface
+     */
+    protected $_manager;
 
     /**
      * @param \PhpAmqpLib\Connection\AbstractConnection|null $connection
      */
-    public function __construct(array $config = [], AbstractConnection $connection = null)
+    public function __construct(array $config = [], ManagerInterface $manager, AbstractConnection $connection = null)
     {
         $this->config($config);
 
         if ($connection) {
             $this->_connection = $connection;
         }
+
+        $this->_manager = $manager;
     }
 
     public function __destroy()
@@ -79,13 +90,18 @@ class PhpAmqpLibDriver
             return $this->_channel;
         }
 
-        $this->_channel = $this->getConnection->channel();
+        $this->_channel = $this->getConnection()->channel();
+
+        $this->declareExchange();
+        $this->declareQueue($this->_manager->config('maximumPriority'));
+        $this->bind();
 
         return $this->_channel;
     }
 
-    public function declareExchange($prefix)
+    public function declareExchange()
     {
+        $prefix = $this->config('prefix');
         $channel = $this->getChannel();
 
         $channel->exchange_declare($prefix . 'direct-exchange', 'direct', false, true, false, false, false);
@@ -97,25 +113,30 @@ class PhpAmqpLibDriver
         ]);
     }
 
-    public function declareQueue($prefix, $maximumPriority)
+    public function declareQueue($maximumPriority)
     {
+        $prefix = $this->config('prefix');
         $channel = $this->getChannel();
 
-        $channel->queue_declare($prefix . '-queue', false, true, false, false, false, [
+        $channel->queue_declare($prefix . 'queue', false, true, false, false, false, [
             'x-max-priority' => ['s', $maximumPriority]
         ]);
     }
 
-    public function bind($prefix, $routingKey)
+    public function bind()
     {
+        $prefix = $this->config('prefix');
+        $routingKey = $this->config('routingKey');
         $channel = $this->getChannel();
 
-        $channel->queue_bind($prefix . 'queue', $routingKey . 'delayed-exchange', $this->config('routingKey'));
-        $channel->queue_bind($prefix . 'queue', $routingKey . 'direct-exchange', $this->config('routingKey'));
+        $channel->queue_bind($prefix . 'queue', $prefix . 'delayed-exchange', $routingKey);
+        $channel->queue_bind($prefix . 'queue', $prefix . 'direct-exchange', $routingKey);
     }
 
-    public function publishJob($jobData, $prefix, $routingKey)
+    public function publishJob($jobData)
     {
+        $prefix = $this->config('prefix');
+        $routingKey = $this->config('routingKey');
         $channel = $this->getChannel();
 
         $messageProperties = [
@@ -154,21 +175,47 @@ class PhpAmqpLibDriver
         $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
         $channel->basic_publish($message, $exchange, $this->_serviceName);
         $this->dj_log(__('Job {0} has been requeued to {1}, a delay of {2}', $message->body, $exchange, $delay));
-
-        $channel->wait_for_pending_acks();
     }
 
-    public function listen($callback, $qos = 1)
+    public function consume(callable $callback, callable $heartbeat)
     {
+        $prefix = $this->config('prefix');
         $channel = $this->getChannel();
-        $channel->basic_qos(null, $qos, null);
-        return $channel->basic_consume($this->_serviceName . '-queue', '', false, false, false, false, $callback);
+        $channel->basic_qos(null, $this->config('qos'), null);
+
+        $tag = $channel->basic_consume($prefix . 'queue', '', false, false, false, false, function (AMQPMessage $message) use ($callback) {
+            $body = json_decode($message->body, true);
+
+            $job = new Job();
+            $job
+                ->setId($body['id'])
+                ->setBrokerMessage($message);
+
+            return $callback($job, $message->delivery_info['redelivered']);
+        });
+        $this->_tag = $tag;
+
+        $time = microtime(true);
+        while (count($channel->callbacks)) {
+            try {
+                $channel->wait(null, false, static::TIMEOUT);
+            } catch (AMQPTimeoutException $e) {
+                $heartbeat();
+            } catch (AMQPIOWaitException $e) {
+                $heartbeat();
+            }
+
+            if (microtime(true) - $time >= static::TIMEOUT) {
+                $heartbeat();
+                $time = microtime(true);
+            }
+        }
     }
 
-    public function stopListening($tag)
+    public function stopConsuming()
     {
         $channel = $this->getChannel();
-        $channel->basic_cancel($tag);
+        $channel->basic_cancel($this->_tag);
     }
 
     public function wait($timeout = 1)
@@ -182,13 +229,15 @@ class PhpAmqpLibDriver
         }
     }
 
-    public function ack(AMQPMessage $message)
+    public function ack(Job $job)
     {
+        $message = $job->getBrokerMessage();
         $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
     }
 
-    public function nack(AMQPMessage $message, $requeue = true)
+    public function nack(Job $job, $requeue = true)
     {
+        $message = $job->getBrokerMessage();
         $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, $requeue);
     }
 

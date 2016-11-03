@@ -2,6 +2,8 @@
 
 namespace DelayedJobs\Datasource;
 
+use DelayedJobs\DelayedJob\Job;
+
 /**
  * Interface DatastoreInterface
  */
@@ -44,4 +46,6 @@ interface DatasourceInterface
      * @return bool
      */
     public function isSimilarJob(Job $job);
+
+    public function loadJob(Job $job);
 }

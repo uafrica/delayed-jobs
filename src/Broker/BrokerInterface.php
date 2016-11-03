@@ -15,7 +15,7 @@ interface BrokerInterface
      */
     public function publishJob(Job $job);
 
-    public function consume(callable $callback, array $options);
+    public function consume(callable $callback, callable $heartbeat);
 
     public function stopConsuming();
 
