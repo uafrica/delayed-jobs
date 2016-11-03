@@ -5,6 +5,7 @@ namespace DelayedJobs\Shell;
 use App\Shell\AppShell;
 use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\JobManager;
 
 /**
  * Class MonitorShell
@@ -136,7 +137,9 @@ class MonitorShell extends AppShell
 
     protected function _rabbitStats()
     {
-        $rabbit_status = PhpAmqpLibBroker::queueStatus();
+        $rabbit_status = JobManager::instance()
+            ->getMessageBroker()
+            ->queueStatus();
         if (empty($rabbit_status)) {
             return;
         }
@@ -157,7 +160,9 @@ class MonitorShell extends AppShell
 
         $max_length = 50;
 
-        $rabbit_status = PhpAmqpLibBroker::queueStatus();
+        $rabbit_status = JobManager::instance()
+            ->getMessageBroker()
+            ->queueStatus();
         if (empty($rabbit_status)) {
             return;
         }

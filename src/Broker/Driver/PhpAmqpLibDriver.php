@@ -93,7 +93,7 @@ class PhpAmqpLibDriver
         $this->_channel = $this->getConnection()->channel();
 
         $this->declareExchange();
-        $this->declareQueue($this->_manager->config('maximumPriority'));
+        $this->declareQueue($this->_manager->config('maximum.priority'));
         $this->bind();
 
         return $this->_channel;
@@ -239,39 +239,6 @@ class PhpAmqpLibDriver
     {
         $message = $job->getBrokerMessage();
         $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, $requeue);
-    }
-
-    public static function queueStatus()
-    {
-        $config = Configure::read('dj.service.rabbit.server');
-
-        $client = new Client([
-            'host' => $config['host'],
-            'port' => 15672,
-            'auth' => [
-                'username' => $config['user'],
-                'password' => $config['pass']
-            ]
-        ]);
-        try {
-            $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
-                Configure::read('dj.service.name') . '-queue'), [], [
-                'type' => 'json'
-            ]);
-        } catch (Exception $e) {
-            return [];
-        }
-        $data = $queue_data->json;
-
-        if (!isset($data['messages'])) {
-            return null;
-        }
-
-        return [
-            'messages' => $data['messages'],
-            'messages_ready' => $data['messages_ready'],
-            'messages_unacknowledged' => $data['messages_unacknowledged']
-        ];
     }
 
     /**

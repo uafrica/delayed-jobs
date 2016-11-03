@@ -8,25 +8,18 @@
  */
 use Cake\Core\Configure;
 
-if (!Configure::check('dj.service.name')) {
-    Configure::write("dj.service.name", "delayed-job");
-    // This name should be unique for every parent app running on the same server
-}
-if (!Configure::check('dj.max.workers')) {
-    Configure::write("dj.max.workers", 10);
-}
-if (!Configure::check('dj.max.retries')) {
-    Configure::write("dj.max.retries", 5);
-}
-if (!Configure::check('dj.default.retries')) {
-    Configure::write("dj.default.retries", 5);
-}
-if (!Configure::check('dj.max.execution.time')) {
-    Configure::write("dj.max.execution.time", 6 * 60 * 60); // 6 Hours
-}
+$defaultConfig = [
+    'maximum' => [
+        'maxRetries' => 5,
+        'pulseTime' => 6 * 60 * 60,
+    ],
+    'default' => [
+        'maxRetries' => 5,
+    ],
+];
 
-if (!Configure::check('dj.service.cache')) {
-    Configure::write("dj.service.cache", 'default');
-}
+$delayedJobsConfig = Configure::read('DelayedJobs');
+
+Configure::write($delayedJobsConfig + $defaultConfig);
 
 \Cake\Database\Type::map('serialize', 'DelayedJobs\Database\Type\SerializeType');

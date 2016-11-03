@@ -70,7 +70,6 @@ class WorkerShell extends AppShell
         $this->loadModel('DelayedJobs.Workers');
         $this->_myPID = getmypid();
         $this->_hostName = php_uname('n');
-        $this->_workerName = Configure::read('dj.service.name');
         $this->_startTime = time();
 
         $worker_count = $this->Workers->find()
@@ -83,7 +82,7 @@ class WorkerShell extends AppShell
                 ]
             ])
             ->count();
-        $this->_workerName .= '-' . $worker_count;
+        $this->_workerName = $this->_hostName . '-' . $worker_count;
 
         $this->_worker = $this->Workers->started($this->_hostName, $this->_workerName, $this->_myPID);
 

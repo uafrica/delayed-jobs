@@ -44,7 +44,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     protected $_datastore = null;
 
     protected $_defaultConfig = [
-        'maximumPriority' => 255,
+        'maximum' => [
+            'priority' => 255
+        ],
         'datasource' => [
             'className' => TableDatasource::class
         ],
@@ -431,10 +433,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         if ($job->getId() === null) {
             throw new EnqueueException('Job has not been persisted.');
-        }
-
-        if (Configure::read('dj.service.rabbit.disable') === true) {
-            return true;
         }
 
         try {

@@ -59,15 +59,12 @@ class RabbitMqBroker implements BrokerInterface
         $delay = $job->getRunAt()->isFuture() ? Time::now()->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
         //Invert the priority because Rabbit does things differently
-        $jobPriority = $this->_manager->config('maximumPriority') - $job->getPriority();
+        $jobPriority = $this->_manager->config('maximum.priority') - $job->getPriority();
         $jobData = [
-            'priority' => $jobPriority,
+            'priority' => $jobPriority > 0 ? $jobPriority : 0,
             'delay' => $delay,
             'payload' => ['id' => $job->getId()]
         ];
-        if ($jobData['priority'] < 0) {
-            $jobData['priority'] = 0;
-        }
 
         $driver->publishJob($jobData);
     }
@@ -91,6 +88,39 @@ class RabbitMqBroker implements BrokerInterface
     {
         $this->getDriver()
             ->nack($job, $requeue);
+    }
+
+    public function queueStatus()
+    {
+        $config = $this->config('apiServer');
+
+        $client = new Client([
+            'host' => $config['host'],
+            'port' => 15672,
+            'auth' => [
+                'username' => $config['user'],
+                'password' => $config['pass']
+            ]
+        ]);
+        try {
+            $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
+                Configure::read('dj.service.name') . '-queue'), [], [
+                'type' => 'json'
+            ]);
+        } catch (Exception $e) {
+            return [];
+        }
+        $data = $queue_data->json;
+
+        if (!isset($data['messages'])) {
+            return null;
+        }
+
+        return [
+            'messages' => $data['messages'],
+            'messages_ready' => $data['messages_ready'],
+            'messages_unacknowledged' => $data['messages_unacknowledged']
+        ];
     }
 
 }
