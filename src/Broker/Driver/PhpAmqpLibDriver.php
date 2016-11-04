@@ -39,8 +39,6 @@ class PhpAmqpLibDriver
      */
     protected $_channel = null;
 
-    protected $_serviceName;
-
     protected $_defaultConfig = [];
 
     /**
@@ -156,25 +154,6 @@ class PhpAmqpLibDriver
         $channel->basic_publish($message, $exchange, $routingKey);
 
         return $message;
-    }
-
-    public function requeueMessage(AMQPMessage $message, $delay = 5000)
-    {
-        $channel = $this->getChannel();
-
-        if ($delay > 0) {
-            $headers = new AMQPTable();
-            $headers->set('x-delay', $delay);
-            $message->set('application_headers', $headers);
-        }
-
-        $body = json_decode($message->body, true);
-        $body['is-requeue'] = true;
-        $message->setBody(json_encode($body));
-
-        $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
-        $channel->basic_publish($message, $exchange, $this->_serviceName);
-        $this->log(__('Job {0} has been requeued to {1}, a delay of {2}', $message->body, $exchange, $delay));
     }
 
     public function consume(callable $callback, callable $heartbeat)
