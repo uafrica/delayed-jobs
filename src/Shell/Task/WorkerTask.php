@@ -24,21 +24,21 @@ class WorkerTask extends Shell
     public function main()
     {
         if (isset($this->args[0])) {
-            $job_id = $this->args[0];
+            $jobId = $this->args[0];
         }
 
-        if (empty($job_id)) {
+        if (empty($jobId)) {
             $this->out("<error>No Job ID received</error>");
             $this->_stop(1);
         }
 
-        $this->out('<info>Starting Job: ' . $job_id . '</info>', 1, Shell::VERBOSE);
+        $this->out('<info>Starting Job: ' . $jobId . '</info>', 1, Shell::VERBOSE);
 
         try {
-            $job = JobManager::instance()->fetchJob($job_id);
+            $job = JobManager::instance()->fetchJob($jobId);
             $this->out(' - Got job from DB', 1, Shell::VERBOSE);
         } catch (JobNotFoundException $e) {
-            $this->out('<fail>Job ' . $job_id . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
+            $this->out('<fail>Job ' . $jobId . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
             $this->_stop(1);
             return;
         }
@@ -62,13 +62,13 @@ class WorkerTask extends Shell
     {
         $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
         $this->out(' - Executing job', 1, Shell::VERBOSE);
-        $this->log(__('Executing: {0}', $job->getId()));
+        $this->djLog(__('Executing: {0}', $job->getId()));
 
         $start = microtime(true);
         try {
-            $response = JobManager::instance()->execute($job, $this);
+            $response = JobManager::instance()->execute($job, $this->param('force'));
 
-            $this->log(__('Done with: {0}', $job->getId()));
+            $this->djLog(__('Done with: {0}', $job->getId()));
 
             $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response), 1, Shell::VERBOSE);
         } catch (\Throwable $e) {
@@ -88,7 +88,7 @@ class WorkerTask extends Shell
         $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
         $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
 
-        $this->log(__('Failed {0} because {1}', $job->getId(), $exc->getMessage()));
+        $this->djLog(__('Failed {0} because {1}', $job->getId(), $exc->getMessage()));
     }
 
     /**

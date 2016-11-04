@@ -66,7 +66,7 @@ interface ManagerInterface
 
     public function lock(Job $job);
 
-    public function execute(Job $job);
+    public function execute(Job $job, $force);
 
     public function enqueueNextSequence(Job $job);
 

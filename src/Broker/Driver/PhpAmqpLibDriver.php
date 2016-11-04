@@ -211,12 +211,22 @@ class PhpAmqpLibDriver
     public function ack(Job $job)
     {
         $message = $job->getBrokerMessage();
+
+        if ($message === null) {
+            return;
+        }
+
         $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
     }
 
     public function nack(Job $job, $requeue = true)
     {
         $message = $job->getBrokerMessage();
+
+        if ($message === null) {
+            return;
+        }
+
         $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, $requeue);
     }
 }

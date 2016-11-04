@@ -329,7 +329,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         return $this->_persistToDatastore($job);
     }
 
-    public function execute(Job $job)
+    public function execute(Job $job, $force = false)
     {
         $className = App::className($job->getWorker(), 'Worker', 'Worker');
 
@@ -342,7 +342,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         if (!$jobWorker instanceof JobWorkerInterface) {
             throw new JobExecuteException("Worker class '{$className}' does not follow the required 'JobWorkerInterface");
         }
-        $this->log(__('Received job {0}.', $job->getId()));
+        $this->djLog(__('Received job {0}.', $job->getId()));
 
         $event = $this->dispatchEvent('DelayedJob.beforeJobExecute', [$job]);
         if ($event->isStopped()) {
@@ -350,16 +350,16 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return $event->result;
         }
 
-        if ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURRIED) {
-            $this->log(__('Job {0} has already been processed', $job->getId()));
+        if ($force === false && ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURRIED)) {
+            $this->djLog(__('Job {0} has already been processed', $job->getId()));
             $this->getMessageBroker()
                 ->ack($job);
 
             return true;
         }
 
-        if ($job->getStatus() === Job::STATUS_BUSY) {
-            $this->log(__('Job {0} has already being processed', $job->getId()));
+        if ($force === false && $job->getStatus() === Job::STATUS_BUSY) {
+            $this->djLog(__('Job {0} has already being processed', $job->getId()));
             $this->getMessageBroker()
                 ->ack($job);
 
@@ -467,7 +467,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             try {
                 $this->loadJob($job);
             } catch (\Exception $e) {
-                $this->log($e->getMessage());
+                $this->djLog($e->getMessage());
 
                 if ($retried) {
                     $this->getMessageBroker()->nack($job, false);
@@ -475,7 +475,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                     return;
                 }
 
-                $this->log(__('Will retry job {0}', $job->getId()));
+                $this->djLog(__('Will retry job {0}', $job->getId()));
 
                 $this->requeueJob($job);
 

@@ -328,7 +328,7 @@ class DelayedJobsTable extends Table
             ->first();
 
         if (!$next) {
-            $this->log(__('No more sequenced jobs found for {0}', $job->getSequence()));
+            $this->djLog(__('No more sequenced jobs found for {0}', $job->getSequence()));
 
             return false;
         }

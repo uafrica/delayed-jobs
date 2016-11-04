@@ -8,7 +8,7 @@ use Cake\Log\Log;
 trait DebugLoggerTrait
 {
 
-    public function log($message)
+    public function djLog($message)
     {
         if (Configure::read('debug')) {
             Log::debug($message);
