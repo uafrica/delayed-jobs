@@ -18,7 +18,8 @@ $defaultConfig = [
         'maxRetries' => 5,
     ],
     'archive' => [
-        'enabled' => false
+        'enabled' => false,
+        'tableName' => 'delayed_jobs_archive'
     ]
 ];
 
