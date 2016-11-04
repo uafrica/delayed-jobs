@@ -10,11 +10,11 @@ use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
-use DelayedJobs\Traits\DebugTrait;
+use DelayedJobs\Traits\DebugLoggerTrait;
 
 class WorkerTask extends Shell
 {
-    use DebugTrait;
+    use DebugLoggerTrait;
 
     /**
      * @var string
@@ -62,13 +62,13 @@ class WorkerTask extends Shell
     {
         $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
         $this->out(' - Executing job', 1, Shell::VERBOSE);
-        $this->dj_log(__('Executing: {0}', $job->getId()));
+        $this->log(__('Executing: {0}', $job->getId()));
 
         $start = microtime(true);
         try {
             $response = JobManager::instance()->execute($job, $this);
 
-            $this->dj_log(__('Done with: {0}', $job->getId()));
+            $this->log(__('Done with: {0}', $job->getId()));
 
             $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response), 1, Shell::VERBOSE);
         } catch (\Throwable $e) {
@@ -88,7 +88,7 @@ class WorkerTask extends Shell
         $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
         $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
 
-        $this->dj_log(__('Failed {0} because {1}', $job->getId(), $exc->getMessage()));
+        $this->log(__('Failed {0} because {1}', $job->getId(), $exc->getMessage()));
     }
 
     /**

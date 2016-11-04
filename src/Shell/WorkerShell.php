@@ -16,7 +16,7 @@ use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Model\Table\WorkersTable;
-use DelayedJobs\Traits\DebugTrait;
+use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Message\AMQPMessage;
 
 /**
@@ -29,7 +29,7 @@ use PhpAmqpLib\Message\AMQPMessage;
  */
 class WorkerShell extends AppShell
 {
-    use DebugTrait;
+    use DebugLoggerTrait;
 
     const TIMEOUT = 10; //In seconds
     const MAXFAIL = 5;

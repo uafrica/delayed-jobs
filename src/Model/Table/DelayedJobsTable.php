@@ -7,7 +7,7 @@ use Cake\I18n\Time;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Model\Entity\DelayedJob;
-use DelayedJobs\Traits\DebugTrait;
+use DelayedJobs\Traits\DebugLoggerTrait;
 
 /**
  * DelayedJob Model
@@ -16,7 +16,7 @@ use DelayedJobs\Traits\DebugTrait;
  */
 class DelayedJobsTable extends Table
 {
-    use DebugTrait;
+    use DebugLoggerTrait;
 
     /**
      * @param array $config Config array.
@@ -328,7 +328,7 @@ class DelayedJobsTable extends Table
             ->first();
 
         if (!$next) {
-            $this->dj_log(__('No more sequenced jobs found for {0}', $job->getSequence()));
+            $this->log(__('No more sequenced jobs found for {0}', $job->getSequence()));
 
             return false;
         }

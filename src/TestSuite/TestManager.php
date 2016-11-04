@@ -134,4 +134,16 @@ class TestManager implements ManagerInterface
         return false;
     }
 
+    public function startConsuming()
+    {
+    }
+
+    public function stopConsuming()
+    {
+    }
+
+    public function requeueJob(Job $job)
+    {
+    }
+
 }

@@ -18,6 +18,7 @@ use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Exception\JobExecuteException;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Exception\NonRetryableException;
+use DelayedJobs\Traits\DebugLoggerTrait;
 use DelayedJobs\Worker\JobWorkerInterface;
 
 /**
@@ -27,6 +28,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 {
     use EventDispatcherTrait;
     use InstanceConfigTrait;
+    use DebugLoggerTrait;
 
     const BASE_RETRY_TIME = 5;
     const RETRY_FACTOR = 4;
@@ -340,7 +342,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         if (!$jobWorker instanceof JobWorkerInterface) {
             throw new JobExecuteException("Worker class '{$className}' does not follow the required 'JobWorkerInterface");
         }
-        Log::debug(__('Received job {0}.', $job->getId()));
+        $this->log(__('Received job {0}.', $job->getId()));
 
         $event = $this->dispatchEvent('DelayedJob.beforeJobExecute', [$job]);
         if ($event->isStopped()) {
@@ -349,7 +351,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         if ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURRIED) {
-            Log::debug(__('Job {0} has already been processed', $job->getId()));
+            $this->log(__('Job {0} has already been processed', $job->getId()));
             $this->getMessageBroker()
                 ->ack($job);
 
@@ -357,7 +359,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         if ($job->getStatus() === Job::STATUS_BUSY) {
-            Log::debug(__('Job {0} has already being processed', $job->getId()));
+            $this->log(__('Job {0} has already being processed', $job->getId()));
             $this->getMessageBroker()
                 ->ack($job);
 
@@ -465,7 +467,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             try {
                 $this->loadJob($job);
             } catch (\Exception $e) {
-                Log::debug($e->getMessage());
+                $this->log($e->getMessage());
 
                 if ($retried) {
                     $this->getMessageBroker()->nack($job, false);
@@ -473,7 +475,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                     return;
                 }
 
-                Log::debug(__('Will retry job {0}', $job->getId()));
+                $this->log(__('Will retry job {0}', $job->getId()));
 
                 $this->requeueJob($job);
 

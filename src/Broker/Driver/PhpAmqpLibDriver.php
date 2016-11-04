@@ -12,7 +12,7 @@ use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\MessageBrokerInterface;
-use DelayedJobs\Traits\DebugTrait;
+use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazyConnection;
@@ -24,7 +24,7 @@ use PhpAmqpLib\Wire\AMQPTable;
 
 class PhpAmqpLibDriver
 {
-    use DebugTrait;
+    use DebugLoggerTrait;
     use InstanceConfigTrait;
 
     const TIMEOUT = 5; //In seconds
@@ -174,7 +174,7 @@ class PhpAmqpLibDriver
 
         $exchange = $this->_serviceName . ($delay > 0 ? '-delayed-exchange' : '-direct-exchange');
         $channel->basic_publish($message, $exchange, $this->_serviceName);
-        $this->dj_log(__('Job {0} has been requeued to {1}, a delay of {2}', $message->body, $exchange, $delay));
+        $this->log(__('Job {0} has been requeued to {1}, a delay of {2}', $message->body, $exchange, $delay));
     }
 
     public function consume(callable $callback, callable $heartbeat)
@@ -239,18 +239,5 @@ class PhpAmqpLibDriver
     {
         $message = $job->getBrokerMessage();
         $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, $requeue);
-    }
-
-    /**
-     * @return bool
-     */
-    public function testConnection()
-    {
-        try {
-            $this->_connection->getSocket();
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
     }
 }
