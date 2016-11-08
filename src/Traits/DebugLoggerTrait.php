@@ -5,12 +5,12 @@ namespace DelayedJobs\Traits;
 use Cake\Core\Configure;
 use Cake\Log\Log;
 
-trait DebugTrait
+trait DebugLoggerTrait
 {
 
-    public function dj_log($message)
+    public function djLog($message)
     {
-        if (Configure::read('dj.debug') === true) {
+        if (Configure::read('debug')) {
             Log::debug($message);
         }
     }

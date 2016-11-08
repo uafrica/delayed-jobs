@@ -10,9 +10,9 @@ use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\Time;
 use Cake\ORM\TableRegistry;
-use DelayedJobs\Amqp\AmqpManager;
+use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\DelayedJob\Manager;
+use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\Lock;
 use DelayedJobs\Model\Entity\Worker;
@@ -48,13 +48,12 @@ class WatchdogShell extends AppShell
 
     protected function _welcome()
     {
-        if (!Configure::check('dj.service.name')) {
+        if (!Configure::check('DelayedJobs')) {
             throw new Exception('Could not load config, check your load settings in bootstrap.php');
         }
         $hostname = php_uname('n');
 
         $this->clear();
-        $this->out('App Name: <info>' . Configure::read('dj.service.name') . '</info>');
         $this->out('Hostname: <info>' . $hostname . '</info>');
         $this->hr();
     }
@@ -82,7 +81,7 @@ class WatchdogShell extends AppShell
 
     protected function _checkHeartbeat(Worker $worker)
     {
-        $max_time = Configure::read('dj.max.execution.time');
+        $max_time = Configure::read('DelayedJobs.maximum.pulseTime');
         $last_beat = $worker->pulse->diffInSeconds();
         return $last_beat <= $max_time;
     }
@@ -90,12 +89,6 @@ class WatchdogShell extends AppShell
     public function startWorkers($worker_count = null)
     {
         $worker_count = $worker_count ?: $this->param('workers');
-        $max_workers = Configure::read('dj.max.workers');
-
-        if ($worker_count > $max_workers) {
-            $worker_count = $max_workers;
-            $this->out('<error>Too many workers (max_workers:' . $max_workers . ')</error>');
-        }
 
         $hostname = php_uname('n');
         $workers = $this->Workers->find('forHost', ['host' => $hostname]);
@@ -196,7 +189,7 @@ class WatchdogShell extends AppShell
                     ]);
             }
 
-            if (Manager::instance()->isSimilarJob($job)) {
+            if (JobManager::instance()->isSimilarJob($job)) {
                 $this->out(__('  <error>Already queued:</error> {0}', $job->getWorker()), 1, Shell::VERBOSE);
                 continue;
             }
@@ -378,7 +371,7 @@ class WatchdogShell extends AppShell
 
     public function revive()
     {
-        $stats = AmqpManager::queueStatus();
+        $stats = JobManager::instance()->getMessageBroker()->queueStatus();
         if ($stats['messages'] > 0) {
             $this->out(__('<error>There are {0} messages currently queued</error>', $stats['messages']));
             $this->out('We cannot reliablily determine which messages to requeue unless the RabbitMQ queue is empty.');
@@ -432,7 +425,7 @@ class WatchdogShell extends AppShell
             }
 
             $this->out(__(' - Queing job <info>{0}</info>', $job['id']), 0, Shell::VERBOSE);
-            if (Manager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
+            if (JobManager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
                 $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
             } else {
                 $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);

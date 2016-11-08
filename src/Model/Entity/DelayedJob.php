@@ -1,16 +1,9 @@
 <?php
 namespace DelayedJobs\Model\Entity;
 
-use Cake\Console\Shell;
-use Cake\Core\App;
-use Cake\Core\Configure;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
-use Cake\Log\Log;
 use Cake\ORM\Entity;
-use Cake\Core\Exception\Exception;
-use DelayedJobs\Amqp\AmqpManager;
-use DelayedJobs\Model\Table\DelayedJobsTable;
 
 /**
  * Class DelayedJob

@@ -100,6 +100,12 @@ class Job
      * @var array
      */
     protected $_history = [];
+    /**
+     * Internal storage for the broker message object.
+     *
+     * @var object
+     */
+    protected $_brokerMessage;
 
     /**
      * Job constructor.
@@ -210,7 +216,7 @@ class Job
      */
     public function getMaxRetries()
     {
-        return $this->_maxRetries !== null ? $this->_maxRetries : Configure::read('dj.default.retries');
+        return $this->_maxRetries !== null ? $this->_maxRetries : Configure::read('DelayedJobs.default.maxRetries');
     }
 
     /**
@@ -219,7 +225,7 @@ class Job
      */
     public function setMaxRetries($maxRetries)
     {
-        $this->_maxRetries = min($maxRetries, Configure::read('dj.max.retries'));
+        $this->_maxRetries = min($maxRetries, Configure::read('DelayedJobs.maximum.maxRetries'));
 
         return $this;
     }
@@ -555,6 +561,26 @@ class Job
             'message' => $message ?: ''
         ]);
 
+        if (is_string($message)) {
+            $this->setLastMessage($message);
+        }
+
         return $this;
+    }
+
+    /**
+     * @return object
+     */
+    public function getBrokerMessage()
+    {
+        return $this->_brokerMessage;
+    }
+
+    /**
+     * @param object $brokerMessage The broker message
+     */
+    public function setBrokerMessage($brokerMessage)
+    {
+        $this->_brokerMessage = $brokerMessage;
     }
 }

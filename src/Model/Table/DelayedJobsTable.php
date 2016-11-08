@@ -2,23 +2,21 @@
 
 namespace DelayedJobs\Model\Table;
 
-use Cake\Core\Configure;
 use Cake\Database\Schema\Table as Schema;
 use Cake\I18n\Time;
 use Cake\ORM\Table;
-use DelayedJobs\DelayedJob\DatastoreInterface;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Model\Entity\DelayedJob;
-use DelayedJobs\Traits\DebugTrait;
+use DelayedJobs\Traits\DebugLoggerTrait;
 
 /**
  * DelayedJob Model
  *
  * @internal
  */
-class DelayedJobsTable extends Table implements DatastoreInterface
+class DelayedJobsTable extends Table
 {
-    use DebugTrait;
+    use DebugLoggerTrait;
 
     /**
      * @param array $config Config array.
@@ -330,7 +328,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             ->first();
 
         if (!$next) {
-            $this->dj_log(__('No more sequenced jobs found for {0}', $job->getSequence()));
+            $this->djLog(__('No more sequenced jobs found for {0}', $job->getSequence()));
 
             return false;
         }
