@@ -7,13 +7,13 @@ use DelayedJobs\DelayedJob\Job;
 /**
  * Interface BrokerInterface
  */
-interface BrokerInterface
+interface RabbitMqDriverInterface
 {
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job to publish
+     * @param array $jobData Job to publish
      * @return void
      */
-    public function publishJob(Job $job);
+    public function publishJob(array $jobData);
 
     public function consume(callable $callback, callable $heartbeat);
 

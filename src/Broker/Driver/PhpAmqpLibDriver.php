@@ -8,6 +8,7 @@ use Cake\Core\InstanceConfigTrait;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Network\Http\Client;
+use DelayedJobs\Broker\RabbitMqDriverInterface;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\ManagerInterface;
@@ -22,7 +23,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPAbstractCollection;
 use PhpAmqpLib\Wire\AMQPTable;
 
-class PhpAmqpLibDriver
+class PhpAmqpLibDriver implements RabbitMqDriverInterface
 {
     use DebugLoggerTrait;
     use InstanceConfigTrait;
@@ -131,7 +132,7 @@ class PhpAmqpLibDriver
         $channel->queue_bind($prefix . 'queue', $prefix . 'direct-exchange', $routingKey);
     }
 
-    public function publishJob($jobData)
+    public function publishJob(array $jobData)
     {
         $prefix = $this->config('prefix');
         $routingKey = $this->config('routingKey');

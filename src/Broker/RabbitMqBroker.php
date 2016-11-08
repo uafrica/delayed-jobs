@@ -50,12 +50,10 @@ class RabbitMqBroker implements BrokerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job to publish
-     * @return mixed
+     * @return void
      */
     public function publishJob(Job $job)
     {
-        $driver = $this->getDriver();
-
         $delay = $job->getRunAt()->isFuture() ? Time::now()->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
         //Invert the priority because Rabbit does things differently
@@ -66,7 +64,7 @@ class RabbitMqBroker implements BrokerInterface
             'payload' => ['id' => $job->getId()]
         ];
 
-        $driver->publishJob($jobData);
+        $this->getDriver()->publishJob($jobData);
     }
 
     public function consume(callable $callback, callable $heartbeat)
