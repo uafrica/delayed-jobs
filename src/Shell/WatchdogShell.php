@@ -178,7 +178,7 @@ class WatchdogShell extends AppShell
 
         //Event is deprecated
         $event = new Event('DelayedJobs.recurring', $this);
-        $event->result = RecurringJobBuilder::retrive();
+        $event->result = RecurringJobBuilder::retrieve();
         EventManager::instance()->dispatch($event);
 
         $this->out(__('{0} jobs to queue', count($event->result)), 1, Shell::VERBOSE);

@@ -19,7 +19,8 @@ $defaultConfig = [
     ],
     'archive' => [
         'enabled' => false,
-        'tableName' => 'delayed_jobs_archive'
+        'tableName' => 'delayed_jobs_archive',
+        'recurring' => 'tomorrow 00:30am'
     ]
 ];
 

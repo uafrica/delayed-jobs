@@ -14,7 +14,7 @@ class RecurringJobBuilder
         static::$_recurringJobs[] = $jobInfo;
     }
 
-    public static function retrive()
+    public static function retrieve()
     {
         return static::$_recurringJobs;
     }

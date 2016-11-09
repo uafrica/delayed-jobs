@@ -7,6 +7,7 @@ use Cake\Database\Exception;
 use Cake\Database\Query;
 use Cake\Database\Schema\Table;
 use Cake\Datasource\ConnectionManager;
+use Cake\I18n\Time;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\Job;
 
@@ -74,6 +75,8 @@ class ArchiveWorker extends Worker
 
         $connection->driver()
             ->autoQuoting($quote);
+
+        return new Time(Configure::read('DelayedJobs.archive.recurring'));
     }
 
 }
