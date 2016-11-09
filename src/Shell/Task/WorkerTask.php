@@ -65,18 +65,18 @@ class WorkerTask extends Shell
         $this->djLog(__('Executing: {0}', $job->getId()));
 
         $start = microtime(true);
-        try {
-            $response = JobManager::instance()->execute($job, $this->param('force'));
+        $response = JobManager::instance()->execute($job, $this->param('force'));
 
+        if ($response instanceof \Throwable) {
+            $this->_failedJob($job, $response);
+        } else {
             $this->djLog(__('Done with: {0}', $job->getId()));
 
-            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response), 1, Shell::VERBOSE);
-        } catch (\Throwable $e) {
-            $this->_failedJob($job, $e);
-        } finally {
-            $end = microtime(true);
-            $this->out(sprintf(' - Took: %.2f seconds', $end - $start), 1, Shell::VERBOSE);
+            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response), 1,
+                Shell::VERBOSE);
         }
+        $end = microtime(true);
+        $this->out(sprintf(' - Took: %.2f seconds', $end - $start), 1, Shell::VERBOSE);
     }
 
     protected function _failedJob(Job $job, $exc)

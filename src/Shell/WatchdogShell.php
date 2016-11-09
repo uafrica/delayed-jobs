@@ -18,6 +18,7 @@ use DelayedJobs\Lock;
 use DelayedJobs\Model\Entity\Worker;
 use DelayedJobs\Model\Table\WorkersTable;
 use DelayedJobs\Process;
+use DelayedJobs\RecurringJobBuilder;
 
 /**
  * Class WatchdogShell
@@ -174,8 +175,10 @@ class WatchdogShell extends AppShell
     public function recurring()
     {
         $this->out('Firing recurring event.');
+
+        //Event is deprecated
         $event = new Event('DelayedJobs.recurring', $this);
-        $event->result = [];
+        $event->result = RecurringJobBuilder::retrieve();
         EventManager::instance()->dispatch($event);
 
         $this->out(__('{0} jobs to queue', count($event->result)), 1, Shell::VERBOSE);
@@ -460,9 +463,6 @@ class WatchdogShell extends AppShell
                         ]
                     ]
                 ]
-            ])
-            ->addSubcommand('clean', [
-                'help' => 'Cleans out jobs that are completed and older than 4 weeks'
             ])
             ->addSubcommand('recurring', [
                 'help' => 'Fires the recurring event and creates the initial recurring job instance'

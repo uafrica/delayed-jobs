@@ -390,6 +390,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $duration = $duration ?? round((microtime(true) - $start) * 1000);
             $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result, $duration]);
         }
+
+        return $result;
     }
 
     public function enqueueNextSequence(Job $job)
