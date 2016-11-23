@@ -8,7 +8,6 @@ use Cake\Core\InstanceConfigTrait;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\Network\Http\Client;
-use DelayedJobs\Broker\RabbitMqDriverInterface;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\ManagerInterface;
