@@ -9,6 +9,7 @@ use Cake\Core\Configure;
 use Cake\Datasource\Exception\InvalidPrimaryKeyException;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\Event\Event;
+use Cake\I18n\FrozenTime;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use DelayedJobs\Broker\PhpAmqpLibBroker;
@@ -33,6 +34,7 @@ class WorkerShell extends AppShell
 
     const TIMEOUT = 10; //In seconds
     const MAXFAIL = 5;
+    const SUICIDE_EXIT_CODE=100;
     public $modelClass = 'DelayedJobs.DelayedJobs';
     public $tasks = ['DelayedJobs.Worker', 'DelayedJobs.ProcessManager'];
     protected $_workerId;
@@ -57,6 +59,25 @@ class WorkerShell extends AppShell
     protected $_lastJob;
     protected $_myPID;
     private $_pulse = false;
+    /**
+     * Should this worker be suicidal
+     *
+     * @var array {
+     * @var bool $enabled Should this worker be suicidal
+     * @var int $jobCount After how many jobs should this worker kill itself
+     * @var int $idleTimeout After how many idle seconds should this worker kill itself
+     * }
+     */
+    protected $_suicideMode = [
+        'enabled' => false,
+        'jobCount' => 100,
+        'idleTimeout' => 120
+    ];
+    /**
+     * Time that the last job was executed
+     * @var float
+     */
+    protected $_timeOfLastJob;
 
     /**
      * @inheritDoc
@@ -87,6 +108,9 @@ class WorkerShell extends AppShell
         $this->_worker = $this->Workers->started($this->_hostName, $this->_workerName, $this->_myPID);
 
         $this->_workerId = $this->_workerName . '.' . $this->_workerName;
+
+        $this->_suicideMode = Configure::read('DelayedJobs.workers.suicideMode') + $this->_suicideMode;
+        $this->_timeOfLastJob = microtime(true);
 
         cli_set_process_title(sprintf('DJ Worker :: %s :: Booting', $this->_workerId));
 
@@ -119,7 +143,7 @@ class WorkerShell extends AppShell
         $this->nl();
     }
 
-    public function stopHammerTime()
+    public function stopHammerTime($exitCode = 0)
     {
         $this->out('Shutting down...');
 
@@ -129,7 +153,7 @@ class WorkerShell extends AppShell
             $this->Workers->delete($this->_worker);
         }
 
-        $this->_stop();
+        $this->_stop($exitCode);
     }
 
     public function main()
@@ -182,6 +206,21 @@ class WorkerShell extends AppShell
 
         $this->Workers->save($this->_worker);
         pcntl_signal_dispatch();
+
+        $this->_checkSuicideStatus();
+    }
+
+    protected function _checkSuicideStatus()
+    {
+        if ($this->_suicideMode['enabled'] !== true) {
+            return;
+        }
+
+        if ($this->_jobCount >= $this->_suicideMode['jobCount'] ||
+            microtime(true) - $this->_timeOfLastJob >= $this->_suicideMode['idleTimeout']
+        ) {
+            $this->stopHammerTime(static::SUICIDE_EXIT_CODE);
+        }
     }
 
     public function beforeExecute(Event $event, Job $job)
@@ -202,6 +241,7 @@ class WorkerShell extends AppShell
         $job->setHostName($this->_hostName);
 
         pcntl_signal_dispatch();
+        $this->_timeLastJob = microtime(true);
 
         return true;
     }
@@ -221,6 +261,9 @@ class WorkerShell extends AppShell
 
         $this->out(sprintf(' - Took: %.2f seconds', $duration / 1000), 1, Shell::VERBOSE);
         pcntl_signal_dispatch();
+
+        $this->_timeLastJob = microtime(true);
+        $this->_checkSuicideStatus();
     }
 
     public function getOptionParser()
@@ -229,15 +272,6 @@ class WorkerShell extends AppShell
         $options->addSubcommand('worker', [
             'help' => 'Executes a job',
             'parser' => $this->Worker->getOptionParser(),
-        ])
-        ->addOption('qos', [
-            'help' => 'Sets the QOS value for AMQP',
-            'default' => 1
-        ])
-        ->addOption('debug', [
-            'help' => 'Debug mode, will quit on error',
-            'boolean' => true,
-            'default' => false
         ]);
         return $options;
     }

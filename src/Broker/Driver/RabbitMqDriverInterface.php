@@ -1,6 +1,6 @@
 <?php
 
-namespace DelayedJobs\Broker;
+namespace DelayedJobs\Broker\Driver;
 
 use DelayedJobs\DelayedJob\Job;
 
