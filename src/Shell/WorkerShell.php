@@ -273,10 +273,6 @@ class WorkerShell extends AppShell
             'help' => 'Executes a job',
             'parser' => $this->Worker->getOptionParser(),
         ])
-        ->addOption('qos', [
-            'help' => 'Sets the QOS value for AMQP',
-            'default' => 1
-        ])
         ->addOption('debug', [
             'help' => 'Debug mode, will quit on error',
             'boolean' => true,
