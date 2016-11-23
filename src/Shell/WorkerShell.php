@@ -272,11 +272,6 @@ class WorkerShell extends AppShell
         $options->addSubcommand('worker', [
             'help' => 'Executes a job',
             'parser' => $this->Worker->getOptionParser(),
-        ])
-        ->addOption('debug', [
-            'help' => 'Debug mode, will quit on error',
-            'boolean' => true,
-            'default' => false
         ]);
         return $options;
     }
