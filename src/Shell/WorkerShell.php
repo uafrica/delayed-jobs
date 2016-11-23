@@ -34,6 +34,7 @@ class WorkerShell extends AppShell
 
     const TIMEOUT = 10; //In seconds
     const MAXFAIL = 5;
+    const SUICIDE_EXIT_CODE=100;
     public $modelClass = 'DelayedJobs.DelayedJobs';
     public $tasks = ['DelayedJobs.Worker', 'DelayedJobs.ProcessManager'];
     protected $_workerId;
@@ -142,7 +143,7 @@ class WorkerShell extends AppShell
         $this->nl();
     }
 
-    public function stopHammerTime()
+    public function stopHammerTime($exitCode = 0)
     {
         $this->out('Shutting down...');
 
@@ -152,7 +153,7 @@ class WorkerShell extends AppShell
             $this->Workers->delete($this->_worker);
         }
 
-        $this->_stop();
+        $this->_stop($exitCode);
     }
 
     public function main()
@@ -218,8 +219,7 @@ class WorkerShell extends AppShell
         if ($this->_jobCount >= $this->_suicideMode['jobCount'] ||
             microtime(true) - $this->_timeOfLastJob >= $this->_suicideMode['idleTimeout']
         ) {
-            $this->out('Goodbye cruel world!', 1, Shell::VERBOSE);
-            $this->stopHammerTime();
+            $this->stopHammerTime(static::SUICIDE_EXIT_CODE);
         }
     }
 
