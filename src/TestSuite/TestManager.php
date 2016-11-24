@@ -119,7 +119,7 @@ class TestManager implements ManagerInterface
         return $job;
     }
 
-    public function execute(Job $job, Shell $shell = null)
+    public function execute(Job $job, $force)
     {
         return $job;
     }
