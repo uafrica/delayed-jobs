@@ -20,13 +20,13 @@ $defaultConfig = [
     'archive' => [
         'enabled' => false,
         'tableName' => 'delayed_jobs_archive',
-        'recurring' => 'tomorrow 00:30am'
+        'recurring' => 'tomorrow 00:30'
     ]
 ];
 
 $delayedJobsConfig = Configure::read('DelayedJobs');
 
-Configure::write($delayedJobsConfig + $defaultConfig);
+Configure::write('DelayedJobs', \Cake\Utility\Hash::merge($defaultConfig, $delayedJobsConfig));
 
 \Cake\Database\Type::map('serialize', 'DelayedJobs\Database\Type\SerializeType');
 

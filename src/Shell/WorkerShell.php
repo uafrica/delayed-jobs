@@ -122,7 +122,9 @@ class WorkerShell extends AppShell
     protected function _enableListeners()
     {
         $this->ProcessManager->eventManager()
-            ->on('CLI.signal', [$this, 'stopHammerTime']);
+            ->on('CLI.signal', function () {
+                $this->stopHammerTime();
+            });
         $this->ProcessManager->handleKillSignals();
     }
 

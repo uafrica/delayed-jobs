@@ -2,7 +2,9 @@
 
 namespace DelayedJobs\Broker;
 
+use Cake\Core\Configure;
 use Cake\Core\InstanceConfigTrait;
+use Cake\Http\Client;
 use Cake\I18n\Time;
 use DelayedJobs\Broker\Driver\PhpAmqpLibDriver;
 use DelayedJobs\DelayedJob\Job;
