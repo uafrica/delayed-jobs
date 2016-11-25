@@ -241,7 +241,7 @@ class WatchdogShell extends AppShell
         $base_path = self::BASEPATH;
 
         //## Host not found in database, start it
-        $process = new Process($base_path . ' -q --qos ' . $this->param('qos'));
+        $process = new Process($base_path . ' -q');
         sleep(2);
 
         if (!$process->status()) {
