@@ -479,6 +479,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
                 $this->djLog(__('Will retry job {0}', $job->getId()));
 
+                // Sleep 100ms before requeuing the job... sometimes RabbitMQ is just too fast.
+                usleep(100 * 1000);
+
                 $this->requeueJob($job);
 
                 return;
