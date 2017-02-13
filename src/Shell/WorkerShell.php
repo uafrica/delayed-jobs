@@ -35,6 +35,7 @@ class WorkerShell extends AppShell
     const TIMEOUT = 10; //In seconds
     const MAXFAIL = 5;
     const SUICIDE_EXIT_CODE=100;
+    const HEARTBEAT_TIME = 30;
     public $modelClass = 'DelayedJobs.DelayedJobs';
     public $tasks = ['DelayedJobs.Worker', 'DelayedJobs.ProcessManager'];
     protected $_workerId;
@@ -174,8 +175,10 @@ class WorkerShell extends AppShell
 
     public function heartbeat()
     {
+        $this->out('<success>Heartbeat</success>', 1, Shell::VERBOSE);
         cli_set_process_title(sprintf('DJ Worker :: %s :: %s', $this->_workerId, $this->_pulse ? 'O' : '-'));
         $this->_pulse = !$this->_pulse;
+        $this->_startTime = time();
 
         if ($this->_worker === null) {
             $this->stopHammerTime();
@@ -237,7 +240,9 @@ class WorkerShell extends AppShell
 
         $this->out(__('<success>Starting job:</success> {0} :: ', $job->getId()), 1, Shell::VERBOSE);
 
+        $this->_beforeMemory = memory_get_usage(true);
         $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
+        $this->out(sprintf(' - Before job memory: <info>%s</info>', $this->_makeReadable($this->_beforeMemory)), 1, Shell::VERBOSE);
         $this->out(' - Executing job', 1, Shell::VERBOSE);
 
         $job->setHostName($this->_hostName);
@@ -248,11 +253,24 @@ class WorkerShell extends AppShell
         return true;
     }
 
+    private function _makeReadable($size, $precision = 2)
+    {
+        static $units = ['B', 'kiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+        $step = 1024;
+        $i = 0;
+        while (($size / $step) > 0.9) {
+            $size = $size / $step;
+            $i++;
+        }
+
+        return round($size, $precision) . $units[$i];
+    }
+
     public function afterExecute(Event $event, Job $job, $result, $duration)
     {
         $this->_lastJob = $job->getId();
         $this->_jobCount++;
-        $this->out('');
+        $this->out('', 1, Shell::VERBOSE);
 
         if ($result instanceof \Throwable) {
             $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
@@ -261,11 +279,17 @@ class WorkerShell extends AppShell
             $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $result), 1, Shell::VERBOSE);
         }
 
+        $nowMem = memory_get_usage(true);
+        $this->out(sprintf(' - After job memory: <info>%s</info> (Change %s)', $this->_makeReadable($nowMem), $this->_makeReadable($nowMem - $this->_beforeMemory)), 1, Shell::VERBOSE);
         $this->out(sprintf(' - Took: %.2f seconds', $duration / 1000), 1, Shell::VERBOSE);
         pcntl_signal_dispatch();
 
         $this->_timeLastJob = microtime(true);
         $this->_checkSuicideStatus();
+
+        if (time() - $this->_startTime >= self::HEARTBEAT_TIME) {
+            $this->heartbeat();
+        }
     }
 
     public function getOptionParser()

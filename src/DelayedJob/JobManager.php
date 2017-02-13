@@ -389,6 +389,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->getMessageBroker()->ack($job);
             $duration = $duration ?? round((microtime(true) - $start) * 1000);
             $this->dispatchEvent('DelayedJob.afterJobExecute', [$job, $result, $duration]);
+
+            unset($jobWorker, $job);
         }
 
         return $result;
