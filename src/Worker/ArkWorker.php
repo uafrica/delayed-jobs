@@ -3,11 +3,13 @@
 namespace DelayedJobs\Worker;
 
 use Cake\Network\Http\Client;
+use DelayedJobs\DelayedJob\EnqueueTrait;
+use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Traits\QueueJobTrait;
 
 class ArkWorker
 {
-    use QueueJobTrait;
+    use EnqueueTrait;
 
     protected function _bcfact($n)
     {
@@ -31,36 +33,37 @@ class ArkWorker
         return bcdiv(1, (bcmul(12, ($num))), $precision);
     }
 
-    public function flood($payload, $job)
+    public function flood(Job $job)
     {
-        $command = 'ps -p ' . $payload['pid'];
+        $command = 'ps -p ' . $job->getPayload('pid');
         exec($command, $op);
         if (!isset($op[1])) {
             return 'Flood has been stopped';
         }
 
-        $pi = $this->_bcpi(rand(1, $payload['work']));
+        $pi = $this->_bcpi(random_int(1, $job->getPayload('work')));
         //Fetch an api 50% of the time
-        if (rand(0, 1) == 0) {
+        if (random_int(0, 1) === 0) {
             $client = new Client();
             $client->get('http://jsonplaceholder.typicode.com/posts');
 
             $pi .= ' - api';
 
-            sleep(rand(0, 120));
+            sleep(random_int(0, 30));
         }
 
-        $number_forks = rand($payload['first'] ? 1 : 0, $payload['max_fork']);
+        $number_forks = random_int($job->getPayload('first') ? 1 : 0, $job->getPayload('max_fork'));
         $payload['first'] = false;
-        $sequence = rand(0, 9) > 0 ? null : 'ark_' . $job->id . '_' . time();
+        $sequence = random_int(0, 9) > 0 ? null : 'ark_' . $job->id . '_' . time();
         for ($i = 0; $i < $number_forks; $i++) {
-            $this->_queueJob(
-                'FloodTest',
-                'DelayedJobs\Worker\ArkWorker',
-                'flood',
+            $this->enqueue(
+                'DelayedJobs.Ark',
                 $payload,
-                rand(0, 9) + $job->priority,
-                $sequence
+                [
+                    'group' => 'FloodTest',
+                    'priority' => random_int(0, 9) + $job->getPriority(),
+                    'sequence' => $sequence
+                ]
             );
         }
 

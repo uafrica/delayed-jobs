@@ -3,11 +3,12 @@
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
+use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\Traits\QueueJobTrait;
 
 class NoahShell extends AppShell
 {
-    use QueueJobTrait;
+    use EnqueueTrait;
 
     public $modelClass = 'DelayedJobs.DelayedJobs';
 
@@ -28,18 +29,19 @@ class NoahShell extends AppShell
         $work = (int)$this->in('Maximum number of pi digits to calculate?', null, 5);
 
         for ($i = 0;$i < $initial; $i++) {
-            $this->_queueJob(
-                'FloodTest',
-                'DelayedJobs\Worker\ArkWorker',
-                'flood',
+            $this->enqueue(
+                'DelayedJobs.Ark',
                 [
                     'first' => true,
                     'max_fork' => $max_fork,
                     'work' => $work,
                     'pid' => getmypid()
                 ],
-                rand(1, 10) * 10 + 100,
-                'initial_' . rand(0, 100)
+                [
+                    'group' => 'FloodTest',
+                    'priority' => random_int(1, 10) * 10 + 100,
+                    'sequence' => 'initial_' . random_int(0, 100)
+                ]
             );
         }
 
