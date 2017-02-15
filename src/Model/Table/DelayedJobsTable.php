@@ -4,6 +4,7 @@ namespace DelayedJobs\Model\Table;
 
 use Cake\Database\Schema\Table as Schema;
 use Cake\I18n\Time;
+use Cake\Log\Log;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Model\Entity\DelayedJob;
@@ -308,6 +309,7 @@ class DelayedJobsTable extends Table
             return false;
         }
 
+        $this->connection()->driver()->autoQuoting(false);
         $next = $this->find()
             ->select([
                 'id',
@@ -334,6 +336,7 @@ class DelayedJobsTable extends Table
         }
 
         $job = new Job($next->toArray());
+
         return $job;
     }
 
