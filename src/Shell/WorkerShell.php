@@ -248,7 +248,7 @@ class WorkerShell extends AppShell
         $job->setHostName($this->_hostName);
 
         pcntl_signal_dispatch();
-        $this->_timeLastJob = microtime(true);
+        $this->_timeOfLastJob = microtime(true);
 
         return true;
     }
@@ -282,10 +282,11 @@ class WorkerShell extends AppShell
         $nowMem = memory_get_usage(true);
         $this->out(sprintf(' - After job memory: <info>%s</info> (Change %s)', $this->_makeReadable($nowMem), $this->_makeReadable($nowMem - $this->_beforeMemory)), 1, Shell::VERBOSE);
         $this->out(sprintf(' - Took: %.2f seconds', $duration / 1000), 1, Shell::VERBOSE);
-        pcntl_signal_dispatch();
 
-        $this->_timeLastJob = microtime(true);
+        $this->_timeOfLastJob = microtime(true);
         $this->_checkSuicideStatus();
+
+        pcntl_signal_dispatch();
 
         if (time() - $this->_startTime >= self::HEARTBEAT_TIME) {
             $this->heartbeat();
