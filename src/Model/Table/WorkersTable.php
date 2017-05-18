@@ -19,6 +19,7 @@ class WorkersTable extends Table
     const STATUS_TO_KILL = 3;
     const STATUS_UNKNOWN = 4;
     const STATUS_SHUTDOWN = 5;
+    const STATUS_DEAD = 6;
 
     public function initialize(array $config)
     {

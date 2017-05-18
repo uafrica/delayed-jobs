@@ -16,7 +16,9 @@ use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
+use DelayedJobs\Model\Entity\Worker;
 use DelayedJobs\Model\Table\WorkersTable;
+use DelayedJobs\Shell\Task\ProcessManagerTask;
 use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -35,6 +37,7 @@ class WorkerShell extends AppShell
     const TIMEOUT = 10; //In seconds
     const MAXFAIL = 5;
     const SUICIDE_EXIT_CODE=100;
+    const NO_WORKER_EXIT_CODE=110;
     const HEARTBEAT_TIME = 30;
     public $modelClass = 'DelayedJobs.DelayedJobs';
     public $tasks = ['DelayedJobs.Worker', 'DelayedJobs.ProcessManager'];
@@ -123,8 +126,8 @@ class WorkerShell extends AppShell
     protected function _enableListeners()
     {
         $this->ProcessManager->eventManager()
-            ->on('CLI.signal', function () {
-                $this->stopHammerTime();
+            ->on('CLI.signal', function (Event $event) {
+                $this->stopHammerTime(ProcessManagerTask::$signals[$event->getData('signo')] ?? 'Unknown');
             });
         $this->ProcessManager->handleKillSignals();
     }
@@ -136,7 +139,7 @@ class WorkerShell extends AppShell
         $this->out(sprintf('WorkerID: <info>%s</info>', $this->_workerId));
         $this->out(sprintf('PID: <info>%s</info>', $this->_myPID));
 
-        if ($this->_io->level() == Shell::NORMAL && $this->_jobCount > 0) {
+        if ($this->_io->level() === Shell::NORMAL && $this->_jobCount > 0) {
             $this->out(sprintf('Last job: <info>%d</info>', $this->_lastJob));
             $this->out(sprintf('Jobs completed: <info>%d</info>', $this->_jobCount));
             $this->out(sprintf('Jobs completed/s: <info>%.2f</info>', $this->_jobCount / (time() - $this->_startTime)));
@@ -146,14 +149,17 @@ class WorkerShell extends AppShell
         $this->nl();
     }
 
-    public function stopHammerTime($exitCode = 0)
+    public function stopHammerTime($reason, $exitCode = 0)
     {
         $this->out('Shutting down...');
 
         $this->_manager->stopConsuming();
 
         if ($this->_worker) {
-            $this->Workers->delete($this->_worker);
+            $this->_worker->status = WorkersTable::STATUS_DEAD;
+            $this->_worker->shutdown_reason = $reason;
+            $this->_worker->shutdown_time = new FrozenTime();
+            $this->Workers->save($this->_worker);
         }
 
         $this->_stop($exitCode);
@@ -170,7 +176,7 @@ class WorkerShell extends AppShell
 
         $this->_manager->startConsuming();
 
-        $this->stopHammerTime();
+        $this->stopHammerTime(Worker::SHUTDOWN_LOOP_EXIT);
     }
 
     public function heartbeat()
@@ -181,7 +187,7 @@ class WorkerShell extends AppShell
         $this->_startTime = time();
 
         if ($this->_worker === null) {
-            $this->stopHammerTime();
+            $this->stopHammerTime(Worker::SHUTDOWN_NO_WORKER, static::NO_WORKER_EXIT_CODE);
 
             return;
         }
@@ -189,25 +195,29 @@ class WorkerShell extends AppShell
         try {
             $this->_worker = $this->Workers->get($this->_worker->id);
         } catch (RecordNotFoundException $e) {
-            $this->stopHammerTime();
+            $this->stopHammerTime(Worker::SHUTDOWN_NO_WORKER, static::NO_WORKER_EXIT_CODE);
             return;
         }
 
         //This isn't us, we aren't supposed to be alive!
         if ($this->_worker->pid !== $this->_myPID) {
-            $this->stopHammerTime();
+            $this->_worker = null;
+            $this->stopHammerTime(Worker::SHUTDOWN_WRONG_PID, static::NO_WORKER_EXIT_CODE);
 
             return;
         }
 
         if ($this->_worker && $this->_worker->status === WorkersTable::STATUS_SHUTDOWN) {
-            $this->stopHammerTime();
+            $this->stopHammerTime(Worker::SHUTDOWN_STATUS);
 
             return;
         }
 
         $this->_worker->pulse = new Time();
         $this->_worker->job_count = $this->_jobCount;
+        $this->_worker->memory_usage = memory_get_usage(true);
+        $this->_worker->idle_time = ceil(microtime(true) - $this->_timeOfLastJob);
+        $this->_worker->last_job = $this->_lastJob;
 
         $this->Workers->save($this->_worker);
         pcntl_signal_dispatch();
@@ -224,7 +234,7 @@ class WorkerShell extends AppShell
         if ($this->_jobCount >= $this->_suicideMode['jobCount'] ||
             microtime(true) - $this->_timeOfLastJob >= $this->_suicideMode['idleTimeout']
         ) {
-            $this->stopHammerTime(static::SUICIDE_EXIT_CODE);
+            $this->stopHammerTime(Worker::SHUTDOWN_SUICIDE, static::SUICIDE_EXIT_CODE);
         }
     }
 

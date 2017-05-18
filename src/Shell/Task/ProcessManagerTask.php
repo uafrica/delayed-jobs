@@ -38,7 +38,7 @@ class ProcessManagerTask extends Shell
      *
      * @var array
      */
-    protected static $_signals = [
+    public static $signals = [
         1 => 'SIGHUP',
         2 => 'SIGINT',
         3 => 'SIGQUIT',
@@ -131,13 +131,13 @@ class ProcessManagerTask extends Shell
     public function signal($signal, callable $callback)
     {
         if (is_numeric($signal)) {
-            if (!array_key_exists($signal, static::$_signals)) {
+            if (!array_key_exists($signal, static::$signals)) {
                 throw new Exception('Unknown signal: %s', $signal);
             }
             $signo = $signal;
-            $signalName = static::$_signals[$signal];
+            $signalName = static::$signals[$signal];
         } else {
-            if (false === ($pos = array_search($signal, static::$_signals))) {
+            if (false === ($pos = array_search($signal, static::$signals))) {
                 throw new Exception('Unknown signal: %s', $signal);
             }
             $signo = $pos;
@@ -154,7 +154,7 @@ class ProcessManagerTask extends Shell
     public function handleKillSignals()
     {
         $callback = function ($signo) {
-            $event = new Event('CLI.signal', compact('signo'));
+            $event = new Event('CLI.signal', null, compact('signo'));
             $this->eventManager()->dispatch($event);
         };
 
