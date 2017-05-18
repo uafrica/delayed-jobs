@@ -46,10 +46,7 @@ class WorkersTable extends Table
             'pulse' => new Time()
         ];
 
-        $host = $this->getWorker($host_name, $worker_name);
-        if (!$host) {
-            $host = $this->newEntity();
-        }
+        $host = $this->newEntity($data);
         $this->patchEntity($host, $data);
 
         return $this->save($host);
