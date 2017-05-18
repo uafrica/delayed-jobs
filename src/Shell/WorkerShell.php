@@ -238,7 +238,7 @@ class WorkerShell extends AppShell
 
         cli_set_process_title(sprintf('DJ Worker :: %s :: Working %s', $this->_workerId, $job->getId()));
 
-        $this->out(__('<success>Starting job:</success> {0} :: ', $job->getId()), 1, Shell::VERBOSE);
+        $this->out(__('<info>Job: {0}</info>', $job->getId()));
 
         $this->_beforeMemory = memory_get_usage(true);
         $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
@@ -282,6 +282,11 @@ class WorkerShell extends AppShell
         $nowMem = memory_get_usage(true);
         $this->out(sprintf(' - After job memory: <info>%s</info> (Change %s)', $this->_makeReadable($nowMem), $this->_makeReadable($nowMem - $this->_beforeMemory)), 1, Shell::VERBOSE);
         $this->out(sprintf(' - Took: %.2f seconds', $duration / 1000), 1, Shell::VERBOSE);
+
+        if ($this->_io->level() === Shell::NORMAL) {
+            $fin = ($result instanceof \Throwable ? '<error>✘</error>' : '<success>✔</success>');
+            $this->out(sprintf('%s %d %.2fs (%s)', $fin, $job->getId(), $duration / 1000, $this->_makeReadable($nowMem)));
+        }
 
         $this->_timeOfLastJob = microtime(true);
         $this->_checkSuicideStatus();
