@@ -142,6 +142,7 @@ class Job
             'max_retries' => $this->getMaxRetries(),
             'retries' => $this->getRetries(),
             'history' => $this->getHistory(),
+            'host_name' => $this->getHostName(),
         ];
     }
 
@@ -556,10 +557,11 @@ class Job
             $message = $message->getMessage();
         }
 
-        array_push($this->_history, [
+        $this->_history[] = [
             'timestamp' => new FrozenTime(),
+            'host_name' => $this->getHostName(),
             'message' => $message ?: ''
-        ]);
+        ];
 
         if (is_string($message)) {
             $this->setLastMessage($message);
