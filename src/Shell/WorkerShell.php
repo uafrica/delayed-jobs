@@ -75,7 +75,8 @@ class WorkerShell extends AppShell
     protected $_suicideMode = [
         'enabled' => false,
         'jobCount' => 100,
-        'idleTimeout' => 120
+        'idleTimeout' => 120,
+        'memoryLimit' => false
     ];
     /**
      * Time that the last job was executed
@@ -232,7 +233,8 @@ class WorkerShell extends AppShell
         }
 
         if ($this->_jobCount >= $this->_suicideMode['jobCount'] ||
-            microtime(true) - $this->_timeOfLastJob >= $this->_suicideMode['idleTimeout']
+            microtime(true) - $this->_timeOfLastJob >= $this->_suicideMode['idleTimeout'] ||
+            ($this->_suicideMode['memoryLimit'] !== false && $this->_suicideMode['memoryLimit'] * 1024 * 1024 <= memory_get_usage(true))
         ) {
             $this->stopHammerTime(Worker::SHUTDOWN_SUICIDE, static::SUICIDE_EXIT_CODE);
         }
