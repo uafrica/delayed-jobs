@@ -4,7 +4,7 @@
   "type": "cakephp-plugin",
   "require": {
     "cakephp/cakephp": "^3.0",
-    "friendsofcake/crud": "^4.0,^5.0",
+    "friendsofcake/crud": "^4.0 || ^5.0",
     "cakephp/migrations": "^1.5.1",
     "php-amqplib/php-amqplib": "^2.5",
     "symfony/polyfill-php70": "^1.1.1"
