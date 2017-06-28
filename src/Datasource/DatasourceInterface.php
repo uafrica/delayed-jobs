@@ -15,6 +15,10 @@ interface DatasourceInterface
      */
     public function persistJob(Job $job);
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs
+     * @return bool
+     */
     public function persistJobs(array $jobs);
 
     /**

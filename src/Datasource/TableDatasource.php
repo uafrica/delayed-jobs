@@ -87,15 +87,15 @@ class TableDatasource extends BaseDatasource
 
     public function loadJob(Job $job)
     {
-        $jobData = $this->_table()->find()
+        $jobEntity = $this->_table()->find()
             ->where(['id' => $job->getId()])
-            ->hydrate(false)
             ->first();
 
-        if ($jobData === null) {
+        if ($jobEntity === null) {
             throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $job->getId()));
         }
 
-        return $job->setData($jobData);
+        return $job
+            ->setDataFromEntity($jobEntity);
     }
 }

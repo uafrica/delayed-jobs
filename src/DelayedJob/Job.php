@@ -4,6 +4,7 @@ namespace DelayedJobs\DelayedJob;
 
 use Cake\Core\App;
 use Cake\Core\Configure;
+use Cake\Datasource\EntityInterface;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
 use Cake\I18n\FrozenTime;
@@ -106,16 +107,28 @@ class Job
      * @var object
      */
     protected $_brokerMessage;
+    /**
+     * @var \Cake\Datasource\EntityInterface|null
+     */
+    protected $_baseEntity;
 
     /**
      * Job constructor.
      *
-     * @param array $data Data to populate with
+     * @param array|\Cake\Datasource\EntityInterface|null $data Data to populate with
      */
-    public function __construct(array $data = null)
+    public function __construct($data = null)
     {
-        if ($data) {
+        if ($data === null) {
+            return;
+        }
+
+        if (is_array($data)) {
             $this->setData($data);
+        } elseif ($data instanceof EntityInterface) {
+            $this->setDataFromEntity($data);
+        } else {
+            throw new \InvalidArgumentException('$data is not an array or instance of ' . EntityInterface::class);
         }
     }
 
@@ -161,6 +174,37 @@ class Job
         }
 
         return $this;
+    }
+
+    /**
+     * @param \Cake\Datasource\EntityInterface $entity
+     * @return $this
+     */
+    public function setDataFromEntity(EntityInterface $entity)
+    {
+        $this->setData($entity->toArray());
+        $this->setEntity($entity);
+
+        return $this;
+    }
+
+    /**
+     * @param \Cake\Datasource\EntityInterface $entity
+     * @return $this
+     */
+    public function setEntity(EntityInterface $entity)
+    {
+        $this->_baseEntity = $entity;
+
+        return $this;
+    }
+
+    /**
+     * @return \Cake\Datasource\EntityInterface|null
+     */
+    public function getEntity()
+    {
+        return $this->_baseEntity;
     }
 
     /**

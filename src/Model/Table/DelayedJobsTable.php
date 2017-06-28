@@ -209,28 +209,37 @@ class DelayedJobsTable extends Table
 
     public function persistJob(Job $job)
     {
-        $job_data = $job->getData();
-        $job_entity = $this->newEntity($job_data);
+        $jobData = $job->getData();
+        $jobEntity = $job->getEntity();
+        if (!$jobEntity) {
+            $jobEntity = $this->newEntity();
+        }
+        $this->patchEntity($jobEntity, $jobData);
 
-        if (!$job_entity->status) {
-            $job_entity->status = DelayedJob::STATUS_NEW;
+        if (!$jobEntity->status) {
+            $jobEntity->status = Job::STATUS_NEW;
         }
 
         $options = [
             'atomic' => !$this->connection()->inTransaction()
         ];
 
-        $result = $this->save($job_entity, $options);
+        $result = $this->save($jobEntity, $options);
 
         if (!$result) {
             return false;
         }
 
-        $job->setId($job_entity->id);
+        $job->setId($jobEntity->id);
+        $job->setEntity($jobEntity);
 
         return $job;
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs
+     * @return bool
+     */
     public function persistJobs(array $jobs)
     {
         $query = $this->query()
@@ -254,7 +263,6 @@ class DelayedJobsTable extends Table
                 'modified',
             ]);
 
-        $batchData = [];
         foreach ($jobs as $job) {
             $jobData = $job->getData();
             unset($jobData['id']);
@@ -287,15 +295,15 @@ class DelayedJobsTable extends Table
 
     public function fetchJob($jobId)
     {
-        $job_entity = $this->find()
+        $jobEntity = $this->find()
             ->where(['id' => $jobId])
             ->first();
 
-        if (!$job_entity) {
+        if (!$jobEntity) {
             return null;
         }
 
-        $job = new Job($job_entity->toArray());
+        $job = new Job($jobEntity);
         return $job;
     }
 
