@@ -294,6 +294,11 @@ class Job
      */
     public function setPriority($priority)
     {
+        if ($priority > 255) {
+            $priority = 255;
+        } elseif ($priority < 0) {
+            $priority = 0;
+        }
         $this->_priority = $priority;
 
         return $this;

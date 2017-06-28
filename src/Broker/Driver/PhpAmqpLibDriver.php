@@ -152,8 +152,6 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
         $exchange = $prefix . ($jobData['delay'] > 0 ? 'delayed-exchange' : 'direct-exchange');
         $channel->basic_publish($message, $exchange, $routingKey);
-
-        return $message;
     }
 
     public function consume(callable $callback, callable $heartbeat)

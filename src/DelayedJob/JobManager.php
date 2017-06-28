@@ -151,8 +151,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         $job = new Job(compact('id', 'priority'));
 
-        return $this->getMessageBroker()
-            ->publishJob($job);
+        $this->getMessageBroker()->publishJob($job);
+
+        return true;
     }
 
     public function enqueueBatch(array $jobs)

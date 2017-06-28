@@ -58,10 +58,16 @@ class RabbitMqBroker implements BrokerInterface
     {
         $delay = $job->getRunAt()->isFuture() ? Time::now()->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
-        //Invert the priority because Rabbit does things differently
         $jobPriority = $this->_manager->config('maximum.priority') - $job->getPriority();
+        if ($jobPriority < 0) {
+            $jobPriority = 0;
+        } elseif ($jobPriority > 255) {
+            $jobPriority = 255;
+        }
+
+        //Invert the priority because Rabbit does things differently
         $jobData = [
-            'priority' => $jobPriority > 0 ? $jobPriority : 0,
+            'priority' => $jobPriority,
             'delay' => $delay,
             'payload' => ['id' => $job->getId()]
         ];
