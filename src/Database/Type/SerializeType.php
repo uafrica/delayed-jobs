@@ -26,7 +26,7 @@ class SerializeType extends Type
             return null;
         }
 
-        $unserialized = unserialize($value, true);
+        $unserialized = unserialize($value);
         if ($unserialized === false) {
             Log::error(__('Could not unserialize payload:'));
             Log::error($value);
@@ -50,7 +50,7 @@ class SerializeType extends Type
             return $value;
         }
 
-        return unserialize($value, true);
+        return unserialize($value);
     }
 
     /**
