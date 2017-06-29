@@ -219,7 +219,11 @@ class DelayedJobsTable extends Table
         if (!$jobEntity) {
             $jobEntity = $this->newEntity();
         }
-        $this->patchEntity($jobEntity, $jobData);
+        $this->patchEntity($jobEntity, $jobData, [
+            'accessibleFields' => [
+                '*' => true
+            ]
+        ]);
 
         if (!$jobEntity->status) {
             $jobEntity->status = Job::STATUS_NEW;
