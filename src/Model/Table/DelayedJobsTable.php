@@ -144,11 +144,6 @@ class DelayedJobsTable extends Table
 
     public function currentlySequenced(Job $job)
     {
-        //@TODO: Figure out some other way of solving the concurrent sequence problem
-        if (random_int(1, 2) === 1) { //50% of the time, sleep for between 10 and 50 ms
-            usleep(random_int(10, 50) * 1000);
-        }
-
         return $this->exists([
             'id <' => $job->getId(),
             'sequence' => $job->getSequence(),
