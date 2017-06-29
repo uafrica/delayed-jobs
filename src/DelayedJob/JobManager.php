@@ -282,7 +282,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                 'endTime' => null,
                 'duration' => null,
                 'id' => null
-            ]);
+            ])
+            ->setEntity(null);
             $this->enqueue($recuringJob);
         }
     }

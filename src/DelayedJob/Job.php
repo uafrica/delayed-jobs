@@ -192,7 +192,7 @@ class Job
      * @param \Cake\Datasource\EntityInterface $entity
      * @return $this
      */
-    public function setEntity(EntityInterface $entity)
+    public function setEntity(EntityInterface $entity = null)
     {
         $this->_baseEntity = $entity;
 
