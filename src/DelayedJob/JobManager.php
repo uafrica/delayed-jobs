@@ -195,8 +195,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $growthFactor = static::BASE_RETRY_TIME + $retryCount ** static::RETRY_FACTOR;
         }
 
-        $growthFactorRandom = mt_rand(1, 2) === 2 ? -1 : +1;
-        $growthFactorRandom = $growthFactorRandom * ceil(\log($growthFactor + mt_rand($growthFactor / 2, $growthFactor)));
+        $growthFactorRandom = random_int(1, 2) === 2 ? -1 : +1;
+        $growthFactorRandom *= ceil(\log($growthFactor + random_int($growthFactor / 2, $growthFactor)));
 
         $growthFactor += $growthFactorRandom;
 
