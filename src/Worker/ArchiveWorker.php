@@ -63,7 +63,7 @@ class ArchiveWorker extends Worker
             ->autoQuoting(true);
 
         $selectQuery = $delayedJobsTable->query()
-            ->where(['status IN' => [Job::STATUS_BURRIED, Job::STATUS_SUCCESS]]);
+            ->where(['status IN' => [Job::STATUS_BURIED, Job::STATUS_SUCCESS]]);
 
         $insertQuery = $archiveTable->query();
         $insertQuery
@@ -71,7 +71,7 @@ class ArchiveWorker extends Worker
             ->values($selectQuery)
             ->execute();
 
-        $delayedJobsTable->deleteAll(['status IN' => [Job::STATUS_BURRIED, Job::STATUS_SUCCESS]]);
+        $delayedJobsTable->deleteAll(['status IN' => [Job::STATUS_BURIED, Job::STATUS_SUCCESS]]);
 
         $connection->driver()
             ->autoQuoting($quote);

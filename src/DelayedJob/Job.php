@@ -22,12 +22,13 @@ class Job
 {
     const STATUS_NEW = 1;
     const STATUS_BUSY = 2;
-    const STATUS_BURRIED = 3;
+    const STATUS_BURIED = 3;
     const STATUS_SUCCESS = 4;
     const STATUS_KICK = 5;
     const STATUS_FAILED = 6;
     const STATUS_UNKNOWN = 7;
     const STATUS_TEST_JOB = 8;
+    const STATUS_PAUSED = 9;
 
     /**
      * @var string
@@ -130,6 +131,23 @@ class Job
         } else {
             throw new \InvalidArgumentException('$data is not an array or instance of ' . EntityInterface::class);
         }
+    }
+
+    public function __clone()
+    {
+        $this->setData([
+            'status' => Job::STATUS_NEW,
+            'retries' => 0,
+            'lastMessage' => null,
+            'failedAt' => null,
+            'lockedBy' => null,
+            'startTime' => null,
+            'endTime' => null,
+            'duration' => null,
+            'id' => null,
+            'history' => [],
+            'entity' => null
+        ]);
     }
 
     /**

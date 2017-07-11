@@ -22,4 +22,6 @@ interface RabbitMqDriverInterface
     public function ack(Job $job);
 
     public function nack(Job $job, $requeue = false);
+
+    public function getChannel();
 }

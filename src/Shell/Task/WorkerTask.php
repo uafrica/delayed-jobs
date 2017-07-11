@@ -48,7 +48,7 @@ class WorkerTask extends Shell
             $this->_stop(2);
         }
 
-        if (!$this->param('force') && $job->getStatus() == Job::STATUS_BURRIED) {
+        if (!$this->param('force') && $job->getStatus() == Job::STATUS_BURIED) {
             $this->out("<error>Job Failed too many times, but why was it called again</error>");
             $this->_stop(3);
         }
