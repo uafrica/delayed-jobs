@@ -288,8 +288,12 @@ class WorkerShell extends AppShell
         $this->out('', 1, Shell::VERBOSE);
 
         if ($result instanceof Failed) {
-            $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
-            $this->out($result->getException()->getTraceAsString(), 1, Shell::VERBOSE);
+            $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()), 1,
+                Shell::VERBOSE);
+            $this->out($result->getException()
+                ->getTraceAsString(), 1, Shell::VERBOSE);
+        } elseif ($result instanceof Paused) {
+            $this->out(sprintf('<success> - Execution paused</success> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
         } else {
             $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
         }
@@ -299,7 +303,9 @@ class WorkerShell extends AppShell
         $this->out(sprintf(' - Took: %.2f seconds', $duration / 1000), 1, Shell::VERBOSE);
 
         if ($this->_io->level() === Shell::NORMAL) {
-            $fin = ($result instanceof Failed ? '<error>✘</error>' : '<success>✔</success>');
+            $fin = ($result instanceof Failed ? '<error>✘</error>' : (
+                $result instanceof Paused ? '<info>❙ ❙</info>' : '<success>✔</success>'
+            ));
             $this->out(sprintf('%s %d %.2fs (%s)', $fin, $job->getId(), $duration / 1000, $this->_makeReadable($nowMem)));
         }
 

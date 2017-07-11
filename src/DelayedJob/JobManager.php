@@ -271,6 +271,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         if ($result instanceof ResultInterface) {
             return $result;
+        } elseif ($result === null) {
+            return new Success($job);
         } elseif (is_string($result) || $result === true) {
             return new Success($job, $result);
         } elseif ($result instanceof \DateTimeInterface) {
@@ -366,16 +368,14 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
         if ($force === false && ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURIED)) {
             $this->djLog(__('Job {0} has already been processed', $job->getId()));
-            $this->getMessageBroker()
-                ->ack($job);
+            $this->getMessageBroker()->ack($job);
 
             return true;
         }
 
         if ($force === false && $job->getStatus() === Job::STATUS_BUSY) {
-            $this->djLog(__('Job {0} has already being processed', $job->getId()));
-            $this->getMessageBroker()
-                ->ack($job);
+            $this->djLog(__('Job {0} is already being processed', $job->getId()));
+            $this->getMessageBroker()->ack($job);
 
             return true;
         }

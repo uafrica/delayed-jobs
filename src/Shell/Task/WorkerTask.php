@@ -42,18 +42,6 @@ class WorkerTask extends Shell
             $this->_stop(1);
             return;
         }
-        //## First check if job is not locked
-        if (!$this->param('force') && $job->getStatus() == Job::STATUS_SUCCESS) {
-            $this->out("<error>Job previously completed, Why is is being called again</error>");
-            $this->_stop(2);
-        }
-
-        if (!$this->param('force') && $job->getStatus() == Job::STATUS_BURIED) {
-            $this->out("<error>Job Failed too many times, but why was it called again</error>");
-            $this->_stop(3);
-        }
-
-        JobManager::instance()->lock($job);
 
         $this->executeJob($job);
     }
