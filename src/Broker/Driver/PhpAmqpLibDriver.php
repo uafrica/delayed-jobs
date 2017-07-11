@@ -161,12 +161,18 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $channel->basic_qos(null, $this->config('qos'), null);
 
         $tag = $channel->basic_consume($prefix . 'queue', '', false, false, false, false, function (AMQPMessage $message) use ($callback) {
-            $body = json_decode($message->body, true);
+            $body = json_decode($message->getBody(), true);
 
             $job = new Job();
             $job
-                ->setId($body['id'])
-                ->setBrokerMessage($message);
+                ->setBrokerMessage($message)
+                ->setBrokerMessageBody($body);
+
+            if (isset($message->get_properties()['correlation_id'])) {
+                $job->setId($message->get_properties()['correlation_id']);
+            } elseif (isset($body['id'])) {
+                $job->setId($body['id']);
+            }
 
             return $callback($job, $message->delivery_info['redelivered']);
         });

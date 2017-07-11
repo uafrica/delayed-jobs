@@ -112,6 +112,12 @@ class Job
      * @var \Cake\Datasource\EntityInterface|null
      */
     protected $_baseEntity;
+    /**
+     * Storage for the body/payload of the message from the broker
+     *
+     * @var mixed
+     */
+    protected $_brokerMessageBody;
 
     /**
      * Job constructor.
@@ -647,9 +653,31 @@ class Job
 
     /**
      * @param object $brokerMessage The broker message
+     * @return $this
      */
     public function setBrokerMessage($brokerMessage)
     {
         $this->_brokerMessage = $brokerMessage;
+
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getBrokerMessageBody()
+    {
+        return $this->_brokerMessageBody;
+    }
+
+    /**
+     * @param mixed $brokerMessageBody
+     * @return Job
+     */
+    public function setBrokerMessageBody($brokerMessageBody)
+    {
+        $this->_brokerMessageBody = $brokerMessageBody;
+
+        return $this;
     }
 }
