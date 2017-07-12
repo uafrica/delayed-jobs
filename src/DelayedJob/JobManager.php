@@ -6,6 +6,7 @@ use Cake\Console\Shell;
 use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Core\InstanceConfigTrait;
+use Cake\Event\Event;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
 use Cake\I18n\Time;
@@ -315,8 +316,31 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         return $result->getMessage();
     }
 
+    /**
+     * @param \DelayedJobs\Worker\JobWorkerInterface $jobWorker
+     * @param $name
+     * @param null $data
+     * @param null $subject
+     * @return \Cake\Event\Event
+     */
+    protected function _dispatchWorkerEvent(JobWorkerInterface $jobWorker, $name, $data = null, $subject = null): Event
+    {
+        $event = new Event($name, $subject ?? $this, $data);
+        $this->eventManager()->dispatch($event);
+        if ($jobWorker instanceof EventDispatcherInterface) {
+            $jobWorker->eventManager()->dispatch($event);
+        }
+
+        return $event;
+    }
+
     protected function _executeJob(Job $job, JobWorkerInterface $jobWorker)
     {
+        $event = $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.beforeJobExecute', [$job]);
+        if ($event->isStopped()) {
+            return $event->result;
+        }
+
         $job->incrementRetries();
 
         $event = null;
@@ -343,8 +367,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                 $result = $this->_buildResultObject($job, $result);
             }
 
-            $duration = round((microtime(true) - $start) * 1000);
-            $this->dispatchEvent('DelayedJob.afterJobExecute', [$result, $duration]);
+            $duration = round((microtime(true) - $start) * 1000); //Duration in milliseconds
+            $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobExecute', [$result, $duration]);
 
             return $this->_handleResult($result, $duration);
         }
@@ -359,12 +383,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         $this->djLog(__('Received job {0}.', $job->getId()));
-
-        $event = $this->dispatchEvent('DelayedJob.beforeJobExecute', [$job]);
-        if ($event->isStopped()) {
-            //@TODO: Requeue job if queueable job
-            return $event->result;
-        }
 
         if ($force === false && ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURIED)) {
             $this->djLog(__('Job {0} has already been processed', $job->getId()));

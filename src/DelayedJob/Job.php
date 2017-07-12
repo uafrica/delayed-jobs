@@ -421,6 +421,28 @@ class Job
     }
 
     /**
+     * @param string $option The option name
+     * @param  mixed $value The value
+     * @return $this
+     */
+    public function setOption($option, $value)
+    {
+        $this->_options[$option] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param string $option Dot separated path
+     * @param mixed $default Default value to use
+     * @return mixed
+     */
+    public function getOption($option, $default = null)
+    {
+        return Hash::get($this->_options, $option, $default);
+    }
+
+    /**
      * @return string
      */
     public function getSequence()
