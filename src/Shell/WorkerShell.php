@@ -290,8 +290,10 @@ class WorkerShell extends AppShell
         if ($result instanceof Failed) {
             $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()), 1,
                 Shell::VERBOSE);
-            $this->out($result->getException()
-                ->getTraceAsString(), 1, Shell::VERBOSE);
+            if ($result->getException()) {
+                $this->out($result->getException()
+                    ->getTraceAsString(), 1, Shell::VERBOSE);
+            }
         } elseif ($result instanceof Paused) {
             $this->out(sprintf('<success> - Execution paused</success> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
         } else {
