@@ -374,14 +374,15 @@ class Job
 
     /**
      * @param string $key Hash get compatible key (or null for entire payload)
+     * @param mixed $default The default value to use
      * @return mixed
      */
-    public function getPayload($key = null)
+    public function getPayload($key = null, $default = null)
     {
         if ($key === null) {
             return $this->_payload;
         } else {
-            return Hash::get($this->_payload, $key);
+            return Hash::get($this->_payload, $key, $default);
         }
     }
 
