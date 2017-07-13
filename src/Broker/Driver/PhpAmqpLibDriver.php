@@ -164,12 +164,12 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             $body = json_decode($message->getBody(), true);
 
             $job = new Job();
-            $job
-                ->setBrokerMessage($message)
-                ->setBrokerMessageBody($body);
+            $job->setBrokerMessage($message);
 
             if (isset($message->get_properties()['correlation_id'])) {
-                $job->setId($message->get_properties()['correlation_id']);
+                $job
+                    ->setId($message->get_properties()['correlation_id'])
+                    ->setBrokerMessageBody($body); //If we're using a correlation id, then the message body is something special, and should be recorded as such.
             } elseif (isset($body['id'])) {
                 $job->setId($body['id']);
             }

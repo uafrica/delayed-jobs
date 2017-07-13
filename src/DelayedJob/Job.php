@@ -402,6 +402,18 @@ class Job
     }
 
     /**
+     * @param string $key The key to use
+     * @param mixed $value The value
+     * @return $this
+     */
+    public function setPayloadKey($key, $value)
+    {
+        $this->_payload[$key] = $value;
+
+        return $this;
+    }
+
+    /**
      * @return array
      */
     public function getOptions()
