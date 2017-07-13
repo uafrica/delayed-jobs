@@ -483,15 +483,14 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
     public function startConsuming()
     {
-        $time = microtime(true);
-        $this->getMessageBroker()->consume(function (Job $job, $retried = false) use (&$time) {
+        $this->getMessageBroker()->consume(function (Job $job, $retried = false) {
             try {
                 $this->loadJob($job);
             } catch (\Exception $e) {
                 $this->djLog($e->getMessage());
 
                 if ($retried) {
-                    $this->getMessageBroker()->nack($job, false);
+                    $this->getMessageBroker()->nack($job);
 
                     return;
                 }
