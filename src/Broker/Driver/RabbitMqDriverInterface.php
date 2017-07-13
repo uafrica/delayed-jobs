@@ -24,4 +24,13 @@ interface RabbitMqDriverInterface
     public function nack(Job $job, $requeue = false);
 
     public function getChannel();
+
+    /**
+     * @param string $body
+     * @param string $exchange
+     * @param string $routing_key
+     * @param array $headers
+     * @return mixed
+     */
+    public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = []);
 }

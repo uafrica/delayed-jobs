@@ -233,4 +233,23 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
         $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, $requeue);
     }
+
+    /**
+     * @param string $body
+     * @param string $exchange
+     * @param string $routing_key
+     * @param array $headers
+     * @return mixed
+     */
+    public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = [])
+    {
+        $channel = $this->getChannel();
+        $messageHeaders = new AMQPTable($headers);
+        $message = new AMQPMessage($body, [
+            'delivery_mode' => 2,
+            'application_headers' => $messageHeaders
+        ]);
+        $channel->basic_publish($message, $exchange, $routing_key);
+    }
+
 }
