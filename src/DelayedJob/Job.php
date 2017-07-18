@@ -405,10 +405,17 @@ class Job
     /**
      * @param string $key The key to use
      * @param mixed $value The value
+     * @param bool $overwrite Overwrite the value. If false they will be merged
      * @return $this
      */
-    public function setPayloadKey($key, $value)
+    public function setPayloadKey($key, $value, $overwrite = true)
     {
+        if (!$overwrite && isset($this->_payload[$key])) {
+            $this->_payload[$key] = Hash::merge((array)$this->_payload[$key], (array)$value);
+
+            return $this;
+        }
+
         $this->_payload[$key] = $value;
 
         return $this;
