@@ -10,6 +10,9 @@ use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Model\Table\DelayedJobsTable;
+use DelayedJobs\Result\Failed;
+use DelayedJobs\Result\Pause;
+use DelayedJobs\Result\Success;
 use DelayedJobs\Traits\DebugLoggerTrait;
 
 class WorkerTask extends Shell
@@ -54,29 +57,35 @@ class WorkerTask extends Shell
 
         $start = microtime(true);
         $response = JobManager::instance()->execute($job, $this->param('force'));
+        $this->djLog(__('Done with: {0}', $job->getId()));
 
-        if ($response instanceof \Throwable) {
+        if ($response instanceof Failed) {
             $this->_failedJob($job, $response);
-        } else {
-            $this->djLog(__('Done with: {0}', $job->getId()));
-
-            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response), 1,
+        } elseif ($response instanceof Success) {
+            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response->getMessage()), 1,
                 Shell::VERBOSE);
+        } elseif ($response instanceof Pause) {
+            $this->out(sprintf('<info> - Execution paused</info> :: <info>%s</info>', $response->getMessage()), 1,
+                Shell::VERBOSE);
+        } else {
+
         }
         $end = microtime(true);
         $this->out(sprintf(' - Took: %.2f seconds', $end - $start), 1, Shell::VERBOSE);
     }
 
-    protected function _failedJob(Job $job, $exc)
+    protected function _failedJob(Job $job, Failed $response)
     {
         if ($this->param('debug')) {
-            throw $exc;
+            throw $response->getException();
         }
 
-        $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $exc->getMessage()), 1, Shell::VERBOSE);
-        $this->out($exc->getTraceAsString(), 1, Shell::VERBOSE);
+        $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $response->getMessage()), 1, Shell::VERBOSE);
+        if ($response->getException()) {
+            $this->out($response->getException()->getTraceAsString(), 1, Shell::VERBOSE);
+        }
 
-        $this->djLog(__('Failed {0} because {1}', $job->getId(), $exc->getMessage()));
+        $this->djLog(__('Failed {0} because {1}', $job->getId(), $response->getMessage()));
     }
 
     /**

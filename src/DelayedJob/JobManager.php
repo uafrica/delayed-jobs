@@ -319,7 +319,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->enqueueNextSequence($job);
         }
 
-        return $result->getMessage();
+        return $result;
     }
 
     /**

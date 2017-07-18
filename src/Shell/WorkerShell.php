@@ -295,7 +295,7 @@ class WorkerShell extends AppShell
                     ->getTraceAsString(), 1, Shell::VERBOSE);
             }
         } elseif ($result instanceof Paused) {
-            $this->out(sprintf('<success> - Execution paused</success> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
+            $this->out(sprintf('<info> - Execution paused</info> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
         } else {
             $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
         }
