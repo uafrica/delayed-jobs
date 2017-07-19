@@ -19,6 +19,7 @@ use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Model\Entity\Worker;
 use DelayedJobs\Model\Table\WorkersTable;
 use DelayedJobs\Result\Failed;
+use DelayedJobs\Result\Pause;
 use DelayedJobs\Result\ResultInterface;
 use DelayedJobs\Shell\Task\ProcessManagerTask;
 use DelayedJobs\Traits\DebugLoggerTrait;
@@ -294,7 +295,7 @@ class WorkerShell extends AppShell
                 $this->out($result->getException()
                     ->getTraceAsString(), 1, Shell::VERBOSE);
             }
-        } elseif ($result instanceof Paused) {
+        } elseif ($result instanceof Pause) {
             $this->out(sprintf('<info> - Execution paused</info> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
         } else {
             $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
