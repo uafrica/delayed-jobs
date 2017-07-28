@@ -22,12 +22,13 @@ class Job
 {
     const STATUS_NEW = 1;
     const STATUS_BUSY = 2;
-    const STATUS_BURRIED = 3;
+    const STATUS_BURIED = 3;
     const STATUS_SUCCESS = 4;
     const STATUS_KICK = 5;
     const STATUS_FAILED = 6;
     const STATUS_UNKNOWN = 7;
     const STATUS_TEST_JOB = 8;
+    const STATUS_PAUSED = 9;
 
     /**
      * @var string
@@ -111,6 +112,12 @@ class Job
      * @var \Cake\Datasource\EntityInterface|null
      */
     protected $_baseEntity;
+    /**
+     * Storage for the body/payload of the message from the broker
+     *
+     * @var mixed
+     */
+    protected $_brokerMessageBody;
 
     /**
      * Job constructor.
@@ -130,6 +137,23 @@ class Job
         } else {
             throw new \InvalidArgumentException('$data is not an array or instance of ' . EntityInterface::class);
         }
+    }
+
+    public function __clone()
+    {
+        $this->setData([
+            'status' => Job::STATUS_NEW,
+            'retries' => 0,
+            'lastMessage' => null,
+            'failedAt' => null,
+            'lockedBy' => null,
+            'startTime' => null,
+            'endTime' => null,
+            'duration' => null,
+            'id' => null,
+            'history' => [],
+            'entity' => null
+        ]);
     }
 
     /**
@@ -350,14 +374,15 @@ class Job
 
     /**
      * @param string $key Hash get compatible key (or null for entire payload)
+     * @param mixed $default The default value to use
      * @return mixed
      */
-    public function getPayload($key = null)
+    public function getPayload($key = null, $default = null)
     {
         if ($key === null) {
             return $this->_payload;
         } else {
-            return Hash::get($this->_payload, $key);
+            return Hash::get($this->_payload, $key, $default);
         }
     }
 
@@ -373,6 +398,25 @@ class Job
         } else {
             $this->_payload += $payload;
         }
+
+        return $this;
+    }
+
+    /**
+     * @param string $key The key to use
+     * @param mixed $value The value
+     * @param bool $overwrite Overwrite the value. If false they will be merged
+     * @return $this
+     */
+    public function setPayloadKey($key, $value, $overwrite = true)
+    {
+        if (!$overwrite && isset($this->_payload[$key])) {
+            $this->_payload[$key] = Hash::merge((array)$this->_payload[$key], (array)$value);
+
+            return $this;
+        }
+
+        $this->_payload[$key] = $value;
 
         return $this;
     }
@@ -394,6 +438,28 @@ class Job
         $this->_options = $options;
 
         return $this;
+    }
+
+    /**
+     * @param string $option The option name
+     * @param  mixed $value The value
+     * @return $this
+     */
+    public function setOption($option, $value)
+    {
+        $this->_options[$option] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param string $option Dot separated path
+     * @param mixed $default Default value to use
+     * @return mixed
+     */
+    public function getOption($option, $default = null)
+    {
+        return Hash::get($this->_options, $option, $default);
     }
 
     /**
@@ -629,9 +695,31 @@ class Job
 
     /**
      * @param object $brokerMessage The broker message
+     * @return $this
      */
     public function setBrokerMessage($brokerMessage)
     {
         $this->_brokerMessage = $brokerMessage;
+
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getBrokerMessageBody()
+    {
+        return $this->_brokerMessageBody;
+    }
+
+    /**
+     * @param mixed $brokerMessageBody
+     * @return Job
+     */
+    public function setBrokerMessageBody($brokerMessageBody)
+    {
+        $this->_brokerMessageBody = $brokerMessageBody;
+
+        return $this;
     }
 }

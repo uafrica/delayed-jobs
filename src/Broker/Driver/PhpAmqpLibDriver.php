@@ -161,12 +161,18 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $channel->basic_qos(null, $this->config('qos'), null);
 
         $tag = $channel->basic_consume($prefix . 'queue', '', false, false, false, false, function (AMQPMessage $message) use ($callback) {
-            $body = json_decode($message->body, true);
+            $body = json_decode($message->getBody(), true);
 
             $job = new Job();
-            $job
-                ->setId($body['id'])
-                ->setBrokerMessage($message);
+            $job->setBrokerMessage($message);
+
+            if (isset($message->get_properties()['correlation_id'])) {
+                $job
+                    ->setId($message->get_properties()['correlation_id'])
+                    ->setBrokerMessageBody($body); //If we're using a correlation id, then the message body is something special, and should be recorded as such.
+            } elseif (isset($body['id'])) {
+                $job->setId($body['id']);
+            }
 
             return $callback($job, $message->delivery_info['redelivered']);
         });
@@ -227,4 +233,23 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
         $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, $requeue);
     }
+
+    /**
+     * @param string $body
+     * @param string $exchange
+     * @param string $routing_key
+     * @param array $headers
+     * @return mixed
+     */
+    public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = [])
+    {
+        $channel = $this->getChannel();
+        $messageHeaders = new AMQPTable($headers);
+        $message = new AMQPMessage($body, [
+            'delivery_mode' => 2,
+            'application_headers' => $messageHeaders
+        ]);
+        $channel->basic_publish($message, $exchange, $routing_key);
+    }
+
 }

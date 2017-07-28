@@ -17,7 +17,7 @@ class MonitorShell extends AppShell
         'waiting' => 'Waiting',
         Job::STATUS_NEW => 'New',
         Job::STATUS_BUSY => 'Busy',
-        Job::STATUS_BURRIED => 'Buried',
+        Job::STATUS_BURIED => 'Buried',
         Job::STATUS_SUCCESS => 'Success',
         Job::STATUS_KICK => 'Kicked',
         Job::STATUS_FAILED => 'Failed',
@@ -217,7 +217,7 @@ class MonitorShell extends AppShell
         $last_buried = $this->DelayedJobs->find()
             ->select(['id', 'last_message', 'failed_at', 'worker'])
             ->where([
-                'status' => Job::STATUS_BURRIED
+                'status' => Job::STATUS_BURIED
             ])
             ->order([
                 'failed_at' => 'DESC'

@@ -147,7 +147,7 @@ class DelayedJobsTable extends Table
         return $this->exists([
             'id <' => $job->getId(),
             'sequence' => $job->getSequence(),
-            'status in' => [Job::STATUS_NEW, Job::STATUS_BUSY, Job::STATUS_FAILED, Job::STATUS_UNKNOWN]
+            'status in' => [Job::STATUS_NEW, Job::STATUS_BUSY, Job::STATUS_FAILED, Job::STATUS_UNKNOWN, Job::STATUS_PAUSED]
         ]);
     }
 
@@ -372,6 +372,7 @@ class DelayedJobsTable extends Table
             'status IN' => [
                 Job::STATUS_BUSY,
                 Job::STATUS_NEW,
+                Job::STATUS_PAUSED,
                 Job::STATUS_FAILED,
                 Job::STATUS_UNKNOWN
             ]

@@ -61,7 +61,7 @@ class TestShell extends AppShell
 
         $job = JobManager::instance()->fetchJob($job->getId());
 
-        if ($job->getStatus() !== Job::STATUS_BURRIED) {
+        if ($job->getStatus() !== Job::STATUS_BURIED) {
             throw new \Exception("Failed Job did not fail");
         }
 

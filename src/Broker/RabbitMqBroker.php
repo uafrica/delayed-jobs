@@ -7,6 +7,7 @@ use Cake\Core\InstanceConfigTrait;
 use Cake\Http\Client;
 use Cake\I18n\Time;
 use DelayedJobs\Broker\Driver\PhpAmqpLibDriver;
+use DelayedJobs\Broker\Driver\RabbitMqDriverInterface;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\ManagerInterface;
 
@@ -24,6 +25,9 @@ class RabbitMqBroker implements BrokerInterface
         'qos' => 1
     ];
 
+    /**
+     * @var \DelayedJobs\Broker\Driver\RabbitMqDriverInterface
+     */
     protected $_driver;
 
     /**
@@ -38,7 +42,10 @@ class RabbitMqBroker implements BrokerInterface
         $this->_manager = $manager;
     }
 
-    public function getDriver()
+    /**
+     * @return \DelayedJobs\Broker\Driver\RabbitMqDriverInterface
+     */
+    public function getDriver(): RabbitMqDriverInterface
     {
         if ($this->_driver) {
             return $this->_driver;
@@ -127,6 +134,18 @@ class RabbitMqBroker implements BrokerInterface
             'messages_ready' => $data['messages_ready'],
             'messages_unacknowledged' => $data['messages_unacknowledged']
         ];
+    }
+
+    /**
+     * @param string $body
+     * @param string $exchange
+     * @param string $routing_key
+     * @param array $headers
+     * @return mixed
+     */
+    public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = [])
+    {
+        $this->getDriver()->publishBasic($body, $exchange, $routing_key, $headers);
     }
 
 }

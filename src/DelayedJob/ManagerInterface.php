@@ -32,22 +32,6 @@ interface ManagerInterface
     public function enqueueBatch(array $jobs);
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job that failed
-     * @param string $message Message to store with the jbo
-     * @param bool $burryJob Should the job be burried
-     * @return bool|\DelayedJobs\DelayedJob\Job
-     */
-    public function failed(Job $job, $message, $burryJob = false);
-
-    /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job that has been completed
-     * @param string|null $result Result to store with job
-     * @param int $duration How long execution took
-     * @return \DelayedJobs\DelayedJob\Job|bool
-     */
-    public function completed(Job $job, $result = null, $duration = 0);
-
-    /**
      * Gets the Job instance for a specific job
      *
      * @param int $jobId Job to fetch

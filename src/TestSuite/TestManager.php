@@ -2,6 +2,7 @@
 
 namespace DelayedJobs\TestSuite;
 
+use Cake\Core\InstanceConfigTrait;
 use Cake\Utility\Text;
 use Cake\Console\Shell;
 use DelayedJobs\DelayedJob\ManagerInterface;
@@ -13,6 +14,9 @@ use DelayedJobs\DelayedJob\Job;
  */
 class TestManager implements ManagerInterface
 {
+    use InstanceConfigTrait;
+
+    protected $_defaultConfig = [];
     protected static $_jobs = [];
 
     /**
