@@ -302,8 +302,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             ->setDuration($duration)
             ->addHistory($result->getMessage());
 
-        $this->_persistToDatastore($job);
-
         if ($result->getRetry() && $job->getRetries() < $job->getMaxRetries()) {
             $job->incrementRetries();
 
@@ -318,6 +316,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         if ($job->getStatus() === Job::STATUS_SUCCESS && $job->getSequence() !== null) {
             $this->enqueueNextSequence($job);
         }
+        $this->_persistToDatastore($job);
 
         return $result;
     }
