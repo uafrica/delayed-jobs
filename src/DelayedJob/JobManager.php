@@ -317,8 +317,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->enqueueNextSequence($job);
         }
         $this->_persistToDatastore($job);
-
-        return $result;
     }
 
     /**
@@ -373,7 +371,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $duration = round((microtime(true) - $start) * 1000); //Duration in milliseconds
             $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobExecute', [$result, $duration]);
 
-            return $this->_handleResult($result, $duration);
+            $this->_handleResult($result, $duration);
         }
     }
 
@@ -410,7 +408,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return false;
         }
 
-        return $this->_executeJob($job, $jobWorker);
+        $this->_executeJob($job, $jobWorker);
     }
 
     public function enqueueNextSequence(Job $job)
