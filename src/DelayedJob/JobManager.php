@@ -372,6 +372,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobExecute', [$result, $duration]);
 
             $this->_handleResult($result, $duration);
+
+            $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobCompleted');
         }
     }
 
