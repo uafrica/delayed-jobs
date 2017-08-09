@@ -2,20 +2,14 @@
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
-use Cake\Cache\Cache;
-use Cake\Console\Exception\StopException;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
-use Cake\Datasource\Exception\InvalidPrimaryKeyException;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\Event\Event;
 use Cake\I18n\FrozenTime;
 use Cake\I18n\Time;
-use Cake\Log\Log;
-use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Model\Entity\Worker;
 use DelayedJobs\Model\Table\WorkersTable;
 use DelayedJobs\Result\Failed;
@@ -23,7 +17,6 @@ use DelayedJobs\Result\Pause;
 use DelayedJobs\Result\ResultInterface;
 use DelayedJobs\Shell\Task\ProcessManagerTask;
 use DelayedJobs\Traits\DebugLoggerTrait;
-use PhpAmqpLib\Message\AMQPMessage;
 
 /**
  * Class WorkerShell
@@ -39,11 +32,13 @@ class WorkerShell extends AppShell
 
     const TIMEOUT = 10; //In seconds
     const MAXFAIL = 5;
-    const SUICIDE_EXIT_CODE=100;
-    const NO_WORKER_EXIT_CODE=110;
+    const SUICIDE_EXIT_CODE = 100;
+    const NO_WORKER_EXIT_CODE = 110;
     const HEARTBEAT_TIME = 30;
+
     public $modelClass = 'DelayedJobs.DelayedJobs';
     public $tasks = ['DelayedJobs.Worker', 'DelayedJobs.ProcessManager'];
+
     protected $_workerId;
     protected $_workerName;
     protected $_hostName;
@@ -65,6 +60,8 @@ class WorkerShell extends AppShell
     protected $_jobCount = 0;
     protected $_lastJob;
     protected $_myPID;
+    /** @var int */
+    protected $_beforeMemory;
     private $_pulse = false;
     /**
      * Should this worker be suicidal
@@ -94,8 +91,10 @@ class WorkerShell extends AppShell
     {
         if ($this->command !== 'main') {
             parent::startup();
+
             return;
         }
+
         $this->loadModel('DelayedJobs.Workers');
         $this->_myPID = getmypid();
         $this->_hostName = php_uname('n');
@@ -201,6 +200,7 @@ class WorkerShell extends AppShell
             $this->_worker = $this->Workers->get($this->_worker->id);
         } catch (RecordNotFoundException $e) {
             $this->stopHammerTime(Worker::SHUTDOWN_NO_WORKER, static::NO_WORKER_EXIT_CODE);
+
             return;
         }
 
@@ -308,7 +308,7 @@ class WorkerShell extends AppShell
 
         if ($this->_io->level() === Shell::NORMAL) {
             $fin = ($result instanceof Failed ? '<error>✘</error>' : (
-                $result instanceof Paused ? '<info>❙ ❙</info>' : '<success>✔</success>'
+                $result instanceof Pause ? '<info>❙ ❙</info>' : '<success>✔</success>'
             ));
             $this->out(sprintf('%s %d %.2fs (%s)', $fin, $job->getId(), $duration / 1000, $this->_makeReadable($nowMem)));
         }
@@ -333,6 +333,7 @@ class WorkerShell extends AppShell
             'help' => 'Executes a job',
             'parser' => $this->Worker->getOptionParser(),
         ]);
+
         return $options;
     }
 

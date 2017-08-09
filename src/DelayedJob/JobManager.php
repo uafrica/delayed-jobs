@@ -2,7 +2,6 @@
 
 namespace DelayedJobs\DelayedJob;
 
-use Cake\Console\Shell;
 use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Core\InstanceConfigTrait;
@@ -11,13 +10,12 @@ use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
 use Cake\I18n\Time;
 use Cake\Log\Log;
-use DelayedJobs\Broker\PhpAmqpLibBroker;
+use DelayedJobs\Broker\BrokerInterface;
 use DelayedJobs\Broker\RabbitMqBroker;
 use DelayedJobs\Datasource\DatasourceInterface;
 use DelayedJobs\Datasource\TableDatasource;
 use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Exception\JobExecuteException;
-use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Result\Failed;
 use DelayedJobs\Result\ResultInterface;
@@ -71,13 +69,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      *
      * @param array $config Config array
      * @param \DelayedJobs\Datasource\DatasourceInterface $datastore Datastore to inject
-     * @param \DelayedJobs\DelayedJob\MessageBrokerInterface $messageBroker Broker that handles message distribution
+     * @param \DelayedJobs\Broker\BrokerInterface $messageBroker Broker that handles message distribution
      */
-    public function __construct(array $config = [], DatasourceInterface $datastore = null, MessageBrokerInterface $messageBroker = null) {
+    public function __construct(array $config = [], DatasourceInterface $datastore = null, BrokerInterface $messageBroker = null) {
         $this->_datastore = $datastore;
         $this->_messageBroker = $messageBroker;
 
-        $this->config($config);
+        $this->setConfig($config);
     }
 
     /**
@@ -109,7 +107,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return $this->_datastore;
         }
 
-        $config = $this->config('datasource');
+        $config = $this->getConfig('datasource');
         $this->_datastore = new $config['className']($config, $this);
 
         return $this->_datastore;
@@ -124,7 +122,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return $this->_messageBroker;
         }
 
-        $config = $this->config('messageBroker');
+        $config = $this->getConfig('messageBroker');
         $this->_messageBroker = new $config['className']($config, $this);
 
         return $this->_messageBroker;
@@ -194,8 +192,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
     protected function _calculateRetryTime($retryCount): Time
     {
-        if ($this->config('DelayedJobs.retryTimes.' . $retryCount)) {
-            $growthFactor = $this->config('DelayedJobs.retryTimes.' . $retryCount);
+        if ($this->getConfig('DelayedJobs.retryTimes.' . $retryCount)) {
+            $growthFactor = $this->getConfig('DelayedJobs.retryTimes.' . $retryCount);
         } else {
             $growthFactor = static::BASE_RETRY_TIME + $retryCount ** static::RETRY_FACTOR;
         }
