@@ -176,6 +176,7 @@ class WorkerShell extends AppShell
         $this->_manager = JobManager::instance();
         $this->_manager->eventManager()->on('DelayedJob.beforeJobExecute', [$this, 'beforeExecute']);
         $this->_manager->eventManager()->on('DelayedJob.afterJobExecute', [$this, 'afterExecute']);
+        $this->_manager->eventManager()->on('DelayedJob.afterJobCompleted', [$this, 'afterCompleted']);
         $this->_manager->eventManager()->on('DelayedJob.heartbeat', [$this, 'heartbeat']);
 
         $this->_manager->startConsuming();
@@ -311,7 +312,10 @@ class WorkerShell extends AppShell
             ));
             $this->out(sprintf('%s %d %.2fs (%s)', $fin, $job->getId(), $duration / 1000, $this->_makeReadable($nowMem)));
         }
+    }
 
+    public function afterCompleted()
+    {
         $this->_timeOfLastJob = microtime(true);
         $this->_checkSuicideStatus();
 
