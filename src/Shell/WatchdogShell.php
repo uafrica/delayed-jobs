@@ -365,7 +365,11 @@ class WatchdogShell extends AppShell
             ->get($this->args[0]);
 
         if ($job->status === Job::STATUS_NEW || $job->status === Job::STATUS_FAILED) {
-            $job->queue();
+            if (JobManager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
+                $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
+            } else {
+                $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);
+            }
             $this->out(__('<success>{0} has been queued</success>', $job->id));
         } else {
             $this->out(__('<error>{0} could not be queued</error>', $job->id));
