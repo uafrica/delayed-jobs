@@ -416,7 +416,7 @@ class Job
             return $this;
         }
 
-        $this->_payload[$key] = $value;
+        $this->_payload = Hash::insert($this->_payload, $key, $value);
 
         return $this;
     }
