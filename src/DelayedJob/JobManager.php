@@ -75,7 +75,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         $this->_datastore = $datastore;
         $this->_messageBroker = $messageBroker;
 
-        $this->setConfig($config);
+        $this->config($config);
     }
 
     /**
@@ -107,7 +107,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return $this->_datastore;
         }
 
-        $config = $this->getConfig('datasource');
+        $config = $this->config('datasource');
         $this->_datastore = new $config['className']($config, $this);
 
         return $this->_datastore;
@@ -122,7 +122,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return $this->_messageBroker;
         }
 
-        $config = $this->getConfig('messageBroker');
+        $config = $this->config('messageBroker');
         $this->_messageBroker = new $config['className']($config, $this);
 
         return $this->_messageBroker;
@@ -192,8 +192,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
     protected function _calculateRetryTime($retryCount): Time
     {
-        if ($this->getConfig('DelayedJobs.retryTimes.' . $retryCount)) {
-            $growthFactor = $this->getConfig('DelayedJobs.retryTimes.' . $retryCount);
+        if ($this->config('DelayedJobs.retryTimes.' . $retryCount)) {
+            $growthFactor = $this->config('DelayedJobs.retryTimes.' . $retryCount);
         } else {
             $growthFactor = static::BASE_RETRY_TIME + $retryCount ** static::RETRY_FACTOR;
         }
