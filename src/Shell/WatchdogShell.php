@@ -365,7 +365,11 @@ class WatchdogShell extends AppShell
             ->get($this->args[0]);
 
         if ($job->status === Job::STATUS_NEW || $job->status === Job::STATUS_FAILED) {
-            $job->queue();
+            if (JobManager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
+                $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
+            } else {
+                $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);
+            }
             $this->out(__('<success>{0} has been queued</success>', $job->id));
         } else {
             $this->out(__('<error>{0} could not be queued</error>', $job->id));
@@ -377,7 +381,7 @@ class WatchdogShell extends AppShell
         $stats = JobManager::instance()->getMessageBroker()->queueStatus();
         if ($stats['messages'] > 0) {
             $this->out(__('<error>There are {0} messages currently queued</error>', $stats['messages']));
-            $this->out('We cannot reliablily determine which messages to requeue unless the RabbitMQ queue is empty.');
+            $this->out('We cannot reliably determine which messages to requeue unless the RabbitMQ queue is empty.');
             $this->_stop(1);
         }
 
@@ -474,7 +478,7 @@ class WatchdogShell extends AppShell
                 'help' => 'Requeues all new or failed jobs that should be in RabbitMQ'
             ])
             ->addSubcommand('requeue', [
-                'help ' => 'Receues a job',
+                'help ' => 'Requeues a job',
                 'parser' => [
                     'arguments' => [
                         'id' => [
