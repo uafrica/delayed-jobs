@@ -2,7 +2,6 @@
 
 namespace DelayedJobs\DelayedJob;
 
-use Cake\Console\Shell;
 use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Core\InstanceConfigTrait;
@@ -11,13 +10,12 @@ use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
 use Cake\I18n\Time;
 use Cake\Log\Log;
-use DelayedJobs\Broker\PhpAmqpLibBroker;
+use DelayedJobs\Broker\BrokerInterface;
 use DelayedJobs\Broker\RabbitMqBroker;
 use DelayedJobs\Datasource\DatasourceInterface;
 use DelayedJobs\Datasource\TableDatasource;
 use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Exception\JobExecuteException;
-use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Result\Failed;
 use DelayedJobs\Result\ResultInterface;
@@ -71,9 +69,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      *
      * @param array $config Config array
      * @param \DelayedJobs\Datasource\DatasourceInterface $datastore Datastore to inject
-     * @param \DelayedJobs\DelayedJob\MessageBrokerInterface $messageBroker Broker that handles message distribution
+     * @param \DelayedJobs\Broker\BrokerInterface $messageBroker Broker that handles message distribution
      */
-    public function __construct(array $config = [], DatasourceInterface $datastore = null, MessageBrokerInterface $messageBroker = null) {
+    public function __construct(array $config = [], DatasourceInterface $datastore = null, BrokerInterface $messageBroker = null) {
         $this->_datastore = $datastore;
         $this->_messageBroker = $messageBroker;
 
@@ -317,8 +315,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->enqueueNextSequence($job);
         }
         $this->_persistToDatastore($job);
-
-        return $result;
     }
 
     /**
@@ -373,7 +369,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $duration = round((microtime(true) - $start) * 1000); //Duration in milliseconds
             $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobExecute', [$result, $duration]);
 
-            return $this->_handleResult($result, $duration);
+            $this->_handleResult($result, $duration);
+
+            $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobCompleted', [$result]);
         }
     }
 
@@ -410,7 +408,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return false;
         }
 
-        return $this->_executeJob($job, $jobWorker);
+        $this->_executeJob($job, $jobWorker);
     }
 
     public function enqueueNextSequence(Job $job)
