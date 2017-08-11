@@ -3,6 +3,7 @@
 namespace DelayedJobs\Datasource;
 
 use Cake\ORM\TableRegistry;
+use DelayedJobs\DelayedJob\DatastoreInterface;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\DelayedJob\Job;
 
@@ -16,9 +17,9 @@ class TableDatasource extends BaseDatasource
     ];
 
     /**
-     * @return \DelayedJobs\Model\Table\DelayedJobsTable
+     * @return \DelayedJobs\DelayedJob\DatastoreInterface
      */
-    protected function _table()
+    protected function _table(): DatastoreInterface
     {
         return TableRegistry::get($this->config('tableName'));
     }

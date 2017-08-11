@@ -239,7 +239,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
      * @param string $exchange
      * @param string $routing_key
      * @param array $headers
-     * @return mixed
+     * @return void
      */
     public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = [])
     {

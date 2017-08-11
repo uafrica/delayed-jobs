@@ -28,7 +28,7 @@ $delayedJobsConfig = Configure::read('DelayedJobs');
 
 Configure::write('DelayedJobs', \Cake\Utility\Hash::merge($defaultConfig, $delayedJobsConfig));
 
-\Cake\Database\Type::map('serialize', 'DelayedJobs\Database\Type\SerializeType');
+\Cake\Database\Type::map('serialize', \DelayedJobs\Database\Type\SerializeType::class);
 
 \DelayedJobs\RecurringJobBuilder::add([
     'worker' => 'DelayedJobs.Archive',
