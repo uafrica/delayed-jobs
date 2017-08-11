@@ -311,7 +311,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->_enqueueRecurring($job, $result->getRecur());
         }
 
-        if ($job->getStatus() === Job::STATUS_SUCCESS && $job->getSequence() !== null) {
+        if (in_array($job->getStatus(), [Job::STATUS_SUCCESS, Job::STATUS_BURIED]) && $job->getSequence() !== null) {
             $this->enqueueNextSequence($job);
         }
         $this->_persistToDatastore($job);
