@@ -109,10 +109,11 @@ class ProcessManagerTask extends Shell
      * Gets the option parser instance and configures it.
      * By overriding this method you can configure the ConsoleOptionParser before returning it.
      *
-     * @return ConsoleOptionParser
+     * @param \Cake\Console\ConsoleOptionParser $parser
+     * @return \Cake\Console\ConsoleOptionParser
      * @link http://book.cakephp.org/2.0/en/console-and-shells.html#Shell::getOptionParser
      */
-    public function processOptionParser(ConsoleOptionParser $parser)
+    public function processOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         return $parser->addOption('process_id', [
             'help' => 'A process identifier to make locking work with Supervisor'

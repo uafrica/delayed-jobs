@@ -5,15 +5,11 @@ namespace DelayedJobs\DelayedJob;
 use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
-use Cake\Event\EventDispatcherInterface;
-use Cake\Event\EventDispatcherTrait;
 use Cake\I18n\FrozenTime;
 use Cake\I18n\Time;
 use Cake\Utility\Hash;
 use Cake\Utility\Inflector;
 use DelayedJobs\DelayedJob\Exception\JobDataException;
-use DelayedJobs\DelayedJob\Exception\JobExecuteException;
-use DelayedJobs\Worker\JobWorkerInterface;
 
 /**
  * Class Job
@@ -139,10 +135,13 @@ class Job
         }
     }
 
+    /**
+     * @return void
+     */
     public function __clone()
     {
         $this->setData([
-            'status' => Job::STATUS_NEW,
+            'status' => self::STATUS_NEW,
             'retries' => 0,
             'lastMessage' => null,
             'failedAt' => null,
@@ -152,14 +151,14 @@ class Job
             'duration' => null,
             'id' => null,
             'history' => [],
-            'entity' => null
+            'entity' => null,
         ]);
     }
 
     /**
      * @return array
      */
-    public function getData()
+    public function getData(): array
     {
         return [
             'id' => $this->getId(),
@@ -234,7 +233,7 @@ class Job
     /**
      * @return int
      */
-    public function getId()
+    public function getId(): int
     {
         return $this->_id;
     }
@@ -253,7 +252,7 @@ class Job
     /**
      * @return int
      */
-    public function getRetries()
+    public function getRetries(): int
     {
         return $this->_retries;
     }
@@ -276,16 +275,16 @@ class Job
     public function incrementRetries()
     {
         $this->_retries++;
-        
+
         return $this;
     }
 
     /**
      * @return int
      */
-    public function getMaxRetries()
+    public function getMaxRetries(): int
     {
-        return $this->_maxRetries !== null ? $this->_maxRetries : Configure::read('DelayedJobs.default.maxRetries');
+        return $this->_maxRetries ?? Configure::read('DelayedJobs.default.maxRetries');
     }
 
     /**
@@ -332,9 +331,9 @@ class Job
     {
         if (!empty($this->_group)) {
             return $this->_group;
-        } else {
-            return $this->_worker;
         }
+
+        return $this->_worker;
     }
 
     /**
@@ -351,7 +350,7 @@ class Job
     /**
      * @return int
      */
-    public function getPriority()
+    public function getPriority(): int
     {
         return $this->_priority ?? 1;
     }
@@ -381,9 +380,9 @@ class Job
     {
         if ($key === null) {
             return $this->_payload;
-        } else {
-            return Hash::get($this->_payload, $key, $default);
         }
+
+        return Hash::get($this->_payload, $key, $default);
     }
 
     /**
@@ -424,7 +423,7 @@ class Job
     /**
      * @return array
      */
-    public function getOptions()
+    public function getOptions(): array
     {
         return $this->_options;
     }
@@ -465,7 +464,7 @@ class Job
     /**
      * @return string
      */
-    public function getSequence()
+    public function getSequence(): string
     {
         return $this->_sequence;
     }
@@ -484,7 +483,7 @@ class Job
     /**
      * @return \Cake\I18n\Time
      */
-    public function getRunAt()
+    public function getRunAt(): Time
     {
         if ($this->_runAt === null) {
             $this->_runAt = new Time();
@@ -507,7 +506,7 @@ class Job
     /**
      * @return int
      */
-    public function getStatus()
+    public function getStatus(): int
     {
         return $this->_status;
     }
@@ -526,7 +525,7 @@ class Job
     /**
      * @return \Cake\I18n\Time
      */
-    public function getTimeFailed()
+    public function getTimeFailed(): Time
     {
         return $this->_timeFailed;
     }
@@ -545,9 +544,9 @@ class Job
     /**
      * @return string
      */
-    public function getLastMessage()
+    public function getLastMessage(): string
     {
-        return $this->_lastMessage;
+        return $this->_lastMessage ?? '';
     }
 
     /**
@@ -566,7 +565,7 @@ class Job
     }
 
     /**
-     * @return \Cake\I18n\Time
+     * @return \Cake\I18n\Time|null
      */
     public function getStartTime()
     {
@@ -585,7 +584,7 @@ class Job
     }
 
     /**
-     * @return \Cake\I18n\Time
+     * @return \Cake\I18n\Time|null
      */
     public function getEndTime()
     {
@@ -606,9 +605,9 @@ class Job
     /**
      * @return int
      */
-    public function getDuration()
+    public function getDuration(): int
     {
-        return $this->_duration;
+        return $this->_duration ?? 0;
     }
 
     /**
@@ -625,9 +624,9 @@ class Job
     /**
      * @return string
      */
-    public function getHostName()
+    public function getHostName(): string
     {
-        return $this->_hostName;
+        return $this->_hostName ?? '';
     }
 
     /**
@@ -644,9 +643,9 @@ class Job
     /**
      * @return array
      */
-    public function getHistory()
+    public function getHistory(): array
     {
-        return $this->_history;
+        return $this->_history ?? [];
     }
 
     /**
@@ -675,7 +674,7 @@ class Job
         $this->_history[] = [
             'timestamp' => new FrozenTime(),
             'host_name' => $this->getHostName(),
-            'message' => $message ?: ''
+            'message' => $message ?: '',
         ];
 
         if (is_string($message)) {
@@ -716,7 +715,7 @@ class Job
      * @param mixed $brokerMessageBody
      * @return Job
      */
-    public function setBrokerMessageBody($brokerMessageBody)
+    public function setBrokerMessageBody($brokerMessageBody): Job
     {
         $this->_brokerMessageBody = $brokerMessageBody;
 

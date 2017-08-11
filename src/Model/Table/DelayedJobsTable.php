@@ -2,12 +2,11 @@
 
 namespace DelayedJobs\Model\Table;
 
-use Cake\Database\Schema\Table as Schema;
+use Cake\Database\Schema\TableSchema;
 use Cake\I18n\Time;
-use Cake\Log\Log;
+use Cake\ORM\Query;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Traits\DebugLoggerTrait;
 
 /**
@@ -32,10 +31,10 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * @param \Cake\Database\Schema\Table $table Table schema
-     * @return \Cake\Database\Schema\Table
+     * @param \Cake\Database\Schema\TableSchema $table Table schema
+     * @return \Cake\Database\Schema\TableSchema
      */
-    protected function _initializeSchema(Schema $table)
+    protected function _initializeSchema(TableSchema $table)
     {
         $table->columnType('payload', 'serialize');
         $table->columnType('options', 'serialize');
@@ -45,168 +44,13 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * Returns true if another job with the same sequence number is already busy
-     *
-     * @param array|\Cake\ORM\Entity $job
-     * @return bool
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return null|\DelayedJobs\DelayedJob\Job
      */
-    public function nextSequence($job)
-    {
-        if (empty($job['sequence'])) {
-            return false;
-        }
-
-        $conditions = [
-            'id !=' => $job['id'],
-            'sequence' => $job['sequence'],
-            'status in' => [Job::STATUS_BUSY, Job::STATUS_FAILED]
-        ];
-        $result = $this->exists($conditions);
-
-        return $result;
-    }
-
     /**
-     * @param $host_id
-     * @return \Cake\ORM\Query
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return \DelayedJobs\DelayedJob\Job|null
      */
-    public function getRunningByHost($host_id)
-    {
-        $conditions = [
-            'DelayedJobs.host_name' => $host_id,
-            'DelayedJobs.status' => Job::STATUS_BUSY,
-        ];
-
-        $jobs = $this
-            ->find()
-            ->select([
-                'id',
-                'pid',
-                'host_name',
-                'status',
-                'priority',
-            ])
-            ->where($conditions)
-            ->order([
-                'DelayedJobs.id' => 'ASC'
-            ]);
-
-        return $jobs;
-    }
-
-    public function getRunning()
-    {
-        $conditions = [
-            'DelayedJobs.status' => Job::STATUS_BUSY,
-        ];
-
-        $jobs = $this->find()
-            ->select([
-                'id',
-                'pid',
-                'status',
-                'sequence',
-                'priority',
-            ])
-            ->where($conditions)
-            ->order([
-                'DelayedJobs.id' => 'ASC'
-            ]);
-
-        return $jobs;
-    }
-
-    public function jobsPerSecond($conditions = [], $field = 'created', $time_range = '-1 hour')
-    {
-        $start_time = new Time($time_range);
-        $current_time = new Time();
-        $second_count = $current_time->diffInSeconds($start_time);
-        $conditions[$this->aliasField($field) . ' > '] = $start_time;
-
-        $count = $this
-            ->find()
-            ->where($conditions)
-            ->count();
-
-        return $count / $second_count;
-    }
-
-    /**
-     * @return int
-     */
-    public function clean()
-    {
-        return $this->deleteAll([
-            'status' => Job::STATUS_SUCCESS,
-            'modified <=' => new Time('-2 weeks')
-        ]);
-    }
-
-    public function currentlySequenced(Job $job)
-    {
-        return $this->exists([
-            'id <' => $job->getId(),
-            'sequence' => $job->getSequence(),
-            'status in' => [Job::STATUS_NEW, Job::STATUS_BUSY, Job::STATUS_FAILED, Job::STATUS_UNKNOWN, Job::STATUS_PAUSED]
-        ]);
-    }
-
-    public function jobRates($field, $status = null)
-    {
-        $available_rates = [
-            '30 seconds',
-            '5 minutes',
-            '1 hour'
-        ];
-
-        $conditions = [];
-        if ($status) {
-            $conditions = [
-                'status' => $status
-            ];
-        }
-
-        $return = [];
-        foreach ($available_rates as $available_rate) {
-            $return[] = $this->jobsPerSecond($conditions, $field, '-' . $available_rate);
-        }
-
-        return $return;
-    }
-
-    public function statusStats()
-    {
-        $statuses = $this->find('list', [
-            'keyField' => 'status',
-            'valueField' => 'counter'
-        ])
-            ->select([
-                'status',
-                'counter' => $this->find()
-                    ->func()
-                    ->count('id')
-            ])
-            ->where([
-                'not' => ['status' => Job::STATUS_NEW]
-            ])
-            ->group(['status'])
-            ->toArray();
-        $statuses['waiting'] = $this->find()
-            ->where([
-                'status' => Job::STATUS_NEW,
-                'run_at >' => new Time()
-            ])
-            ->count();
-        $statuses[Job::STATUS_NEW] = $this->find()
-            ->where([
-                'status' => Job::STATUS_NEW,
-                'run_at <=' => new Time()
-            ])
-            ->count();
-
-        return $statuses;
-    }
-
     public function persistJob(Job $job)
     {
         $jobData = $job->getData();
@@ -225,13 +69,13 @@ class DelayedJobsTable extends Table
         }
 
         $options = [
-            'atomic' => !$this->connection()->inTransaction()
+            'atomic' => !$this->getConnection()->inTransaction()
         ];
 
         $result = $this->save($jobEntity, $options);
 
         if (!$result) {
-            return false;
+            return null;
         }
 
         $job->setId($jobEntity->id);
@@ -242,7 +86,7 @@ class DelayedJobsTable extends Table
 
     /**
      * @param \DelayedJobs\DelayedJob\Job[] $jobs
-     * @return bool
+     * @return \DelayedJobs\DelayedJob\Job[]
      */
     public function persistJobs(array $jobs)
     {
@@ -275,7 +119,7 @@ class DelayedJobsTable extends Table
             $query->values($jobData);
         }
 
-        $connection = $this->connection();
+        $connection = $this->getConnection();
         $quote = $connection
             ->driver()
             ->autoQuoting();
@@ -284,7 +128,7 @@ class DelayedJobsTable extends Table
             ->autoQuoting(true);
         $connection->transactional(function () use ($query, &$jobs) {
             $statement = $query->execute();
-            $firstId = $statement->lastInsertId($this->table(), 'id');
+            $firstId = $statement->lastInsertId($this->getTable(), 'id');
             foreach ($jobs as $job) {
                 $job->setId($firstId++);
             }
@@ -294,9 +138,18 @@ class DelayedJobsTable extends Table
 
         $connection->driver()
             ->autoQuoting($quote);
-        return true;
+
+        return $jobs;
     }
 
+    /**
+     * @param int $jobId Job Id
+     * @return \DelayedJobs\DelayedJob\Job|null
+     */
+    /**
+     * @param int $jobId
+     * @return \DelayedJobs\DelayedJob\Job|null
+     */
     public function fetchJob($jobId)
     {
         $jobEntity = $this->find()
@@ -307,21 +160,20 @@ class DelayedJobsTable extends Table
             return null;
         }
 
-        $job = new Job($jobEntity);
-        return $job;
+        return new Job($jobEntity);
     }
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job The job to fetch next sequence for
-     * @return bool
+     * @return \DelayedJobs\DelayedJob\Job
      */
     public function fetchNextSequence(Job $job)
     {
         if ($job->getSequence() === null) {
-            return false;
+            return null;
         }
 
-        $this->connection()->driver()->autoQuoting(false);
+        $this->getConnection()->driver()->autoQuoting(false);
         $next = $this->find()
             ->select([
                 'id',
@@ -338,18 +190,17 @@ class DelayedJobsTable extends Table
                 'priority' => 'ASC',
                 'id' => 'ASC',
             ])
-            ->from([$this->table() . ' ' . $this->alias() . ' FORCE INDEX (status_2)'])
+            ->from([$this->getTable() . ' ' . $this->getAlias() . ' FORCE INDEX (status_2)'])
+            ->enableHydration(false)
             ->first();
 
         if (!$next) {
             $this->djLog(__('No more sequenced jobs found for {0}', $job->getSequence()));
 
-            return false;
+            return null;
         }
 
-        $job = new Job($next->toArray());
-
-        return $job;
+        return new Job($next);
     }
 
     /**
@@ -358,12 +209,12 @@ class DelayedJobsTable extends Table
      * @param \DelayedJobs\DelayedJob\Job $job Job to check
      * @return bool
      */
-    public function isSimilarJob(Job $job)
+    public function isSimilarJob(Job $job): bool
     {
-        $quoting = $this->connection()
+        $quoting = $this->getConnection()
             ->driver()
             ->autoQuoting();
-        $this->connection()
+        $this->getConnection()
             ->driver()
             ->autoQuoting(true);
 
@@ -384,26 +235,32 @@ class DelayedJobsTable extends Table
 
         $exists = $this->exists($conditions);
 
-        $this->connection()
+        $this->getConnection()
             ->driver()
             ->autoQuoting($quoting);
 
         return $exists;
     }
 
+    /**
+     * @return void
+     */
     public function beforeSave()
     {
-        $this->_quote = $this->connection()
+        $this->_quote = $this->getConnection()
             ->driver()
             ->autoQuoting();
-        $this->connection()
+        $this->getConnection()
             ->driver()
             ->autoQuoting(true);
     }
 
+    /**
+     * @return void
+     */
     public function afterSave()
     {
-        $this->connection()
+        $this->getConnection()
             ->driver()
             ->autoQuoting($this->_quote);
     }

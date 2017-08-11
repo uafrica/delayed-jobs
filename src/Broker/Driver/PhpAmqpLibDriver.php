@@ -2,31 +2,29 @@
 
 namespace DelayedJobs\Broker\Driver;
 
-use Cake\Core\Configure;
-use Cake\Core\Exception\Exception;
 use Cake\Core\InstanceConfigTrait;
-use Cake\I18n\Time;
-use Cake\Log\Log;
-use Cake\Network\Http\Client;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\MessageBrokerInterface;
 use DelayedJobs\Traits\DebugLoggerTrait;
-use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazyConnection;
 use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
-use PhpAmqpLib\Wire\AMQPAbstractCollection;
 use PhpAmqpLib\Wire\AMQPTable;
 
+/**
+ * Class PhpAmqpLibDriver
+ */
 class PhpAmqpLibDriver implements RabbitMqDriverInterface
 {
     use DebugLoggerTrait;
     use InstanceConfigTrait;
 
+    /**
+     *
+     */
     const TIMEOUT = 5; //In seconds
 
     /**
@@ -39,6 +37,9 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
      */
     protected $_channel = null;
 
+    /**
+     * @var array
+     */
     protected $_defaultConfig = [];
 
     /**
@@ -47,11 +48,13 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     protected $_manager;
 
     /**
+     * @param array $config
+     * @param \DelayedJobs\DelayedJob\ManagerInterface $manager
      * @param \PhpAmqpLib\Connection\AbstractConnection|null $connection
      */
     public function __construct(array $config = [], ManagerInterface $manager, AbstractConnection $connection = null)
     {
-        $this->config($config);
+        $this->setConfig($config);
 
         if ($connection) {
             $this->_connection = $connection;
@@ -76,7 +79,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             return $this->_connection;
         }
 
-        $config = $this->config();
+        $config = $this->getConfig();
         $this->_connection = new AMQPLazyConnection($config['host'], $config['port'], $config['user'], $config['pass'], $config['path']);
 
         return $this->_connection;
@@ -91,7 +94,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $this->_channel = $this->getConnection()->channel();
 
         $this->declareExchange();
-        $this->declareQueue($this->_manager->config('maximum.priority'));
+        $this->declareQueue($this->_manager->getConfig('maximum.priority'));
         $this->bind();
 
         return $this->_channel;
@@ -99,7 +102,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
     public function declareExchange()
     {
-        $prefix = $this->config('prefix');
+        $prefix = $this->getConfig('prefix');
         $channel = $this->getChannel();
 
         $channel->exchange_declare($prefix . 'direct-exchange', 'direct', false, true, false, false, false);
@@ -113,7 +116,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
     public function declareQueue($maximumPriority)
     {
-        $prefix = $this->config('prefix');
+        $prefix = $this->getConfig('prefix');
         $channel = $this->getChannel();
 
         $channel->queue_declare($prefix . 'queue', false, true, false, false, false, [
@@ -123,8 +126,8 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
     public function bind()
     {
-        $prefix = $this->config('prefix');
-        $routingKey = $this->config('routingKey');
+        $prefix = $this->getConfig('prefix');
+        $routingKey = $this->getConfig('routingKey');
         $channel = $this->getChannel();
 
         $channel->queue_bind($prefix . 'queue', $prefix . 'delayed-exchange', $routingKey);
@@ -133,8 +136,8 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
     public function publishJob(array $jobData)
     {
-        $prefix = $this->config('prefix');
-        $routingKey = $this->config('routingKey');
+        $prefix = $this->getConfig('prefix');
+        $routingKey = $this->getConfig('routingKey');
         $channel = $this->getChannel();
 
         $messageProperties = [
@@ -156,9 +159,9 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
     public function consume(callable $callback, callable $heartbeat)
     {
-        $prefix = $this->config('prefix');
+        $prefix = $this->getConfig('prefix');
         $channel = $this->getChannel();
-        $channel->basic_qos(null, $this->config('qos'), null);
+        $channel->basic_qos(null, $this->getConfig('qos'), null);
 
         $tag = $channel->basic_consume($prefix . 'queue', '', false, false, false, false, function (AMQPMessage $message) use ($callback) {
             $body = json_decode($message->getBody(), true);

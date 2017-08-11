@@ -3,6 +3,7 @@
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
+use Cake\Console\ConsoleOptionParser;
 use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
@@ -53,7 +54,7 @@ class MonitorShell extends AppShell
         ];
 
         foreach (self::STATUS_MAP as $status => $name) {
-            $data[1][] = str_pad(isset($statuses[$status]) ? $statuses[$status] : 0, 8, ' ', STR_PAD_LEFT);
+            $data[1][] = str_pad($statuses[$status] ?? 0, 8, ' ', STR_PAD_LEFT);
         }
 
         $this->helper('Table')->output($data);
@@ -83,7 +84,7 @@ class MonitorShell extends AppShell
                 if (empty($status_points[$status])) {
                     $status_points[$status] = [];
                 }
-                $status_points[$status][] = isset($statuses[$status]) ? $statuses[$status] : 0;
+                $status_points[$status][] = $statuses[$status] ?? 0;
             }
         }
 
@@ -180,7 +181,7 @@ class MonitorShell extends AppShell
         $this->helper('DelayedJobs.Sparkline')
             ->output([
                 'data' => $ready_points,
-                'title' => "MQ Ready",
+                'title' => 'MQ Ready',
                 'length' => $max_length,
                 'formatter' => '%7d'
             ]);
@@ -297,7 +298,7 @@ class MonitorShell extends AppShell
         $this->start_time = time();
         $this->clear();
         while (true) {
-            if ($this->param('basic-stats') && $this->loop_counter % 100 !== 0) {
+            if ($this->loop_counter % 100 !== 0 && $this->param('basic-stats')) {
                 $this->out("\e[0;0H");
             } else {
                 $this->clear();
@@ -331,12 +332,15 @@ class MonitorShell extends AppShell
         }
     }
 
-    public function getOptionParser()
+    /**
+     * @return \Cake\Console\ConsoleOptionParser
+     */
+    public function getOptionParser(): ConsoleOptionParser
     {
         $options = parent::getOptionParser();
 
         $options
-            ->description('Allows monitoring of the delayed job service')
+            ->setDescription('Allows monitoring of the delayed job service')
             ->addOption('snapshot', [
                 'help' => 'Generate a single snapshot of the delayed job service',
                 'boolean' => true,

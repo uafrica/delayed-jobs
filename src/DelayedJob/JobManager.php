@@ -58,14 +58,14 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     protected $_defaultConfig = [
         'maximum' => [
-            'priority' => 255
+            'priority' => 255,
         ],
         'datasource' => [
-            'className' => TableDatasource::class
+            'className' => TableDatasource::class,
         ],
         'messageBroker' => [
-            'className' => RabbitMqBroker::class
-        ]
+            'className' => RabbitMqBroker::class,
+        ],
     ];
 
     /**
@@ -80,11 +80,15 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * @param \DelayedJobs\Datasource\DatasourceInterface $datastore Datastore to inject
      * @param \DelayedJobs\Broker\BrokerInterface $messageBroker Broker that handles message distribution
      */
-    public function __construct(array $config = [], DatasourceInterface $datastore = null, BrokerInterface $messageBroker = null) {
+    public function __construct(
+        array $config = [],
+        DatasourceInterface $datastore = null,
+        BrokerInterface $messageBroker = null
+    ) {
         $this->_datastore = $datastore;
         $this->_messageBroker = $messageBroker;
 
-        $this->config($config);
+        $this->setConfig($config);
     }
 
     /**
@@ -95,13 +99,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * @param \DelayedJobs\DelayedJob\ManagerInterface $manager Delayed jobs instance.
      * @return \DelayedJobs\DelayedJob\JobManager the global delayed jobs manager
      */
-    public static function instance(ManagerInterface $manager = null)
+    public static function instance(ManagerInterface $manager = null): JobManager
     {
         if ($manager instanceof ManagerInterface) {
             static::$_instance = $manager;
         }
         if (empty(static::$_instance)) {
-            static::$_instance = new JobManager(Configure::read('DelayedJobs'));
+            static::$_instance = new self(Configure::read('DelayedJobs'));
         }
 
         return static::$_instance;
@@ -110,13 +114,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     /**
      * @return \DelayedJobs\Datasource\DatasourceInterface
      */
-    public function getDatasource()
+    public function getDatasource(): DatasourceInterface
     {
         if ($this->_datastore) {
             return $this->_datastore;
         }
 
-        $config = $this->config('datasource');
+        $config = $this->getConfig('datasource');
         $this->_datastore = new $config['className']($config, $this);
 
         return $this->_datastore;
@@ -125,13 +129,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     /**
      * @return \DelayedJobs\Broker\BrokerInterface
      */
-    public function getMessageBroker()
+    public function getMessageBroker(): BrokerInterface
     {
         if ($this->_messageBroker) {
             return $this->_messageBroker;
         }
 
-        $config = $this->config('messageBroker');
+        $config = $this->getConfig('messageBroker');
         $this->_messageBroker = new $config['className']($config, $this);
 
         return $this->_messageBroker;
@@ -145,7 +149,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     public function enqueue(Job $job, bool $skipPersist = false)
     {
         if ($skipPersist || $this->_persistToDatastore($job)) {
-            if ($job->getSequence() && $this->getDatasource()->currentlySequenced($job)) {
+            if ($job->getSequence() &&
+                $this->getDatasource()
+                    ->currentlySequenced($job)) {
                 return;
             }
             $this->_pushToBroker($job);
@@ -161,7 +167,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         $job = new Job(compact('id', 'priority'));
 
-        $this->getMessageBroker()->publishJob($job);
+        $this->getMessageBroker()
+            ->publishJob($job);
     }
 
     /**
@@ -170,7 +177,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function enqueueBatch(array $jobs)
     {
-        if (!$this->getDatasource()->persistJobs($jobs) ) {
+        if (!$this->getDatasource()
+            ->persistJobs($jobs)) {
             throw new EnqueueException('Job batch could not be persisted');
         }
 
@@ -187,7 +195,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                     return false;
                 }
 
-                $currentlySequenced = $this->getDatasource()->currentlySequenced($job);
+                $currentlySequenced = $this->getDatasource()
+                    ->currentlySequenced($job);
                 $sequenceMap[$jobSequence] = $currentlySequenced;
 
                 return !$currentlySequenced;
@@ -203,8 +212,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     protected function _calculateRetryTime($retryCount): Time
     {
-        if ($this->config('DelayedJobs.retryTimes.' . $retryCount)) {
-            $growthFactor = $this->config('DelayedJobs.retryTimes.' . $retryCount);
+        if ($this->getConfig('DelayedJobs.retryTimes.' . $retryCount)) {
+            $growthFactor = $this->getConfig('DelayedJobs.retryTimes.' . $retryCount);
         } else {
             $growthFactor = static::BASE_RETRY_TIME + $retryCount ** static::RETRY_FACTOR;
         }
@@ -239,11 +248,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      *
      * @param int $jobId Job to fetch
      * @return \DelayedJobs\DelayedJob\Job
-     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
-    public function fetchJob($jobId): Job
+    public function fetchJob($jobId): \DelayedJobs\DelayedJob\Job
     {
-        return $this->getDatasource()->fetchJob($jobId);
+        return $this->getDatasource()
+            ->fetchJob($jobId);
     }
 
     /**
@@ -254,10 +263,12 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function loadJob(Job $job): Job
     {
-        $this->getDatasource()->loadJob($job);
+        $this->getDatasource()
+            ->loadJob($job);
 
         if ($job->getBrokerMessageBody()) {
-            $job->setPayloadKey('brokerMessageBody', $job->getBrokerMessageBody(), false);//If there is a message body, ensure that it's not lost on a retry!
+            $job->setPayloadKey('brokerMessageBody', $job->getBrokerMessageBody(),
+                false);//If there is a message body, ensure that it's not lost on a retry!
         }
 
         return $job;
@@ -269,9 +280,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * @param int $jobId Job to get status for
      * @return int
      */
-    public function getStatus($jobId)
+    public function getStatus($jobId): int
     {
-        $job = $this->getDatasource()->fetchJob($jobId);
+        $job = $this->getDatasource()
+            ->fetchJob($jobId);
         if (!$job) {
             return Job::STATUS_UNKNOWN;
         }
@@ -281,14 +293,14 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job
-     * @return \DelayedJobs\DelayedJob\Job|mixed
+     * @return void
      */
     public function lock(Job $job)
     {
         $job->setStatus(Job::STATUS_BUSY)
             ->setStartTime(Time::now());
 
-        return $this->_persistToDatastore($job);
+        $this->_persistToDatastore($job);
     }
 
     /**
@@ -303,12 +315,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         } elseif ($result instanceof \DateTimeInterface) {
             return (new Success($job, "Reoccur at {$result}"))->willRecur($result);
         } elseif ($result instanceof \Error || $result instanceof NonRetryableException) {
-            return (new Failed($job, $result->getMessage()))
-                ->willRetry(false)
+            return (new Failed($job, $result->getMessage()))->willRetry(false)
                 ->setException($result);
         } elseif ($result instanceof \Exception) {
-            return (new Failed($job, $result->getMessage()))
-                ->willRetry($job->getRetries() < $job->getMaxRetries())
+            return (new Failed($job, $result->getMessage()))->willRetry($job->getRetries() < $job->getMaxRetries())
                 ->setException($result);
         }
 
@@ -358,9 +368,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     protected function _dispatchWorkerEvent(JobWorkerInterface $jobWorker, $name, $data = null, $subject = null): Event
     {
         $event = new Event($name, $subject ?? $this, $data);
-        $this->eventManager()->dispatch($event);
+        $this->eventManager()
+            ->dispatch($event);
         if ($jobWorker instanceof EventDispatcherInterface) {
-            $jobWorker->eventManager()->dispatch($event);
+            $jobWorker->eventManager()
+                ->dispatch($event);
         }
 
         return $event;
@@ -369,13 +381,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     /**
      * @param \DelayedJobs\DelayedJob\Job $job
      * @param \DelayedJobs\Worker\JobWorkerInterface $jobWorker
-     * @return void
+     * @return \DelayedJobs\Result\ResultInterface|null
      */
     protected function _executeJob(Job $job, JobWorkerInterface $jobWorker)
     {
         $event = $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.beforeJobExecute', [$job]);
         if ($event->isStopped()) {
-            return;
+            return null;
         }
 
         $event = null;
@@ -386,17 +398,14 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         } catch (\Error $error) {
             //## Job Failed badly
             $result = $error;
-            Log::emergency(sprintf(
-                "Delayed job %d failed due to a fatal PHP error.\n%s\n%s",
-                $job->getId(),
-                $error->getMessage(),
-                $error->getTraceAsString()
-            ));
+            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->getId(),
+                $error->getMessage(), $error->getTraceAsString()));
         } catch (\Exception $exc) {
             //## Job Failed
             $result = $exc;
         } finally {
-            $this->getMessageBroker()->ack($job);
+            $this->getMessageBroker()
+                ->ack($job);
 
             if (!$result instanceof ResultInterface) {
                 $result = $this->_buildResultObject($job, $result);
@@ -408,71 +417,96 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->_handleResult($result, $duration);
 
             $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobCompleted', [$result]);
+
+            return $result;
         }
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param bool $force
+     * @return \DelayedJobs\Result\ResultInterface|null
+     * @throws \DelayedJobs\DelayedJob\Exception\JobExecuteException
+     */
     public function execute(Job $job, $force = false)
     {
         $className = App::className($job->getWorker(), 'Worker', 'Worker');
 
         if (!class_exists($className)) {
-            throw new JobExecuteException("Worker does not exist (" . $className . ")");
+            throw new JobExecuteException("Worker does not exist ({$className})");
         }
 
         $this->djLog(__('Received job {0}.', $job->getId()));
 
-        if ($force === false && ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURIED)) {
+        if ($force === false &&
+            ($job->getStatus() === Job::STATUS_SUCCESS || $job->getStatus() === Job::STATUS_BURIED)) {
             $this->djLog(__('Job {0} has already been processed', $job->getId()));
-            $this->getMessageBroker()->ack($job);
+            $this->getMessageBroker()
+                ->ack($job);
 
-            return;
+            return null;
         }
 
         if ($force === false && $job->getStatus() === Job::STATUS_BUSY) {
             $this->djLog(__('Job {0} is already being processed', $job->getId()));
-            $this->getMessageBroker()->ack($job);
+            $this->getMessageBroker()
+                ->ack($job);
 
-            return;
+            return null;
         }
         $this->lock($job);
 
         $jobWorker = new $className();
 
         if (!$jobWorker instanceof JobWorkerInterface) {
-            Log::emergency("Worker class {$className} for job {$job->getId()} must be an instance of " . JobWorkerInterface::class);
-            $this->getMessageBroker()->ack($job);
-            return;
+            Log::emergency("Worker class {$className} for job {$job->getId()} must be an instance of " .
+                JobWorkerInterface::class);
+            $this->getMessageBroker()
+                ->ack($job);
+
+            return null;
         }
 
-        $this->_executeJob($job, $jobWorker);
+        return $this->_executeJob($job, $jobWorker);
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return void
+     */
     public function enqueueNextSequence(Job $job)
     {
-        $nextJob = $this->getDatasource()->fetchNextSequence($job);
+        $nextJob = $this->getDatasource()
+            ->fetchNextSequence($job);
 
         if ($nextJob) {
-            return $this->_pushToBroker($nextJob);
+            $this->_pushToBroker($nextJob);
         }
     }
 
-    public function isSimilarJob(Job $job)
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return bool
+     */
+    public function isSimilarJob(Job $job): bool
     {
-        return $this->getDatasource()->isSimilarJob($job);
+        return $this->getDatasource()
+            ->isSimilarJob($job);
     }
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job being persisted
-     * @return \DelayedJobs\DelayedJob\Job|mixed
+     * @return \DelayedJobs\DelayedJob\Job
      */
-    protected function _persistToDatastore(Job $job)
+    protected function _persistToDatastore(Job $job): Job
     {
         $event = $this->dispatchEvent('DelayedJobs.beforePersist', [$job]);
         if ($event->isStopped()) {
-            return $event->result;
+            return $job;
         }
 
-        if (!$this->getDatasource()->persistJob($job)) {
+        if (!$this->getDatasource()
+            ->persistJob($job)) {
             throw new EnqueueException('Job could not be persisted');
         }
 
@@ -497,59 +531,71 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                 return;
             }
 
-            $this->getMessageBroker()->publishJob($job);
+            $this->getMessageBroker()
+                ->publishJob($job);
 
             $this->dispatchEvent('DelayedJobs.afterJobQueue', [$job]);
         } catch (\Exception $e) {
-            Log::emergency(__(
-                'RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
-                $e->getMessage(),
-                get_class($e),
-                $job->getId()
-            ));
+            Log::emergency(__('RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
+                $e->getMessage(), get_class($e), $job->getId()));
 
             throw new EnqueueException('Could not push job to broker.');
         }
     }
 
+    /**
+     * @return void
+     */
     public function startConsuming()
     {
-        $this->getMessageBroker()->consume(function (Job $job, $retried = false) {
-            try {
-                $this->loadJob($job);
-            } catch (\Exception $e) {
-                $this->djLog($e->getMessage());
+        //This lambda is run for each message received from the broker
+        $this->getMessageBroker()
+            ->consume(function (Job $job, $retried = false) {
+                try {
+                    $this->loadJob($job); //Load the job data from the database
+                } catch (\Exception $e) {
+                    //If there was a failure with loading the job, we either requeue the job, or we assume it's missing
+                    $this->djLog($e->getMessage());
 
-                if ($retried) {
-                    $this->getMessageBroker()->nack($job);
+                    if ($retried) {
+                        $this->getMessageBroker()
+                            ->nack($job);
+
+                        return;
+                    }
+
+                    $this->djLog(__('Will retry job {0}', $job->getId()));
+
+                    // Sleep 100ms before requeuing the job... sometimes the broker (mostly RabbitMQ) is just too fast.
+                    usleep(100 * 1000);
+
+                    $this->requeueJob($job);
 
                     return;
                 }
 
-                $this->djLog(__('Will retry job {0}', $job->getId()));
-
-                // Sleep 100ms before requeuing the job... sometimes RabbitMQ is just too fast.
-                usleep(100 * 1000);
-
-                $this->requeueJob($job);
-
-                return;
-            }
-
-            $this->execute($job);
-        }, function () {
-            $this->dispatchEvent('DelayedJob.heartbeat');
-        });
+                $this->execute($job); //Execute the job
+            }, function () {
+                $this->dispatchEvent('DelayedJob.heartbeat');
+            });
     }
 
+    /**
+     * @return void
+     */
     public function stopConsuming()
     {
-        $this->getMessageBroker()->stopConsuming();
+        $this->getMessageBroker()
+            ->stopConsuming();
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return void
+     */
     public function requeueJob(Job $job)
     {
-        $this->getMessageBroker()->nack($job, true);
+        $this->getMessageBroker()
+            ->nack($job, true);
     }
-
 }

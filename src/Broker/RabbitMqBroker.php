@@ -35,9 +35,15 @@ class RabbitMqBroker implements BrokerInterface
      */
     protected $_manager;
 
+    /**
+     * RabbitMqBroker constructor.
+     *
+     * @param array $config
+     * @param \DelayedJobs\DelayedJob\ManagerInterface $manager
+     */
     public function __construct($config = [], ManagerInterface $manager)
     {
-        $this->config($config);
+        $this->setConfig($config);
 
         $this->_manager = $manager;
     }
@@ -51,7 +57,7 @@ class RabbitMqBroker implements BrokerInterface
             return $this->_driver;
         }
 
-        $config = $this->config();
+        $config = $this->getConfig();
         $this->_driver = new $config['driver']($config, $this->_manager);
 
         return $this->_driver;
@@ -82,6 +88,11 @@ class RabbitMqBroker implements BrokerInterface
         $this->getDriver()->publishJob($jobData);
     }
 
+    /**
+     * @param callable $callback
+     * @param callable $heartbeat
+     * @return void
+     */
     public function consume(callable $callback, callable $heartbeat)
     {
        $this->getDriver()->consume($callback, $heartbeat);
@@ -92,20 +103,32 @@ class RabbitMqBroker implements BrokerInterface
         $this->getDriver()->stopConsuming();
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return void
+     */
     public function ack(Job $job)
     {
         $this->getDriver()->ack($job);
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param bool $requeue
+     * @return void
+     */
     public function nack(Job $job, $requeue = false)
     {
         $this->getDriver()
             ->nack($job, $requeue);
     }
 
+    /**
+     * @return array|null
+     */
     public function queueStatus()
     {
-        $config = $this->config('apiServer');
+        $config = $this->getConfig('apiServer');
 
         $client = new Client([
             'host' => $config['host'],
@@ -141,7 +164,7 @@ class RabbitMqBroker implements BrokerInterface
      * @param string $exchange
      * @param string $routing_key
      * @param array $headers
-     * @return mixed
+     * @return void
      */
     public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = [])
     {

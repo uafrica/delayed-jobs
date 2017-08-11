@@ -12,10 +12,18 @@ abstract class BaseDatasource implements DatasourceInterface
 {
     use InstanceConfigTrait;
 
+    /**
+     * @var array
+     */
     protected $_defaultConfig = [];
 
+    /**
+     * BaseDatasource constructor.
+     *
+     * @param array $config
+     */
     public function __construct($config = [])
     {
-        $this->config($config);
+        $this->setConfig($config);
     }
 }

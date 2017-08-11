@@ -17,9 +17,9 @@ interface DatasourceInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job[] $jobs
-     * @return bool
+     * @return array
      */
-    public function persistJobs(array $jobs);
+    public function persistJobs(array $jobs): array;
 
     /**
      * @param int $jobId The job to get
@@ -33,7 +33,7 @@ interface DatasourceInterface
      * @param \DelayedJobs\DelayedJob\Job $job The job to check for
      * @return bool
      */
-    public function currentlySequenced(Job $job);
+    public function currentlySequenced(Job $job): bool;
 
     /**
      * Gets the next job in the sequence
@@ -49,7 +49,15 @@ interface DatasourceInterface
      * @param \DelayedJobs\DelayedJob\Job $job Job to check
      * @return bool
      */
-    public function isSimilarJob(Job $job);
+    public function isSimilarJob(Job $job): bool;
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return void
+     */
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return mixed
+     */
     public function loadJob(Job $job);
 }

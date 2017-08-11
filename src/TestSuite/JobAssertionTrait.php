@@ -9,15 +9,36 @@ use DelayedJobs\DelayedJob\Job;
  */
 trait JobAssertionTrait
 {
-    abstract function assertCount($expectedCount, $haystack, $message = '');
+    /**
+     * @param $expectedCount
+     * @param $haystack
+     * @param string $message
+     * @return mixed
+     */
+    abstract public function assertCount($expectedCount, $haystack, $message = '');
 
-    abstract static function assertTrue($condition, $message = '');
+    /**
+     * @param $condition
+     * @param string $message
+     * @return mixed
+     */
+    abstract public static function assertTrue($condition, $message = '');
 
+    /**
+     * @param $count
+     * @param string $message
+     * @return void
+     */
     public function assertJobCount($count, $message = '')
     {
         $this->assertCount($count, TestManager::getJobs(), $message);
     }
 
+    /**
+     * @param callable $callback
+     * @param string $message
+     * @return void
+     */
     public function assertEachJob(callable $callback, $message = '')
     {
         $jobs = TestManager::getJobs();
@@ -32,6 +53,11 @@ trait JobAssertionTrait
         $this->assertTrue(true);
     }
 
+    /**
+     * @param callable $callback
+     * @param string $message
+     * @return void
+     */
     public function assertJob(callable $callback, $message = '')
     {
         $jobs = TestManager::getJobs();
@@ -45,6 +71,11 @@ trait JobAssertionTrait
         $this->assertTrue(false, $message ?: 'No jobs matched the supplied callback.');
     }
 
+    /**
+     * @param callable $callback
+     * @param string $message
+     * @return void
+     */
     public function assertNotJob(callable $callback, $message = '')
     {
         $jobs = TestManager::getJobs();
@@ -59,6 +90,11 @@ trait JobAssertionTrait
         $this->assertTrue(true);
     }
 
+    /**
+     * @param $worker
+     * @param string $message
+     * @return void
+     */
     public function assertJobWorker($worker, $message = '')
     {
         $callback = function (Job $job) use ($worker) {
@@ -68,6 +104,11 @@ trait JobAssertionTrait
         $this->assertJob($callback, $message ?: sprintf('No job using the "%s" worker was triggered.', $worker));
     }
 
+    /**
+     * @param $worker
+     * @param string $message
+     * @return void
+     */
     public function assertNotJobWorker($worker, $message = '')
     {
         $callback = function (Job $job) use ($worker) {
