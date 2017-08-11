@@ -6,6 +6,7 @@ use Cake\Database\Schema\TableSchema;
 use Cake\I18n\Time;
 use Cake\ORM\Query;
 use Cake\ORM\Table;
+use DelayedJobs\DelayedJob\DatastoreInterface;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Traits\DebugLoggerTrait;
 
@@ -14,7 +15,7 @@ use DelayedJobs\Traits\DebugLoggerTrait;
  *
  * @internal
  */
-class DelayedJobsTable extends Table
+class DelayedJobsTable extends Table implements DatastoreInterface
 {
     use DebugLoggerTrait;
 
@@ -44,9 +45,26 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return null|\DelayedJobs\DelayedJob\Job
+     * Returns true if a job of the same sequence is already persisted and waiting execution.
+     *
+     * @param \DelayedJobs\DelayedJob\Job $job The job to check for
+     * @return bool
      */
+    public function currentlySequenced(Job $job): bool
+    {
+        return $this->exists([
+            'id <' => $job->getId(),
+            'sequence' => $job->getSequence(),
+            'status in' => [
+                Job::STATUS_NEW,
+                Job::STATUS_BUSY,
+                Job::STATUS_FAILED,
+                Job::STATUS_UNKNOWN,
+                Job::STATUS_PAUSED
+            ]
+        ]);
+    }
+
     /**
      * @param \DelayedJobs\DelayedJob\Job $job
      * @return \DelayedJobs\DelayedJob\Job|null
@@ -88,7 +106,7 @@ class DelayedJobsTable extends Table
      * @param \DelayedJobs\DelayedJob\Job[] $jobs
      * @return \DelayedJobs\DelayedJob\Job[]
      */
-    public function persistJobs(array $jobs)
+    public function persistJobs(array $jobs): array
     {
         $query = $this->query()
             ->insert([
@@ -143,10 +161,6 @@ class DelayedJobsTable extends Table
     }
 
     /**
-     * @param int $jobId Job Id
-     * @return \DelayedJobs\DelayedJob\Job|null
-     */
-    /**
      * @param int $jobId
      * @return \DelayedJobs\DelayedJob\Job|null
      */
@@ -165,7 +179,7 @@ class DelayedJobsTable extends Table
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job The job to fetch next sequence for
-     * @return \DelayedJobs\DelayedJob\Job
+     * @return \DelayedJobs\DelayedJob\Job|null
      */
     public function fetchNextSequence(Job $job)
     {

@@ -231,9 +231,9 @@ class Job
     }
 
     /**
-     * @return int
+     * @return int|null
      */
-    public function getId(): int
+    public function getId()
     {
         return $this->_id;
     }
@@ -254,7 +254,7 @@ class Job
      */
     public function getRetries(): int
     {
-        return $this->_retries;
+        return $this->_retries ?? 0;
     }
 
     /**
@@ -462,9 +462,9 @@ class Job
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getSequence(): string
+    public function getSequence()
     {
         return $this->_sequence;
     }
@@ -508,7 +508,7 @@ class Job
      */
     public function getStatus(): int
     {
-        return $this->_status;
+        return $this->_status ?? self::STATUS_UNKNOWN;
     }
 
     /**
@@ -523,9 +523,9 @@ class Job
     }
 
     /**
-     * @return \Cake\I18n\Time
+     * @return \Cake\I18n\Time|null
      */
-    public function getTimeFailed(): Time
+    public function getTimeFailed()
     {
         return $this->_timeFailed;
     }

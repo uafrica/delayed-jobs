@@ -290,7 +290,7 @@ class WorkerShell extends AppShell
         static $units = ['B', 'kiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
         $step = 1024;
         $i = 0;
-        while ($size > 0.9) {
+        while (($size / $step) > 0.9) {
             $size /= $step;
             $i++;
         }
