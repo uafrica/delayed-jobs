@@ -1,7 +1,7 @@
 <?php
 use Migrations\AbstractMigration;
 
-class ChangePayloadDataTypeForDelayedJobs extends AbstractMigration
+class ChangePayloadDataTypeToLongForDelayedJobs extends AbstractMigration
 {
     /**
      * Change Method.
