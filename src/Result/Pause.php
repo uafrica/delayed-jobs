@@ -16,4 +16,12 @@ class Pause extends Result
     {
         return Job::STATUS_PAUSED;
     }
+
+    /**
+     * @return bool
+     */
+    public function canRetry(): bool
+    {
+        return false;
+    }
 }

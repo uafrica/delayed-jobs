@@ -300,20 +300,22 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             ->setDuration($duration)
             ->addHistory($result->getMessage());
 
-        if ($result->getRetry() && $job->getRetries() < $job->getMaxRetries()) {
-            $job->incrementRetries();
+        if ($result->canRetry()) {
+            $job->incrementRetries()
+                ->setRunAt($this->_calculateRetryTime($job->getRetries()));
+            $this->enqueue($job);
 
-            $job->setRunAt($this->_calculateRetryTime($job->getRetries()));
-            $this->enqueue($job, true);
+            return;
         }
 
         if ($result->getRecur()) {
             $this->_enqueueRecurring($job, $result->getRecur());
         }
 
-        if (in_array($job->getStatus(), [Job::STATUS_SUCCESS, Job::STATUS_BURIED]) && $job->getSequence() !== null) {
+        if ($job->getSequence() !== null && in_array($job->getStatus(), [Job::STATUS_SUCCESS, Job::STATUS_BURIED])) {
             $this->enqueueNextSequence($job);
         }
+
         $this->_persistToDatastore($job);
     }
 

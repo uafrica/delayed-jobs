@@ -35,6 +35,11 @@ interface ResultInterface
     public function getRetry(): bool;
 
     /**
+     * @return bool
+     */
+    public function canRetry(): bool;
+
+    /**
      * @param bool $retry
      * @return self
      */

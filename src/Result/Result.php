@@ -68,6 +68,14 @@ abstract class Result implements ResultInterface
     }
 
     /**
+     * @return bool
+     */
+    public function canRetry(): bool
+    {
+        return $this->getRetry() && $this->getJob()->getRetries() < $this->getJob()->getMaxRetries();
+    }
+
+    /**
      * Most return types cannot reoccur, so we don't actually do anything
      *
      * @param \DateTimeInterface|null $recur When to re-queue the job for.

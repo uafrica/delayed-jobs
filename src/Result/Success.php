@@ -32,6 +32,14 @@ class Success extends Result
     }
 
     /**
+     * @return bool
+     */
+    public function canRetry(): bool
+    {
+        return false;
+    }
+
+    /**
      * @param \DateTimeInterface|null $recur When to re-queue the job for.
      * @return self
      */
