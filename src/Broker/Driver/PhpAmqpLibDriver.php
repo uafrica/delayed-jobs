@@ -209,6 +209,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $channel = $this->getChannel();
         try {
             $channel->wait(null, true, $timeout);
+
             return true;
         } catch (AMQPTimeoutException $e) {
             return false;
@@ -254,5 +255,4 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         ]);
         $channel->basic_publish($message, $exchange, $routing_key);
     }
-
 }

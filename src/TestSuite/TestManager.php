@@ -179,5 +179,4 @@ class TestManager implements ManagerInterface
     public function requeueJob(Job $job)
     {
     }
-
 }

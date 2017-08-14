@@ -312,8 +312,11 @@ class WorkerShell extends AppShell
         $this->out('', 1, Shell::VERBOSE);
 
         if ($result instanceof Failed) {
-            $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()), 1,
-                Shell::VERBOSE);
+            $this->out(
+                sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()),
+                1,
+                Shell::VERBOSE
+            );
             if ($result->getException()) {
                 $this->out($result->getException()
                     ->getTraceAsString(), 1, Shell::VERBOSE);
@@ -364,5 +367,4 @@ class WorkerShell extends AppShell
 
         return $options;
     }
-
 }

@@ -16,7 +16,7 @@ use DelayedJobs\DelayedJob\JobManager;
 class TestShell extends AppShell
 {
     use EnqueueTrait;
-    
+
     public $modelClass = 'DelayedJobs.DelayedJobs';
 
     public function sequencing()

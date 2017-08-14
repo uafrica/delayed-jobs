@@ -42,6 +42,7 @@ class WorkerTask extends Shell
         } catch (JobNotFoundException $e) {
             $this->out('<fail>Job ' . $jobId . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
             $this->_stop(1);
+
             return;
         }
 
@@ -65,11 +66,17 @@ class WorkerTask extends Shell
         if ($response instanceof Failed) {
             $this->_failedJob($job, $response);
         } elseif ($response instanceof Success) {
-            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response->getMessage()), 1,
-                Shell::VERBOSE);
+            $this->out(
+                sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response->getMessage()),
+                1,
+                Shell::VERBOSE
+            );
         } elseif ($response instanceof Pause) {
-            $this->out(sprintf('<info> - Execution paused</info> :: <info>%s</info>', $response->getMessage()), 1,
-                Shell::VERBOSE);
+            $this->out(
+                sprintf('<info> - Execution paused</info> :: <info>%s</info>', $response->getMessage()),
+                1,
+                Shell::VERBOSE
+            );
         }
         $end = microtime(true);
         $this->out(sprintf(' - Took: %.2f seconds', $end - $start), 1, Shell::VERBOSE);

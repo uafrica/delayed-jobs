@@ -95,7 +95,7 @@ class RabbitMqBroker implements BrokerInterface
      */
     public function consume(callable $callback, callable $heartbeat)
     {
-       $this->getDriver()->consume($callback, $heartbeat);
+        $this->getDriver()->consume($callback, $heartbeat);
     }
 
     public function stopConsuming()
@@ -139,10 +139,13 @@ class RabbitMqBroker implements BrokerInterface
             ]
         ]);
         try {
-            $queue_data = $client->get(sprintf('/api/queues/%s/%s', urlencode($config['path']),
-                Configure::read('dj.service.name') . '-queue'), [], [
+            $queue_data = $client->get(sprintf(
+                '/api/queues/%s/%s',
+                urlencode($config['path']),
+                Configure::read('dj.service.name') . '-queue'
+            ), [], [
                 'type' => 'json'
-            ]);
+                ]);
         } catch (Exception $e) {
             return [];
         }
@@ -170,5 +173,4 @@ class RabbitMqBroker implements BrokerInterface
     {
         $this->getDriver()->publishBasic($body, $exchange, $routing_key, $headers);
     }
-
 }

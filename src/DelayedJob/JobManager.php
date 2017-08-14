@@ -218,7 +218,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $growthFactor = static::BASE_RETRY_TIME + $retryCount ** static::RETRY_FACTOR;
         }
 
-        $growthFactorRandom = random_int(1, 2) === 2 ? -1 : +1;
+        $growthFactorRandom = random_int(1, 2) === 2 ? -1 : + 1;
         $growthFactorRandom *= ceil(\log($growthFactor + random_int($growthFactor / 2, $growthFactor)));
 
         $growthFactor += $growthFactorRandom;
@@ -267,8 +267,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             ->loadJob($job);
 
         if ($job->getBrokerMessageBody()) {
-            $job->setPayloadKey('brokerMessageBody', $job->getBrokerMessageBody(),
-                false);//If there is a message body, ensure that it's not lost on a retry!
+            $job->setPayloadKey(
+                'brokerMessageBody',
+                $job->getBrokerMessageBody(),
+                false
+            );//If there is a message body, ensure that it's not lost on a retry!
         }
 
         return $job;
@@ -398,8 +401,12 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         } catch (\Error $error) {
             //## Job Failed badly
             $result = $error;
-            Log::emergency(sprintf("Delayed job %d failed due to a fatal PHP error.\n%s\n%s", $job->getId(),
-                $error->getMessage(), $error->getTraceAsString()));
+            Log::emergency(sprintf(
+                "Delayed job %d failed due to a fatal PHP error.\n%s\n%s",
+                $job->getId(),
+                $error->getMessage(),
+                $error->getTraceAsString()
+            ));
         } catch (\Exception $exc) {
             //## Job Failed
             $result = $exc;
@@ -536,8 +543,12 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
             $this->dispatchEvent('DelayedJobs.afterJobQueue', [$job]);
         } catch (\Exception $e) {
-            Log::emergency(__('RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
-                $e->getMessage(), get_class($e), $job->getId()));
+            Log::emergency(__(
+                'RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
+                $e->getMessage(),
+                get_class($e),
+                $job->getId()
+            ));
 
             throw new EnqueueException('Could not push job to broker.');
         }

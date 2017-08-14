@@ -278,5 +278,4 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             ->driver()
             ->autoQuoting($this->_quote);
     }
-
 }

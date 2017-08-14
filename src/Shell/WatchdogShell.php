@@ -89,6 +89,7 @@ class WatchdogShell extends AppShell
     {
         $max_time = Configure::read('DelayedJobs.maximum.pulseTime');
         $last_beat = $worker->pulse->diffInSeconds();
+
         return $last_beat <= $max_time;
     }
 
@@ -139,6 +140,7 @@ class WatchdogShell extends AppShell
 
         if ($workers->count() === 0) {
             $this->out('No workers to stop');
+
             return;
         }
 
@@ -508,5 +510,4 @@ class WatchdogShell extends AppShell
 
         return $options;
     }
-
 }

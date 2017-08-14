@@ -41,11 +41,21 @@ class MonitorShell extends AppShell
         $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
 
         $this->out("Created / s:\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>', $created_rate[0], $created_rate[1],
-                $created_rate[2], $peak_created_rate));
+            sprintf(
+                '<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $created_rate[0],
+                $created_rate[1],
+                $created_rate[2],
+                $peak_created_rate
+            ));
         $this->out("Completed / s:\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>', $completed_rate[0],
-                $completed_rate[1], $completed_rate[2], $peak_completed_rate));
+            sprintf(
+                '<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $completed_rate[0],
+                $completed_rate[1],
+                $completed_rate[2],
+                $peak_completed_rate
+            ));
         $this->out('');
 
         $data = [
@@ -111,8 +121,13 @@ class MonitorShell extends AppShell
                 'length' => $max_length
             ]);
         $this->out("\t\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
-                $created_rate[0], $created_rate[1], $created_rate[2], $peak_created_rate));
+            sprintf(
+                '<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $created_rate[0],
+                $created_rate[1],
+                $created_rate[2],
+                $peak_created_rate
+            ));
 
         $this->helper('DelayedJobs.Sparkline')
             ->output([
@@ -122,8 +137,13 @@ class MonitorShell extends AppShell
             ]);
 
         $this->out("\t\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
-                $completed_rate[0], $completed_rate[1], $completed_rate[2], $peak_completed_rate));
+            sprintf(
+                '<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $completed_rate[0],
+                $completed_rate[1],
+                $completed_rate[2],
+                $peak_completed_rate
+            ));
 
         foreach (self::STATUS_MAP as $status => $name) {
             $this->helper('DelayedJobs.Sparkline')
@@ -227,19 +247,31 @@ class MonitorShell extends AppShell
 
         $output = [];
         if (!empty($last_completed)) {
-            $output[] = __('Last completed: <info>{0}</info> (<comment>{1}</comment>) @ <info>{2}</info> :: <info>{3}</info> seconds',
-                $last_completed->id, $last_completed->worker,
-                $last_completed->end_time->i18nFormat(), round($last_completed->duration / 1000, 2));
+            $output[] = __(
+                'Last completed: <info>{0}</info> (<comment>{1}</comment>) @ <info>{2}</info> :: <info>{3}</info> seconds',
+                $last_completed->id,
+                $last_completed->worker,
+                $last_completed->end_time->i18nFormat(),
+                round($last_completed->duration / 1000, 2)
+            );
         }
         if (!empty($last_failed)) {
-            $output[] = __('Last failed: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>',
-                $last_failed->id, $last_failed->worker, $last_failed->last_message,
-                $last_failed->failed_at->i18nFormat());
+            $output[] = __(
+                'Last failed: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>',
+                $last_failed->id,
+                $last_failed->worker,
+                $last_failed->last_message,
+                $last_failed->failed_at->i18nFormat()
+            );
         }
         if (!empty($last_buried)) {
-            $output[] = __('Last burried: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>>',
-                $last_buried->id, $last_buried->worker, $last_buried->last_message,
-                $last_buried->failed_at->i18nFormat());
+            $output[] = __(
+                'Last burried: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>>',
+                $last_buried->id,
+                $last_buried->worker,
+                $last_buried->last_message,
+                $last_buried->failed_at->i18nFormat()
+            );
         }
         if (empty($output)) {
             return;

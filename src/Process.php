@@ -1,7 +1,6 @@
 <?php
 namespace DelayedJobs;
 
-
 /* An easy way to keep in track of external processes.
  * Ever wanted to execute a process in php, but you still wanted to have somewhat controll of the process ? Well.. This is a way of doing it.
  * @compability: Linux only. (Windows does not work).
@@ -120,5 +119,4 @@ class Process
 
         return false;
     }
-
 }

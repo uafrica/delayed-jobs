@@ -29,6 +29,7 @@ class DelayedJob extends Entity implements EventDispatcherInterface
                 $this->{$property} = $stream;
             }
         }
+
         return $stream;
     }
 

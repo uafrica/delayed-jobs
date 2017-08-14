@@ -13,7 +13,13 @@
     "cakephp/app": "^3.0",
     "phpunit/phpunit": "^4.5",
     "sizuhiko/fabricate": "~2.0@dev",
-    "sizuhiko/cake_fabricate": "dev-develop"
+    "sizuhiko/cake_fabricate": "dev-develop",
+    "squizlabs/php_codesniffer": "^3.0",
+    "cakephp/cakephp-codesniffer": "^3.0.0"
+  },
+  "scripts": {
+    "cs-check": "phpcs --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/",
+    "cs-fix": "phpcbf --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/"
   },
   "license": "MIT",
   "authors": [

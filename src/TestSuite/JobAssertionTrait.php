@@ -64,6 +64,7 @@ trait JobAssertionTrait
         foreach ($jobs as $job) {
             if ($callback($job)) {
                 $this->assertTrue(true);
+
                 return;
             }
         }

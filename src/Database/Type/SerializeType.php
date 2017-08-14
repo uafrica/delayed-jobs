@@ -32,6 +32,7 @@ class SerializeType extends Type
             Log::error($value);
             $unserialized = [];
         }
+
         return $unserialized;
     }
 

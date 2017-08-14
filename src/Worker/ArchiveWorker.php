@@ -82,5 +82,4 @@ class ArchiveWorker extends Worker
 
         return new Time(Configure::read('DelayedJobs.archive.recurring'));
     }
-
 }

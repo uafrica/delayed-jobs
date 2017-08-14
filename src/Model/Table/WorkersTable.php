@@ -41,6 +41,7 @@ class WorkersTable extends Table
     {
         $validator
             ->notEmpty('host_name');
+
         return $validator;
     }
 
