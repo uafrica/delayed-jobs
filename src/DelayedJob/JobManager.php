@@ -44,7 +44,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     /**
      * The singleton instance
      *
-     * @var \DelayedJobs\DelayedJob\JobManager
+     * @var \DelayedJobs\DelayedJob\ManagerInterface
      */
     protected static $_instance;
 
@@ -97,9 +97,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * If called with the first parameter, it will be set as the globally available instance
      *
      * @param \DelayedJobs\DelayedJob\ManagerInterface $manager Delayed jobs instance.
-     * @return \DelayedJobs\DelayedJob\JobManager the global delayed jobs manager
+     * @return \DelayedJobs\DelayedJob\ManagerInterface the global delayed jobs manager
      */
-    public static function instance(ManagerInterface $manager = null): JobManager
+    public static function instance(ManagerInterface $manager = null): ManagerInterface
     {
         if ($manager instanceof ManagerInterface) {
             static::$_instance = $manager;
