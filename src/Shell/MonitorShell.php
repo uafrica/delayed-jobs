@@ -4,6 +4,7 @@ namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
 use Cake\Console\ConsoleOptionParser;
+use Cake\I18n\Time;
 use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
@@ -29,14 +30,136 @@ class MonitorShell extends AppShell
 
     public $loop_counter;
 
+    /**
+     * @return array
+     */
+    protected function _statusStats()
+    {
+        $statuses = $this->DelayedJobs->find('list', [
+            'keyField' => 'status',
+            'valueField' => 'counter'
+        ])
+            ->select([
+                'status',
+                'counter' => $this->DelayedJobs->find()
+                    ->func()
+                    ->count('id')
+            ])
+            ->where([
+                'not' => ['status' => Job::STATUS_NEW]
+            ])
+            ->group(['status'])
+            ->toArray();
+        $statuses['waiting'] = $this->DelayedJobs->find()
+            ->where([
+                'status' => Job::STATUS_NEW,
+                'run_at >' => new Time()
+            ])
+            ->count();
+        $statuses[Job::STATUS_NEW] = $this->DelayedJobs->find()
+            ->where([
+                'status' => Job::STATUS_NEW,
+                'run_at <=' => new Time()
+            ])
+            ->count();
+
+        return $statuses;
+    }
+
+    /**
+     * @param $field
+     * @param null $status
+     * @return array
+     */
+    protected function _jobRates($field, $status = null)
+    {
+        $available_rates = [
+            '30 seconds',
+            '5 minutes',
+            '1 hour'
+        ];
+        $conditions = [];
+        if ($status) {
+            $conditions = [
+                'status' => $status
+            ];
+        }
+        $return = [];
+        foreach ($available_rates as $available_rate) {
+            $return[] = $this->_jobsPerSecond($conditions, $field, '-' . $available_rate);
+        }
+
+        return $return;
+    }
+
+    /**
+     * @param $host_id
+     * @return \Cake\ORM\Query
+     */
+    protected function _getRunningByHost($host_id)
+    {
+        $conditions = [
+            'DelayedJobs.host_name' => $host_id,
+            'DelayedJobs.status' => Job::STATUS_BUSY,
+        ];
+        $jobs = $this->DelayedJobs->find()
+            ->select([
+                'id',
+                'pid',
+                'host_name',
+                'status',
+                'priority',
+            ])
+            ->where($conditions)
+            ->order([
+                'DelayedJobs.id' => 'ASC'
+            ]);
+
+        return $jobs;
+    }
+
+    protected function _getRunning()
+    {
+        $conditions = [
+            'DelayedJobs.status' => Job::STATUS_BUSY,
+        ];
+        $jobs = $this->DelayedJobs->find()
+            ->select([
+                'id',
+                'pid',
+                'status',
+                'sequence',
+                'priority',
+            ])
+            ->where($conditions)
+            ->order([
+                'DelayedJobs.id' => 'ASC'
+            ]);
+
+        return $jobs;
+    }
+
+    protected function _jobsPerSecond($conditions = [], $field = 'created', $time_range = '-1 hour')
+    {
+        $start_time = new Time($time_range);
+        $current_time = new Time();
+        $second_count = $current_time->diffInSeconds($start_time);
+        $conditions[$this->DelayedJobs->aliasField($field) . ' > '] = $start_time;
+        $count = $this->DelayedJobs->find()
+            ->where($conditions)
+            ->count();
+
+        return $count / $second_count;
+    }
+
     protected function _basicStats()
     {
         static $peak_created_rate = 0.0;
         static $peak_completed_rate = 0.0;
 
-        $statuses = $this->DelayedJobs->statusStats();
-        $created_rate = $this->DelayedJobs->jobRates('created');
-        $completed_rate = $this->DelayedJobs->jobRates('end_time', Job::STATUS_SUCCESS);
+        $statuses = $this->_statusStats();
+        $created_rate = $this->_jobRates('created');
+        $completed_rate = $this->_jobRates('end_time', Job::STATUS_SUCCESS);
         $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
         $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
 
@@ -80,9 +203,9 @@ class MonitorShell extends AppShell
 
         $max_length = 50;
 
-        $statuses = $this->DelayedJobs->statusStats();
-        $created_rate = $this->DelayedJobs->jobRates('created');
-        $completed_rate = $this->DelayedJobs->jobRates('end_time', Job::STATUS_SUCCESS);
+        $statuses = $this->_statusStats();
+        $created_rate = $this->_jobRates('created');
+        $completed_rate = $this->_jobRates('end_time', Job::STATUS_SUCCESS);
         $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
         $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
 

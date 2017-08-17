@@ -62,7 +62,7 @@ class SparklineHelper extends Helper
             $data_points = array_slice($data_points, -$data_count);
         }
         array_walk($data_points, function (&$data_point) {
-            $data_point = number_format($data_point, 2) * 100;
+            $data_point = round($data_point, 2) * 100;
         });
 
         $max = max($data_points);
