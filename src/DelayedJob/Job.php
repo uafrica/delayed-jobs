@@ -673,6 +673,7 @@ class Job
 
         $this->_history[] = [
             'timestamp' => new FrozenTime(),
+            'microtime' => microtime(true),
             'host_name' => $this->getHostName(),
             'message' => $message ?: '',
         ];
