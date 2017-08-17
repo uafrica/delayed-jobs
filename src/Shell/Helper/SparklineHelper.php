@@ -9,10 +9,17 @@ use Cake\Console\Helper;
  */
 class SparklineHelper extends Helper
 {
+    /**
+     *
+     */
     const TICKS = [
         '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'
     ];
 
+    /**
+     * @param array $args
+     * @return void
+     */
     public function output($args = [])
     {
         $default = [
@@ -22,7 +29,7 @@ class SparklineHelper extends Helper
             'formatter' => '%6.2f'
         ];
 
-        $args = $args + $default;
+        $args += $default;
 
         $output = '';
         if (!empty($args['title'])) {
@@ -44,6 +51,11 @@ class SparklineHelper extends Helper
         $this->_io->out($output);
     }
 
+    /**
+     * @param $data_points
+     * @param $data_count
+     * @return array
+     */
     protected function _mapData($data_points, $data_count)
     {
         if (count($data_points) > $data_count) {

@@ -2,6 +2,11 @@
 
 namespace DelayedJobs\DelayedJob;
 
+/**
+ * Trait EnqueueTrait
+ *
+ * @package DelayedJobs\DelayedJob
+ */
 trait EnqueueTrait
 {
     /**
@@ -11,30 +16,33 @@ trait EnqueueTrait
      * @return \DelayedJobs\DelayedJob\Job
      * @throws \DelayedJobs\DelayedJob\Exception\JobDataException
      */
-    public function enqueue($worker, $payload = null, array $options = [])
+    public function enqueue($worker, $payload = null, array $options = []): Job
     {
         if ($worker instanceof Job) {
             $job = $worker;
         } else {
             $job = new Job();
-            $job
-                ->setWorker($worker)
+            $job->setWorker($worker)
                 ->setPayload($payload)
                 ->setData($options);
         }
 
-        return JobManager::instance()->enqueue($job);
+        JobManager::instance()
+            ->enqueue($job);
+
+        return $job;
     }
 
     /**
      * Enqueues a batch of similar jobs
      *
      * @param string $worker Worker class to enqueue (In CakePHP format)
-     * @param array $jobsToEnqueue Array of jobs to enqueue. Can either be a simple array for the payload, or contain two keys (_payload, and _options)
+     * @param array $jobsToEnqueue Array of jobs to enqueue. Can either be a simple array for the payload, or contain
+     *     two keys (_payload, and _options)
      * @param array $options Default options for all jobs. Can be overridden with the `_options` key
-     * @return array
+     * @return \DelayedJobs\DelayedJob\Job[]
      */
-    public function enqueueBatch($worker, array $jobsToEnqueue, array $options = [])
+    public function enqueueBatch($worker, array $jobsToEnqueue, array $options = []): array
     {
         $jobs = [];
 
@@ -54,6 +62,9 @@ trait EnqueueTrait
             $jobs[] = $job;
         }
 
-        return JobManager::instance()->enqueueBatch($jobs);
+        JobManager::instance()
+            ->enqueueBatch($jobs);
+
+        return $jobs;
     }
 }

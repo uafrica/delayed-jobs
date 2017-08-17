@@ -16,13 +16,19 @@ class TestManager implements ManagerInterface
 {
     use InstanceConfigTrait;
 
+    /**
+     * @var array
+     */
     protected $_defaultConfig = [];
+    /**
+     * @var array
+     */
     protected static $_jobs = [];
 
     /**
      * @return array
      */
-    public static function getJobs()
+    public static function getJobs(): array
     {
         return static::$_jobs;
     }
@@ -41,7 +47,7 @@ class TestManager implements ManagerInterface
      */
     public function enqueue(Job $job)
     {
-        $jobId = time() + mt_rand(0, time());
+        $jobId = time() + random_int(0, time());
         $job->setId($jobId);
         static::$_jobs[$jobId] = $job;
 
@@ -51,15 +57,17 @@ class TestManager implements ManagerInterface
     /**
      * @param int $id The ID to enqueue
      * @param int $priority The priority of the job
-     * @return bool
+     * @return void
      */
     public function enqueuePersisted($id, $priority)
     {
         static::$_jobs[$id] = new Job(compact('id', 'priority'));
-
-        return static::$_jobs[$id];
     }
 
+    /**
+     * @param array $jobs
+     * @return array
+     */
     public function enqueueBatch(array $jobs)
     {
         foreach ($jobs as $job) {
@@ -82,9 +90,10 @@ class TestManager implements ManagerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job that has been completed
-     * @param string|null $message Message to store with job
+     * @param null $result
      * @param int $duration How long execution took
-     * @return \DelayedJobs\DelayedJob\Job|bool
+     * @return bool|\DelayedJobs\DelayedJob\Job
+     * @internal param null|string $message Message to store with job
      */
     public function completed(Job $job, $result = null, $duration = 0)
     {
@@ -98,13 +107,13 @@ class TestManager implements ManagerInterface
      * @return \DelayedJobs\DelayedJob\Job
      * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
-    public function fetchJob($jobId)
+    public function fetchJob($jobId): \DelayedJobs\DelayedJob\Job
     {
         if (isset(static::$_jobs[$jobId])) {
             return static::$_jobs[$jobId];
-        } else {
-            throw new JobNotFoundException();
         }
+
+        throw new JobNotFoundException();
     }
 
     /**
@@ -113,27 +122,44 @@ class TestManager implements ManagerInterface
      * @param int $jobId Job to get status for
      * @return int
      */
-    public function getStatus($jobId)
+    public function getStatus($jobId): int
     {
         return $this->fetchJob($jobId)->getStatus();
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param null $hostname
+     * @return void
+     */
     public function lock(Job $job, $hostname = null)
     {
-        return $job;
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param $force
+     * @return \DelayedJobs\DelayedJob\Job
+     */
     public function execute(Job $job, $force)
     {
         return $job;
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return null
+     */
     public function enqueueNextSequence(Job $job)
     {
         return null;
     }
 
-    public function isSimilarJob(Job $job)
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return bool
+     */
+    public function isSimilarJob(Job $job): bool
     {
         return false;
     }
@@ -146,8 +172,11 @@ class TestManager implements ManagerInterface
     {
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return void
+     */
     public function requeueJob(Job $job)
     {
     }
-
 }

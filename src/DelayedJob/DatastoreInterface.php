@@ -13,7 +13,11 @@ interface DatastoreInterface
      */
     public function persistJob(Job $job);
 
-    public function persistJobs(array $jobs);
+    /**
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs
+     * @return array
+     */
+    public function persistJobs(array $jobs): array;
 
     /**
      * @param int $jobId The job to get
@@ -27,7 +31,7 @@ interface DatastoreInterface
      * @param \DelayedJobs\DelayedJob\Job $job The job to check for
      * @return bool
      */
-    public function currentlySequenced(Job $job);
+    public function currentlySequenced(Job $job): bool;
 
     /**
      * Gets the next job in the sequence
@@ -43,5 +47,5 @@ interface DatastoreInterface
      * @param \DelayedJobs\DelayedJob\Job $job Job to check
      * @return bool
      */
-    public function isSimilarJob(Job $job);
+    public function isSimilarJob(Job $job): bool;
 }

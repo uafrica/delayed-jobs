@@ -89,5 +89,4 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     public function afterExecute(Event $event, ResultInterface $result, int $duration)
     {
     }
-
 }

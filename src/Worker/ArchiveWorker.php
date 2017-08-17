@@ -16,12 +16,16 @@ use DelayedJobs\DelayedJob\Job;
  */
 class ArchiveWorker extends Worker
 {
+    /**
+     * @param $archiveTable
+     * @return void
+     */
     protected function _ensureTable($archiveTable)
     {
         try {
             $archiveTable->schema();
         } catch (Exception $e) {
-            $djSchema = TableRegistry::get('DelayedJobs.DelayedJobs')->schema();
+            $djSchema = TableRegistry::get('DelayedJobs.DelayedJobs')->getSchema();
             $djColumns = $djSchema->columns();
             $columns = [];
             foreach ($djColumns as $djColumn) {
@@ -46,7 +50,7 @@ class ArchiveWorker extends Worker
     public function __invoke(Job $job)
     {
         if (Configure::read('DelayedJobs.archive.enabled') !== true) {
-            return;
+            return 'Not enabled for archiving';
         }
 
         $delayedJobsTable = TableRegistry::get('DelayedJobs.DelayedJobs');
@@ -56,7 +60,7 @@ class ArchiveWorker extends Worker
 
         $this->_ensureTable($archiveTable);
 
-        $connection = $archiveTable->connection();
+        $connection = $archiveTable->getConnection();
         $quote = $connection->driver()
             ->autoQuoting();
         $connection->driver()
@@ -67,7 +71,7 @@ class ArchiveWorker extends Worker
 
         $insertQuery = $archiveTable->query();
         $insertQuery
-            ->insert($delayedJobsTable->schema()->columns())
+            ->insert($delayedJobsTable->getSchema()->columns())
             ->values($selectQuery)
             ->execute();
 
@@ -78,5 +82,4 @@ class ArchiveWorker extends Worker
 
         return new Time(Configure::read('DelayedJobs.archive.recurring'));
     }
-
 }

@@ -1,20 +1,19 @@
 <?php
 namespace DelayedJobs\Shell\Task;
 
+use Cake\Console\ConsoleOptionParser;
 use Cake\Console\Shell;
-use Cake\Datasource\Exception\RecordNotFoundException;
-use Cake\I18n\Time;
-use Cake\Log\Log;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
-use DelayedJobs\Exception\NonRetryableException;
-use DelayedJobs\Model\Table\DelayedJobsTable;
 use DelayedJobs\Result\Failed;
 use DelayedJobs\Result\Pause;
 use DelayedJobs\Result\Success;
 use DelayedJobs\Traits\DebugLoggerTrait;
 
+/**
+ * Class WorkerTask
+ */
 class WorkerTask extends Shell
 {
     use DebugLoggerTrait;
@@ -31,7 +30,7 @@ class WorkerTask extends Shell
         }
 
         if (empty($jobId)) {
-            $this->out("<error>No Job ID received</error>");
+            $this->out('<error>No Job ID received</error>');
             $this->_stop(1);
         }
 
@@ -43,12 +42,17 @@ class WorkerTask extends Shell
         } catch (JobNotFoundException $e) {
             $this->out('<fail>Job ' . $jobId . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
             $this->_stop(1);
+
             return;
         }
 
         $this->executeJob($job);
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return void
+     */
     public function executeJob(Job $job)
     {
         $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
@@ -62,18 +66,28 @@ class WorkerTask extends Shell
         if ($response instanceof Failed) {
             $this->_failedJob($job, $response);
         } elseif ($response instanceof Success) {
-            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response->getMessage()), 1,
-                Shell::VERBOSE);
+            $this->out(
+                sprintf('<success> - Execution successful</success> :: <info>%s</info>', $response->getMessage()),
+                1,
+                Shell::VERBOSE
+            );
         } elseif ($response instanceof Pause) {
-            $this->out(sprintf('<info> - Execution paused</info> :: <info>%s</info>', $response->getMessage()), 1,
-                Shell::VERBOSE);
-        } else {
-
+            $this->out(
+                sprintf('<info> - Execution paused</info> :: <info>%s</info>', $response->getMessage()),
+                1,
+                Shell::VERBOSE
+            );
         }
         $end = microtime(true);
         $this->out(sprintf(' - Took: %.2f seconds', $end - $start), 1, Shell::VERBOSE);
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param \DelayedJobs\Result\Failed $response
+     * @return void
+     * @throws \Throwable
+     */
     protected function _failedJob(Job $job, Failed $response)
     {
         if ($this->param('debug')) {
@@ -92,7 +106,7 @@ class WorkerTask extends Shell
      * @return \Cake\Console\ConsoleOptionParser
      * @codeCoverageIgnore
      */
-    public function getOptionParser()
+    public function getOptionParser(): ConsoleOptionParser
     {
         $options = parent::getOptionParser();
 

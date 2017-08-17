@@ -3,6 +3,7 @@
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
+use Cake\Console\ConsoleOptionParser;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
@@ -40,7 +41,7 @@ class WatchdogShell extends AppShell
      *
      * @return int
      */
-    protected function _autoWorker()
+    protected function _autoWorker(): int
     {
         $worker_count = (int)exec('nproc') - 1;
 
@@ -80,13 +81,22 @@ class WatchdogShell extends AppShell
         $this->out('<success>!! All done !!</success>');
     }
 
+    /**
+     * @param \DelayedJobs\Model\Entity\Worker $worker
+     * @return bool
+     */
     protected function _checkHeartbeat(Worker $worker)
     {
         $max_time = Configure::read('DelayedJobs.maximum.pulseTime');
         $last_beat = $worker->pulse->diffInSeconds();
+
         return $last_beat <= $max_time;
     }
 
+    /**
+     * @param null $worker_count
+     * @return void
+     */
     public function startWorkers($worker_count = null)
     {
         $worker_count = $worker_count ?: $this->param('workers');
@@ -130,6 +140,7 @@ class WatchdogShell extends AppShell
 
         if ($workers->count() === 0) {
             $this->out('No workers to stop');
+
             return;
         }
 
@@ -151,6 +162,10 @@ class WatchdogShell extends AppShell
         }
     }
 
+    /**
+     * @param \DelayedJobs\Model\Entity\Worker $worker
+     * @return void
+     */
     protected function _stopWorker(Worker $worker)
     {
         //## Host is in the database, tell the host to gracefully shutdown
@@ -203,14 +218,6 @@ class WatchdogShell extends AppShell
         }
     }
 
-    public function clean()
-    {
-        $this->out('Cleaning jobs.');
-        $this->loadModel('DelayedJobs.DelayedJobs');
-        $cleaned = $this->DelayedJobs->clean();
-        $this->out(sprintf('<success>Cleaned:</success> %d jobs', $cleaned));
-    }
-
     /**
      * @param int $pid PID to kill
      * @param string $worker_name Worker name
@@ -251,6 +258,10 @@ class WatchdogShell extends AppShell
         }
     }
 
+    /**
+     * @param \DelayedJobs\Model\Entity\Worker $worker
+     * @return void
+     */
     protected function _checkWorkerInstance(Worker $worker)
     {
         $this->out(sprintf('   - Checking worker <info>%s</info> (%s).', $worker->worker_name, $worker->pid));
@@ -295,6 +306,7 @@ class WatchdogShell extends AppShell
     }
 
     /**
+     * @param $host_name
      * @return void
      */
     protected function _waitForStop($host_name)
@@ -396,7 +408,7 @@ class WatchdogShell extends AppShell
                 'run_at <=' => Time::now(),
                 'sequence is not' => null
             ])
-            ->hydrate(false)
+            ->enableHydration(false)
             ->map(function ($sequence) {
                 return $this->DelayedJobs->find()
                     ->select(['id', 'priority'])
@@ -408,7 +420,7 @@ class WatchdogShell extends AppShell
                     ->order([
                         'id' => 'ASC'
                     ])
-                    ->hydrate(false)
+                    ->enableHydration(false)
                     ->first();
             });
 
@@ -419,28 +431,27 @@ class WatchdogShell extends AppShell
                 'run_at <=' => Time::now(),
                 'sequence is' => null
             ])
-            ->hydrate(false)
+            ->enableHydration(false)
             ->all();
 
-        $all_jobs = $sequences->append($no_sequences);
-        foreach ($all_jobs as $job) {
-            /**
-             * @var \DelayedJobs\Model\Entity\DelayedJob $job
-             */
-            if ($this->_io->level() < Shell::VERBOSE) {
+        /* @var \DelayedJobs\Model\Entity\DelayedJob[] $allJobs */
+        $allJobs = $sequences->append($no_sequences);
+        $isVerbose = $this->_io->level() < Shell::VERBOSE;
+        foreach ($allJobs as $job) {
+            if ($isVerbose) {
                 $this->out('.', 0, Shell::QUIET);
+                continue;
             }
 
-            $this->out(__(' - Queing job <info>{0}</info>', $job['id']), 0, Shell::VERBOSE);
-            if (JobManager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
-                $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
-            } else {
-                $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);
-            }
+            $this->out(__(' - Queueing job <info>{0}</info>', $job['id']), 1, Shell::VERBOSE);
+            JobManager::instance()->enqueuePersisted($job['id'], $job['priority']);
         }
     }
 
-    public function getOptionParser()
+    /**
+     * @return \Cake\Console\ConsoleOptionParser
+     */
+    public function getOptionParser(): ConsoleOptionParser
     {
         $options = parent::getOptionParser();
 
@@ -499,5 +510,4 @@ class WatchdogShell extends AppShell
 
         return $options;
     }
-
 }

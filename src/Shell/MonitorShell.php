@@ -3,6 +3,7 @@
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
+use Cake\Console\ConsoleOptionParser;
 use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
@@ -40,11 +41,21 @@ class MonitorShell extends AppShell
         $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
 
         $this->out("Created / s:\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>', $created_rate[0], $created_rate[1],
-                $created_rate[2], $peak_created_rate));
+            sprintf(
+                '<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $created_rate[0],
+                $created_rate[1],
+                $created_rate[2],
+                $peak_created_rate
+            ));
         $this->out("Completed / s:\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>', $completed_rate[0],
-                $completed_rate[1], $completed_rate[2], $peak_completed_rate));
+            sprintf(
+                '<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $completed_rate[0],
+                $completed_rate[1],
+                $completed_rate[2],
+                $peak_completed_rate
+            ));
         $this->out('');
 
         $data = [
@@ -53,7 +64,7 @@ class MonitorShell extends AppShell
         ];
 
         foreach (self::STATUS_MAP as $status => $name) {
-            $data[1][] = str_pad(isset($statuses[$status]) ? $statuses[$status] : 0, 8, ' ', STR_PAD_LEFT);
+            $data[1][] = str_pad($statuses[$status] ?? 0, 8, ' ', STR_PAD_LEFT);
         }
 
         $this->helper('Table')->output($data);
@@ -83,7 +94,7 @@ class MonitorShell extends AppShell
                 if (empty($status_points[$status])) {
                     $status_points[$status] = [];
                 }
-                $status_points[$status][] = isset($statuses[$status]) ? $statuses[$status] : 0;
+                $status_points[$status][] = $statuses[$status] ?? 0;
             }
         }
 
@@ -110,8 +121,13 @@ class MonitorShell extends AppShell
                 'length' => $max_length
             ]);
         $this->out("\t\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
-                $created_rate[0], $created_rate[1], $created_rate[2], $peak_created_rate));
+            sprintf(
+                '<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $created_rate[0],
+                $created_rate[1],
+                $created_rate[2],
+                $peak_created_rate
+            ));
 
         $this->helper('DelayedJobs.Sparkline')
             ->output([
@@ -121,8 +137,13 @@ class MonitorShell extends AppShell
             ]);
 
         $this->out("\t\t" .
-            sprintf('<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
-                $completed_rate[0], $completed_rate[1], $completed_rate[2], $peak_completed_rate));
+            sprintf(
+                '<info>%6.2f</info> <info>%6.2f</info> <info>%6.2f</info> :: PEAK <info>%6.2f</info>',
+                $completed_rate[0],
+                $completed_rate[1],
+                $completed_rate[2],
+                $peak_completed_rate
+            ));
 
         foreach (self::STATUS_MAP as $status => $name) {
             $this->helper('DelayedJobs.Sparkline')
@@ -180,7 +201,7 @@ class MonitorShell extends AppShell
         $this->helper('DelayedJobs.Sparkline')
             ->output([
                 'data' => $ready_points,
-                'title' => "MQ Ready",
+                'title' => 'MQ Ready',
                 'length' => $max_length,
                 'formatter' => '%7d'
             ]);
@@ -226,19 +247,31 @@ class MonitorShell extends AppShell
 
         $output = [];
         if (!empty($last_completed)) {
-            $output[] = __('Last completed: <info>{0}</info> (<comment>{1}</comment>) @ <info>{2}</info> :: <info>{3}</info> seconds',
-                $last_completed->id, $last_completed->worker,
-                $last_completed->end_time->i18nFormat(), round($last_completed->duration / 1000, 2));
+            $output[] = __(
+                'Last completed: <info>{0}</info> (<comment>{1}</comment>) @ <info>{2}</info> :: <info>{3}</info> seconds',
+                $last_completed->id,
+                $last_completed->worker,
+                $last_completed->end_time->i18nFormat(),
+                round($last_completed->duration / 1000, 2)
+            );
         }
         if (!empty($last_failed)) {
-            $output[] = __('Last failed: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>',
-                $last_failed->id, $last_failed->worker, $last_failed->last_message,
-                $last_failed->failed_at->i18nFormat());
+            $output[] = __(
+                'Last failed: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>',
+                $last_failed->id,
+                $last_failed->worker,
+                $last_failed->last_message,
+                $last_failed->failed_at->i18nFormat()
+            );
         }
         if (!empty($last_buried)) {
-            $output[] = __('Last burried: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>>',
-                $last_buried->id, $last_buried->worker, $last_buried->last_message,
-                $last_buried->failed_at->i18nFormat());
+            $output[] = __(
+                'Last burried: <info>{0}</info> (<comment>{1}</comment>) :: <info>{2}</info> @ <info>{3}</info>>',
+                $last_buried->id,
+                $last_buried->worker,
+                $last_buried->last_message,
+                $last_buried->failed_at->i18nFormat()
+            );
         }
         if (empty($output)) {
             return;
@@ -297,7 +330,7 @@ class MonitorShell extends AppShell
         $this->start_time = time();
         $this->clear();
         while (true) {
-            if ($this->param('basic-stats') && $this->loop_counter % 100 !== 0) {
+            if ($this->loop_counter % 100 !== 0 && $this->param('basic-stats')) {
                 $this->out("\e[0;0H");
             } else {
                 $this->clear();
@@ -331,12 +364,15 @@ class MonitorShell extends AppShell
         }
     }
 
-    public function getOptionParser()
+    /**
+     * @return \Cake\Console\ConsoleOptionParser
+     */
+    public function getOptionParser(): ConsoleOptionParser
     {
         $options = parent::getOptionParser();
 
         $options
-            ->description('Allows monitoring of the delayed job service')
+            ->setDescription('Allows monitoring of the delayed job service')
             ->addOption('snapshot', [
                 'help' => 'Generate a single snapshot of the delayed job service',
                 'boolean' => true,

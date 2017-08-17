@@ -2,6 +2,7 @@
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
+use Cake\Console\ConsoleOptionParser;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\RecordNotFoundException;
@@ -142,7 +143,7 @@ class WorkerShell extends AppShell
         $this->out(sprintf('WorkerID: <info>%s</info>', $this->_workerId));
         $this->out(sprintf('PID: <info>%s</info>', $this->_myPID));
 
-        if ($this->_io->level() === Shell::NORMAL && $this->_jobCount > 0) {
+        if ($this->_jobCount > 0 && $this->_io->level() === Shell::NORMAL) {
             $this->out(sprintf('Last job: <info>%d</info>', $this->_lastJob));
             $this->out(sprintf('Jobs completed: <info>%d</info>', $this->_jobCount));
             $this->out(sprintf('Jobs completed/s: <info>%.2f</info>', $this->_jobCount / (time() - $this->_startTime)));
@@ -152,6 +153,11 @@ class WorkerShell extends AppShell
         $this->nl();
     }
 
+    /**
+     * @param $reason
+     * @param int $exitCode
+     * @return void
+     */
     public function stopHammerTime($reason, $exitCode = 0)
     {
         $this->out('Shutting down...');
@@ -244,6 +250,11 @@ class WorkerShell extends AppShell
         }
     }
 
+    /**
+     * @param \Cake\Event\Event $event
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return bool
+     */
     public function beforeExecute(Event $event, Job $job)
     {
         if ($this->_worker && ($this->_worker->status === WorkersTable::STATUS_SHUTDOWN || $this->_worker->status === WorkersTable::STATUS_TO_KILL)) {
@@ -269,19 +280,30 @@ class WorkerShell extends AppShell
         return true;
     }
 
+    /**
+     * @param $size
+     * @param int $precision
+     * @return string
+     */
     private function _makeReadable($size, $precision = 2)
     {
         static $units = ['B', 'kiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
         $step = 1024;
         $i = 0;
         while (($size / $step) > 0.9) {
-            $size = $size / $step;
+            $size /= $step;
             $i++;
         }
 
         return round($size, $precision) . $units[$i];
     }
 
+    /**
+     * @param \Cake\Event\Event $event
+     * @param \DelayedJobs\Result\ResultInterface $result
+     * @param $duration
+     * @return void
+     */
     public function afterExecute(Event $event, ResultInterface $result, $duration)
     {
         $job = $result->getJob();
@@ -290,8 +312,11 @@ class WorkerShell extends AppShell
         $this->out('', 1, Shell::VERBOSE);
 
         if ($result instanceof Failed) {
-            $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()), 1,
-                Shell::VERBOSE);
+            $this->out(
+                sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage()),
+                1,
+                Shell::VERBOSE
+            );
             if ($result->getException()) {
                 $this->out($result->getException()
                     ->getTraceAsString(), 1, Shell::VERBOSE);
@@ -307,9 +332,12 @@ class WorkerShell extends AppShell
         $this->out(sprintf(' - Took: %.2f seconds', $duration / 1000), 1, Shell::VERBOSE);
 
         if ($this->_io->level() === Shell::NORMAL) {
-            $fin = ($result instanceof Failed ? '<error>✘</error>' : (
-                $result instanceof Pause ? '<info>❙ ❙</info>' : '<success>✔</success>'
-            ));
+            $fin = '<success>✔</success>';
+            if ($result instanceof Failed) {
+                $fin = '<error>✘</error>';
+            } elseif ($result instanceof Pause) {
+                $fin = '<info>❙ ❙</info>';
+            }
             $this->out(sprintf('%s %d %.2fs (%s)', $fin, $job->getId(), $duration / 1000, $this->_makeReadable($nowMem)));
         }
     }
@@ -326,7 +354,10 @@ class WorkerShell extends AppShell
         }
     }
 
-    public function getOptionParser()
+    /**
+     * @return \Cake\Console\ConsoleOptionParser
+     */
+    public function getOptionParser(): ConsoleOptionParser
     {
         $options = parent::getOptionParser();
         $options->addSubcommand('worker', [
@@ -336,5 +367,4 @@ class WorkerShell extends AppShell
 
         return $options;
     }
-
 }

@@ -2,7 +2,8 @@
 
 namespace DelayedJobs\Datasource;
 
-use Cake\ORM\TableRegistry;
+use Cake\ORM\Locator\LocatorAwareTrait;
+use DelayedJobs\DelayedJob\DatastoreInterface;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\DelayedJob\Job;
 
@@ -11,16 +12,22 @@ use DelayedJobs\DelayedJob\Job;
  */
 class TableDatasource extends BaseDatasource
 {
+    use LocatorAwareTrait;
+
+    /**
+     * @var array
+     */
     protected $_defaultConfig = [
-        'tableName' => 'DelayedJobs.DelayedJobs'
+        'tableName' => 'DelayedJobs.DelayedJobs',
     ];
 
     /**
-     * @return \DelayedJobs\Model\Table\DelayedJobsTable
+     * @return \DelayedJobs\DelayedJob\DatastoreInterface
      */
-    protected function _table()
+    protected function _table(): DatastoreInterface
     {
-        return TableRegistry::get($this->config('tableName'));
+        return $this->tableLocator()
+            ->get($this->getConfig('tableName'));
     }
 
     /**
@@ -29,12 +36,18 @@ class TableDatasource extends BaseDatasource
      */
     public function persistJob(Job $job)
     {
-        return $this->_table()->persistJob($job);
+        return $this->_table()
+            ->persistJob($job);
     }
 
-    public function persistJobs(array $jobs)
+    /**
+     * @param array $jobs
+     * @return array
+     */
+    public function persistJobs(array $jobs): array
     {
-        return $this->_table()->persistJobs($jobs);
+        return $this->_table()
+            ->persistJobs($jobs);
     }
 
     /**
@@ -43,7 +56,8 @@ class TableDatasource extends BaseDatasource
      */
     public function fetchJob($jobId)
     {
-        $job = $this->_table()->fetchJob($jobId);
+        $job = $this->_table()
+            ->fetchJob($jobId);
 
         if (!$job) {
             throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $jobId));
@@ -58,9 +72,10 @@ class TableDatasource extends BaseDatasource
      * @param \DelayedJobs\DelayedJob\Job $job The job to check for
      * @return bool
      */
-    public function currentlySequenced(Job $job)
+    public function currentlySequenced(Job $job): bool
     {
-        return $this->_table()->currentlySequenced($job);
+        return $this->_table()
+            ->currentlySequenced($job);
     }
 
     /**
@@ -71,7 +86,8 @@ class TableDatasource extends BaseDatasource
      */
     public function fetchNextSequence(Job $job)
     {
-        return $this->_table()->fetchNextSequence($job);
+        return $this->_table()
+            ->fetchNextSequence($job);
     }
 
     /**
@@ -80,14 +96,21 @@ class TableDatasource extends BaseDatasource
      * @param \DelayedJobs\DelayedJob\Job $job Job to check
      * @return bool
      */
-    public function isSimilarJob(Job $job)
+    public function isSimilarJob(Job $job): bool
     {
-        return $this->_table()->isSimilarJob($job);
+        return $this->_table()
+            ->isSimilarJob($job);
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return $this
+     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
+     */
     public function loadJob(Job $job)
     {
-        $jobEntity = $this->_table()->find()
+        $jobEntity = $this->_table()
+            ->find()
             ->where(['id' => $job->getId()])
             ->first();
 
@@ -95,7 +118,6 @@ class TableDatasource extends BaseDatasource
             throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $job->getId()));
         }
 
-        return $job
-            ->setDataFromEntity($jobEntity);
+        return $job->setDataFromEntity($jobEntity);
     }
 }

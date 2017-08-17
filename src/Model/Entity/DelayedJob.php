@@ -16,6 +16,11 @@ class DelayedJob extends Entity implements EventDispatcherInterface
 {
     use EventDispatcherTrait;
 
+    /**
+     * @param $stream
+     * @param null $property
+     * @return bool|string
+     */
     protected function _getStream($stream, $property = null)
     {
         if (is_resource($stream)) {
@@ -24,6 +29,7 @@ class DelayedJob extends Entity implements EventDispatcherInterface
                 $this->{$property} = $stream;
             }
         }
+
         return $stream;
     }
 
@@ -36,6 +42,10 @@ class DelayedJob extends Entity implements EventDispatcherInterface
         return $this->_getStream($options, 'options');
     }
 
+    /**
+     * @param $payload
+     * @return bool|string
+     */
     protected function _getPayload($payload)
     {
         return $this->_getStream($payload, 'payload');

@@ -65,5 +65,4 @@ class Failed extends Result
 
         return $this;
     }
-
 }

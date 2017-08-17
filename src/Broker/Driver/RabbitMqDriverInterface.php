@@ -15,12 +15,26 @@ interface RabbitMqDriverInterface
      */
     public function publishJob(array $jobData);
 
+    /**
+     * @param callable $callback
+     * @param callable $heartbeat
+     * @return mixed
+     */
     public function consume(callable $callback, callable $heartbeat);
 
     public function stopConsuming();
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return mixed
+     */
     public function ack(Job $job);
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param bool $requeue
+     * @return mixed
+     */
     public function nack(Job $job, $requeue = false);
 
     public function getChannel();
