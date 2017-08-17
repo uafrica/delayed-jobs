@@ -374,7 +374,7 @@ class MonitorShell extends AppShell
                 'Last completed: <info>{0}</info> (<comment>{1}</comment>) @ <info>{2}</info> :: <info>{3}</info> seconds',
                 $last_completed->id,
                 $last_completed->worker,
-                $last_completed->end_time->i18nFormat(),
+                $last_completed->end_time ? $last_completed->end_time->i18nFormat() : '',
                 round($last_completed->duration / 1000, 2)
             );
         }
@@ -384,7 +384,7 @@ class MonitorShell extends AppShell
                 $last_failed->id,
                 $last_failed->worker,
                 $last_failed->last_message,
-                $last_failed->failed_at->i18nFormat()
+                $last_failed->failed_at ? $last_failed->failed_at->i18nFormat() : ''
             );
         }
         if (!empty($last_buried)) {
@@ -393,7 +393,7 @@ class MonitorShell extends AppShell
                 $last_buried->id,
                 $last_buried->worker,
                 $last_buried->last_message,
-                $last_buried->failed_at->i18nFormat()
+                $last_buried->failed_at ? $last_buried->failed_at->i18nFormat() : ''
             );
         }
         if (empty($output)) {
