@@ -350,6 +350,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return;
         }
 
+        $this->_persistToDatastore($job);
+
         if ($result->getRecur()) {
             $this->_enqueueRecurring($job, $result->getRecur());
         }
@@ -357,8 +359,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         if ($job->getSequence() !== null && in_array($job->getStatus(), [Job::STATUS_SUCCESS, Job::STATUS_BURIED])) {
             $this->enqueueNextSequence($job);
         }
-
-        $this->_persistToDatastore($job);
     }
 
     /**
