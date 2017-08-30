@@ -150,8 +150,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         if ($skipPersist || $this->_persistToDatastore($job)) {
             if ($job->getSequence() &&
-                $this->getDatasource()
-                    ->currentlySequenced($job)) {
+                $this->getDatasource()->currentlySequenced($job)) {
                 return;
             }
             $this->_pushToBroker($job);
@@ -177,8 +176,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function enqueueBatch(array $jobs)
     {
-        if (!$this->getDatasource()
-            ->persistJobs($jobs)) {
+        if (!$this->getDatasource()->persistJobs($jobs)) {
             throw new EnqueueException('Job batch could not be persisted');
         }
 
@@ -497,8 +495,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function isSimilarJob(Job $job): bool
     {
-        return $this->getDatasource()
-            ->isSimilarJob($job);
+        return $this->getDatasource()->isSimilarJob($job);
     }
 
     /**
@@ -512,8 +509,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return $job;
         }
 
-        if (!$this->getDatasource()
-            ->persistJob($job)) {
+        if (!$this->getDatasource()->persistJob($job)) {
             throw new EnqueueException('Job could not be persisted');
         }
 

@@ -127,6 +127,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 'retries',
                 'created',
                 'modified',
+                'history',
             ]);
 
         foreach ($jobs as $job) {

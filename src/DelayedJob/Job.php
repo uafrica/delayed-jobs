@@ -645,7 +645,13 @@ class Job
      */
     public function getHistory(): array
     {
-        return $this->_history ?? [];
+        return !empty($this->_history) ? $this->_history : [[
+            'timestamp' => new FrozenTime(),
+            'microtime' => microtime(true),
+            'host_name' => $this->getHostName(),
+            'message' => 'Created',
+            'status' => $this->getStatus(),
+        ]];
     }
 
     /**
@@ -676,6 +682,7 @@ class Job
             'microtime' => microtime(true),
             'host_name' => $this->getHostName(),
             'message' => $message ?: '',
+            'status' => $this->getStatus(),
         ];
 
         if (is_string($message)) {
