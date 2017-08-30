@@ -99,17 +99,22 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         return $this->_connection;
     }
 
+    /**
+     * @return \PhpAmqpLib\Channel\AMQPChannel
+     */
     public function getChannel()
     {
         if ($this->_channel) {
             return $this->_channel;
         }
 
-        $this->_channel = $this->getConnection()->channel();
-
-        $this->declareExchange();
-        $this->declareQueue($this->_manager->getConfig('maximum.priority'));
-        $this->bind();
+        try {
+            $this->_channel = $this->getConnection()->channel();
+        } catch (\Throwable $e) {
+            //If something went wrong, catch it, disconnect and try again.
+            unset($this->_connection);
+            $this->_channel = $this->getConnection()->channel();
+        }
 
         return $this->_channel;
     }
@@ -176,6 +181,10 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $prefix = $this->getConfig('prefix');
         $channel = $this->getChannel();
         $channel->basic_qos(null, $this->getConfig('qos'), null);
+
+        $this->declareExchange();
+        $this->declareQueue($this->_manager->getConfig('maximum.priority'));
+        $this->bind();
 
         $tag = $channel->basic_consume($prefix . 'queue', '', false, false, false, false, function (AMQPMessage $message) use ($callback) {
             $body = json_decode($message->getBody(), true);
