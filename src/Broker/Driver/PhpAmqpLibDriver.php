@@ -68,8 +68,8 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         if ($this->_channel) {
             $this->_channel->close();
         }
-        if ($this->getConnection && $this->getConnection->isConnected()) {
-            $this->getConnection->close();
+        if ($this->_connection && $this->_connection->isConnected()) {
+            $this->_connection->close();
         }
     }
 
