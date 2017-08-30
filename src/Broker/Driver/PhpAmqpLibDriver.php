@@ -8,7 +8,7 @@ use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\MessageBrokerInterface;
 use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Connection\AbstractConnection;
-use PhpAmqpLib\Connection\AMQPLazyConnection;
+use PhpAmqpLib\Connection\AMQPLazySocketConnection;
 use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -73,6 +73,9 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         }
     }
 
+    /**
+     * @return \PhpAmqpLib\Connection\AbstractConnection
+     */
     public function getConnection()
     {
         if ($this->_connection) {
@@ -80,7 +83,18 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         }
 
         $config = $this->getConfig();
-        $this->_connection = new AMQPLazyConnection($config['host'], $config['port'], $config['user'], $config['pass'], $config['path']);
+        $this->_connection = new AMQPLazySocketConnection(
+            $config['host'],
+            $config['port'],
+            $config['user'],
+            $config['pass'],
+            $config['path'],
+            false,
+            'AMQPLAIN',
+            null,
+            'en_US',
+            10
+        );
 
         return $this->_connection;
     }
