@@ -108,6 +108,10 @@ class DelayedJobsTable extends Table implements DatastoreInterface
      */
     public function persistJobs(array $jobs): array
     {
+        if (empty($jobs)) {
+            return [];
+        }
+
         $query = $this->query()
             ->insert([
                 'worker',
@@ -157,6 +161,10 @@ class DelayedJobsTable extends Table implements DatastoreInterface
 
         $connection->driver()
             ->autoQuoting($quote);
+
+        if (!$jobs) {
+            throw new EnqueueException('Job batch could not be persisted');
+        }
 
         return $jobs;
     }

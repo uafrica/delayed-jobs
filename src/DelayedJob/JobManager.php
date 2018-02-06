@@ -176,9 +176,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function enqueueBatch(array $jobs)
     {
-        if (!$this->getDatasource()->persistJobs($jobs)) {
-            throw new EnqueueException('Job batch could not be persisted');
-        }
+        $this->getDatasource()->persistJobs($jobs);
 
         $sequenceMap = [];
 
