@@ -44,10 +44,6 @@ trait EnqueueTrait
      */
     public function enqueueBatch($worker, array $jobsToEnqueue, array $options = []): array
     {
-        if (empty($jobsToEnqueue)) {
-            return [];
-        }
-
         $jobs = [];
 
         foreach ($jobsToEnqueue as $jobInfo) {

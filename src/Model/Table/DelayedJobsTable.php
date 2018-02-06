@@ -108,6 +108,10 @@ class DelayedJobsTable extends Table implements DatastoreInterface
      */
     public function persistJobs(array $jobs): array
     {
+        if (empty($jobs)) {
+            return [];
+        }
+
         $query = $this->query()
             ->insert([
                 'worker',
