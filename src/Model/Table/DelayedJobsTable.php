@@ -162,6 +162,10 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         $connection->driver()
             ->autoQuoting($quote);
 
+        if (!$jobs) {
+            throw new EnqueueException('Job batch could not be persisted');
+        }
+
         return $jobs;
     }
 
