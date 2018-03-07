@@ -265,14 +265,16 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
      * @param string $body
      * @param string $exchange
      * @param string $routing_key
+     * @param int $priority
      * @param array $headers
      * @return void
      */
-    public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = [])
+    public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = [])
     {
         $channel = $this->getChannel();
         $messageHeaders = new AMQPTable($headers);
         $message = new AMQPMessage($body, [
+            'priority' => $priority,
             'delivery_mode' => 2,
             'application_headers' => $messageHeaders
         ]);

@@ -43,8 +43,9 @@ interface RabbitMqDriverInterface
      * @param string $body
      * @param string $exchange
      * @param string $routing_key
+     * @param int $priority
      * @param array $headers
      * @return mixed
      */
-    public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = []);
+    public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = []);
 }

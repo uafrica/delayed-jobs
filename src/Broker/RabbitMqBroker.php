@@ -169,8 +169,8 @@ class RabbitMqBroker implements BrokerInterface
      * @param array $headers
      * @return void
      */
-    public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = [])
+    public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = [])
     {
-        $this->getDriver()->publishBasic($body, $exchange, $routing_key, $headers);
+        $this->getDriver()->publishBasic($body, $exchange, $routing_key, $priority, $headers);
     }
 }

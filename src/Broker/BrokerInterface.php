@@ -44,5 +44,5 @@ interface BrokerInterface
      * @param array $headers
      * @return mixed
      */
-    public function publishBasic(string $body, $exchange = '', $routing_key = '', array $headers = []);
+    public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = []);
 }
