@@ -17,7 +17,9 @@ use DelayedJobs\Datasource\TableDatasource;
 use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Exception\JobExecuteException;
 use DelayedJobs\Exception\NonRetryableException;
+use DelayedJobs\Exception\PausedException;
 use DelayedJobs\Result\Failed;
+use DelayedJobs\Result\Pause;
 use DelayedJobs\Result\ResultInterface;
 use DelayedJobs\Result\Success;
 use DelayedJobs\Traits\DebugLoggerTrait;
@@ -313,6 +315,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return $result;
         } elseif ($result instanceof \DateTimeInterface) {
             return (new Success($job, "Reoccur at {$result}"))->willRecur($result);
+        } elseif ($result instanceof PausedException) {
+            return new Pause($job);
         } elseif ($result instanceof \Error || $result instanceof NonRetryableException) {
             return (new Failed($job, $result->getMessage()))->willRetry(false)
                 ->setException($result);

@@ -35,6 +35,7 @@ class WorkerShell extends AppShell
     const MAXFAIL = 5;
     const SUICIDE_EXIT_CODE = 100;
     const NO_WORKER_EXIT_CODE = 110;
+    const WORKER_ERROR_EXIT_CODE = 120;
     const HEARTBEAT_TIME = 30;
 
     public $modelClass = 'DelayedJobs.DelayedJobs';
@@ -318,8 +319,7 @@ class WorkerShell extends AppShell
                 Shell::VERBOSE
             );
             if ($result->getException()) {
-                $this->out($result->getException()
-                    ->getTraceAsString(), 1, Shell::VERBOSE);
+                $this->out($result->getException()->getTraceAsString(), 1, Shell::VERBOSE);
             }
         } elseif ($result instanceof Pause) {
             $this->out(sprintf('<info> - Execution paused</info> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
@@ -342,8 +342,17 @@ class WorkerShell extends AppShell
         }
     }
 
-    public function afterCompleted()
+    /**
+     * @param \Cake\Event\Event $event
+     * @param \DelayedJobs\Result\ResultInterface $result
+     * @return void
+     */
+    public function afterCompleted(Event $event, ResultInterface $result)
     {
+        if ($this->param('stop-on-failure') && $result instanceof Failed) {
+            $this->stopHammerTime(Worker::SHUTDOWN_ERROR, self::WORKER_ERROR_EXIT_CODE);
+        }
+
         $this->_timeOfLastJob = microtime(true);
         $this->_checkSuicideStatus();
 
@@ -360,10 +369,16 @@ class WorkerShell extends AppShell
     public function getOptionParser(): ConsoleOptionParser
     {
         $options = parent::getOptionParser();
-        $options->addSubcommand('worker', [
-            'help' => 'Executes a job',
-            'parser' => $this->Worker->getOptionParser(),
-        ]);
+        $options
+            ->addOption('stop-on-failure', [
+                'short' => 's',
+                'help' => 'The worker will immediately stop on any failure',
+                'boolean' => true,
+            ])
+            ->addSubcommand('worker', [
+                'help' => 'Executes a job',
+                'parser' => $this->Worker->getOptionParser(),
+            ]);
 
         return $options;
     }
