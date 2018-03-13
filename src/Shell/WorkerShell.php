@@ -321,10 +321,6 @@ class WorkerShell extends AppShell
             if ($result->getException()) {
                 $this->out($result->getException()->getTraceAsString(), 1, Shell::VERBOSE);
             }
-
-            if ($this->param('stop-on-failure')) {
-                $this->stopHammerTime(Worker::SHUTDOWN_ERROR, self::WORKER_ERROR_EXIT_CODE);
-            }
         } elseif ($result instanceof Pause) {
             $this->out(sprintf('<info> - Execution paused</info> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
         } else {
@@ -346,8 +342,17 @@ class WorkerShell extends AppShell
         }
     }
 
-    public function afterCompleted()
+    /**
+     * @param \Cake\Event\Event $event
+     * @param \DelayedJobs\Result\ResultInterface $result
+     * @return void
+     */
+    public function afterCompleted(Event $event, ResultInterface $result)
     {
+        if ($this->param('stop-on-failure') && $result instanceof Failed) {
+            $this->stopHammerTime(Worker::SHUTDOWN_ERROR, self::WORKER_ERROR_EXIT_CODE);
+        }
+
         $this->_timeOfLastJob = microtime(true);
         $this->_checkSuicideStatus();
 
