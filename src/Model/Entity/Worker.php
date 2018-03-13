@@ -28,4 +28,5 @@ class Worker extends Entity
     const SHUTDOWN_LOOP_EXIT = 'loop exited';
     const SHUTDOWN_NO_WORKER = 'no worker';
     const SHUTDOWN_WRONG_PID = 'wrong pid';
+    const SHUTDOWN_ERROR = 'an error occured';
 }
