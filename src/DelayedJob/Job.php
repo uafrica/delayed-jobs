@@ -114,6 +114,12 @@ class Job
      * @var mixed
      */
     protected $_brokerMessageBody;
+    /**
+     * Indicates that this job is being executed manually
+     *
+     * @var bool
+     */
+    protected $_manualRun = false;
 
     /**
      * Job constructor.
@@ -153,6 +159,25 @@ class Job
             'history' => [],
             'entity' => null,
         ]);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isManualRun(): bool
+    {
+        return $this->_manualRun;
+    }
+
+    /**
+     * @param bool $manualRun
+     * @return self
+     */
+    public function setManualRun(bool $manualRun): self
+    {
+        $this->_manualRun = $manualRun;
+
+        return $this;
     }
 
     /**

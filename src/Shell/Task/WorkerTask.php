@@ -59,6 +59,7 @@ class WorkerTask extends Shell
         $this->out(' - Executing job', 1, Shell::VERBOSE);
         $this->djLog(__('Executing: {0}', $job->getId()));
 
+        $job->setManualRun(true);
         $start = microtime(true);
         $response = JobManager::instance()->execute($job, $this->param('force'));
         $this->djLog(__('Done with: {0}', $job->getId()));
