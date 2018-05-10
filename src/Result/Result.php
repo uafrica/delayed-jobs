@@ -17,6 +17,10 @@ abstract class Result implements ResultInterface
      * @var \DelayedJobs\DelayedJob\Job
      */
     private $_job;
+    /**
+     * @var \DateTimeInterface|null
+     */
+    private $_recur;
 
     /**
      * Result constructor.
@@ -58,13 +62,11 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * Most return types cannot reoccur, so we simply return null
-     *
-     * @return null
+     * @return \DateTimeInterface|null
      */
     public function getRecur()
     {
-        return null;
+        return $this->_recur;
     }
 
     /**
@@ -76,13 +78,13 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * Most return types cannot reoccur, so we don't actually do anything
-     *
      * @param \DateTimeInterface|null $recur When to re-queue the job for.
      * @return self
      */
     public function willRecur(\DateTimeInterface $recur = null)
     {
+        $this->_recur = $recur;
+
         return $this;
     }
 
