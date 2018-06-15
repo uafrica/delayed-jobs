@@ -72,6 +72,7 @@ class ArchiveWorker extends Worker
         $insertQuery = $archiveTable->query();
         $insertQuery
             ->insert($delayedJobsTable->getSchema()->columns())
+            ->modifier('IGNORE')
             ->values($selectQuery)
             ->execute();
 
