@@ -8,6 +8,7 @@ use Cake\ORM\Entity;
 /**
  * Class DelayedJob
  *
+ * @property int $status
  * @property \Cake\I18n\Time $run_at
  *
  * @internal
