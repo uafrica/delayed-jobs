@@ -391,7 +391,6 @@ class WatchdogShell extends AppShell
             $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);
 
             return false;
-
         }
 
         $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
