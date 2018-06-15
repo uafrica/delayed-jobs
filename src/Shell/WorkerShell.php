@@ -130,7 +130,7 @@ class WorkerShell extends AppShell
 
     protected function _enableListeners()
     {
-        $this->ProcessManager->eventManager()
+        $this->ProcessManager->getEventManager()
             ->on('CLI.signal', function (Event $event) {
                 $this->stopHammerTime(ProcessManagerTask::$signals[$event->getData('signo')] ?? 'Unknown');
             });
@@ -180,10 +180,10 @@ class WorkerShell extends AppShell
         $this->heartbeat();
 
         $this->_manager = JobManager::instance();
-        $this->_manager->eventManager()->on('DelayedJob.beforeJobExecute', [$this, 'beforeExecute']);
-        $this->_manager->eventManager()->on('DelayedJob.afterJobExecute', [$this, 'afterExecute']);
-        $this->_manager->eventManager()->on('DelayedJob.afterJobCompleted', [$this, 'afterCompleted']);
-        $this->_manager->eventManager()->on('DelayedJob.heartbeat', [$this, 'heartbeat']);
+        $this->_manager->getEventManager()->on('DelayedJob.beforeJobExecute', [$this, 'beforeExecute']);
+        $this->_manager->getEventManager()->on('DelayedJob.afterJobExecute', [$this, 'afterExecute']);
+        $this->_manager->getEventManager()->on('DelayedJob.afterJobCompleted', [$this, 'afterCompleted']);
+        $this->_manager->getEventManager()->on('DelayedJob.heartbeat', [$this, 'heartbeat']);
 
         $this->_manager->startConsuming();
 

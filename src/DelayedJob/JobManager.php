@@ -376,10 +376,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     protected function _dispatchWorkerEvent(JobWorkerInterface $jobWorker, $name, $data = null, $subject = null): Event
     {
         $event = new Event($name, $subject ?? $this, $data);
-        $this->eventManager()
+        $this->getEventManager()
             ->dispatch($event);
         if ($jobWorker instanceof EventDispatcherInterface) {
-            $jobWorker->eventManager()
+            $jobWorker->getEventManager()
                 ->dispatch($event);
         }
 

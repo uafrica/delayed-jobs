@@ -70,7 +70,7 @@ class DelayedJobsControllerTest extends IntegrationTestCase
     public function testRunExecuteJob()
     {
         $table = $this->getModel('\\DelayedJobs\\Model\\Table\\DelayedJobsTable', ['get'], 'DelayedJobs', 'delayed_jobs');
-        TableRegistry::set('DelayedJobs.DelayedJobs', $table);
+        TableRegistry::getTableLocator()->set('DelayedJobs.DelayedJobs', $table);
 
         $job_data = Fabricate::attributes_for('DelayedJobs.DelayedJobs')[0];
         $job = $this->getMock('\\DelayedJobs\\Model\\Entity\\DelayedJob', ['execute'], [$job_data]);

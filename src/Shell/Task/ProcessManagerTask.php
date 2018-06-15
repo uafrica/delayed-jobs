@@ -156,7 +156,7 @@ class ProcessManagerTask extends Shell
     {
         $callback = function ($signo) {
             $event = new Event('CLI.signal', null, compact('signo'));
-            $this->eventManager()->dispatch($event);
+            $this->getEventManager()->dispatch($event);
         };
 
         $this->signal('SIGHUP', $callback);
