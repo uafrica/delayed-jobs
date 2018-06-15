@@ -83,9 +83,10 @@ class ArchiveWorker extends Worker
         Log::debug('Jobs deleted.');
 
         if (Configure::read('DelayedJobs.archive.timeLimit')) {
-            Log::debug('Cleaning archive.');
+            $time = new Time('-' . Configure::read('DelayedJobs.archive.timeLimit'));
+            Log::debug('Cleaning archive. All jobs older than ' . $time);
             $archiveTable->deleteAll([
-                'created <=' => new Time('-' . Configure::read('DelayedJobs.archive.timeLimit'))
+                'created <=' => $time
             ]);
             Log::debug('Archive cleaned.');
         }
