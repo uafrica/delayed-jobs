@@ -373,19 +373,31 @@ class WatchdogShell extends AppShell
 
     public function requeue()
     {
+        /** @var \DelayedJobs\Model\Entity\DelayedJob $job */
         $job = TableRegistry::get('DelayedJobs.DelayedJobs')
             ->get($this->args[0]);
 
-        if ($job->status === Job::STATUS_NEW || $job->status === Job::STATUS_FAILED) {
-            if (JobManager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
-                $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
-            } else {
-                $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);
-            }
-            $this->out(__('<success>{0} has been queued</success>', $job->id));
-        } else {
-            $this->out(__('<error>{0} could not be queued</error>', $job->id));
+        if (!in_array($job->status, [
+            Job::STATUS_NEW,
+            Job::STATUS_FAILED,
+            Job::STATUS_PAUSED,
+        ])) {
+            $this->out(__('<error>{0} could not be queued - status is {1}</error>', $job->id, $job->status));
+
+            return false;
         }
+
+        if (!JobManager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
+            $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);
+
+            return false;
+
+        }
+
+        $this->out(' :: <success>√</success>', 1, Shell::VERBOSE);
+        $this->out(__('<success>{0} has been queued</success>', $job->id));
+
+        return true;
     }
 
     public function revive()
