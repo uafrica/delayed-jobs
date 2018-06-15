@@ -20,7 +20,8 @@ $defaultConfig = [
     'archive' => [
         'enabled' => false,
         'tableName' => 'delayed_jobs_archive',
-        'recurring' => 'tomorrow 00:30'
+        'recurring' => 'tomorrow 00:30',
+        'timeLimit' => '90 days',
     ]
 ];
 

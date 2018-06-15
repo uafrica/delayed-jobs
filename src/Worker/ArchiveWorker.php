@@ -8,6 +8,7 @@ use Cake\Database\Query;
 use Cake\Database\Schema\Table;
 use Cake\Datasource\ConnectionManager;
 use Cake\I18n\Time;
+use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\Job;
 
@@ -69,6 +70,7 @@ class ArchiveWorker extends Worker
         $selectQuery = $delayedJobsTable->query()
             ->where(['status IN' => [Job::STATUS_BURIED, Job::STATUS_SUCCESS]]);
 
+        Log::debug($selectQuery->count() . ' jobs to be archived.');
         $insertQuery = $archiveTable->query();
         $insertQuery
             ->insert($delayedJobsTable->getSchema()->columns())
@@ -76,7 +78,17 @@ class ArchiveWorker extends Worker
             ->values($selectQuery)
             ->execute();
 
+        Log::debug('Jobs archived. Starting delete.');
         $delayedJobsTable->deleteAll(['status IN' => [Job::STATUS_BURIED, Job::STATUS_SUCCESS]]);
+        Log::debug('Jobs deleted.');
+
+        if (Configure::read('DelayedJobs.archive.timeLimit')) {
+            Log::debug('Cleaning archive.');
+            $archiveTable->deleteAll([
+                'created <=' => new Time('-' . Configure::read('DelayedJobs.archive.timeLimit'))
+            ]);
+            Log::debug('Archive cleaned.');
+        }
 
         $connection->driver()
             ->autoQuoting($quote);
