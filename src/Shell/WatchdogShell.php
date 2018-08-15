@@ -373,8 +373,8 @@ class WatchdogShell extends AppShell
 
     public function requeue()
     {
-        /** @var \DelayedJobs\Model\Entity\DelayedJob $job */
-        $job = TableRegistry::get('DelayedJobs.DelayedJobs')
+        $job = TableRegistry::getTableLocator()
+            ->get('DelayedJobs.DelayedJobs')
             ->get($this->args[0]);
 
         if (!in_array($job->status, [

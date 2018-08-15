@@ -11,6 +11,7 @@ use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\Model\Table\ArchiveTable;
 
 /**
  * Class ArchiveWorker
@@ -21,12 +22,12 @@ class ArchiveWorker extends Worker
      * @param $archiveTable
      * @return void
      */
-    protected function _ensureTable($archiveTable)
+    protected function _ensureTable(ArchiveTable $archiveTable)
     {
         try {
-            $archiveTable->schema();
+            $archiveTable->getSchema();
         } catch (Exception $e) {
-            $djSchema = TableRegistry::get('DelayedJobs.DelayedJobs')->getSchema();
+            $djSchema = TableRegistry::getTableLocator()->get('DelayedJobs.DelayedJobs')->getSchema();
             $djColumns = $djSchema->columns();
             $columns = [];
             foreach ($djColumns as $djColumn) {
@@ -54,8 +55,8 @@ class ArchiveWorker extends Worker
             return 'Not enabled for archiving';
         }
 
-        $delayedJobsTable = TableRegistry::get('DelayedJobs.DelayedJobs');
-        $archiveTable = TableRegistry::get('Archive', [
+        $delayedJobsTable = TableRegistry::getTableLocator()->get('DelayedJobs.DelayedJobs');
+        $archiveTable = TableRegistry::getTableLocator()->get('Archive', [
             'table' => Configure::read('DelayedJobs.archive.tableName')
         ]);
 
