@@ -53,5 +53,4 @@ class Plugin extends BasePlugin
         $generatorTasks[] = WorkerTask::class;
         Configure::write('IdeHelper.generatorTasks', $generatorTasks);
     }
-
 }
