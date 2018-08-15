@@ -144,11 +144,11 @@ class DelayedJobsTable extends Table implements DatastoreInterface
 
         $connection = $this->getConnection();
         $quote = $connection
-            ->driver()
-            ->autoQuoting();
+            ->getDriver()
+            ->isAutoQuotingEnabled();
         $connection
-            ->driver()
-            ->autoQuoting(true);
+            ->getDriver()
+            ->enableAutoQuoting();
         $connection->transactional(function () use ($query, &$jobs) {
             $statement = $query->execute();
             $firstId = $statement->lastInsertId($this->getTable(), 'id');
@@ -159,8 +159,8 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             return true;
         });
 
-        $connection->driver()
-            ->autoQuoting($quote);
+        $connection->getDriver()
+            ->enableAutoQuoting($quote);
 
         if (!$jobs) {
             throw new EnqueueException('Job batch could not be persisted');
@@ -196,7 +196,6 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             return null;
         }
 
-        $this->getConnection()->driver()->autoQuoting(false);
         $next = $this->find()
             ->select([
                 'id',
@@ -235,11 +234,11 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     public function isSimilarJob(Job $job): bool
     {
         $quoting = $this->getConnection()
-            ->driver()
-            ->autoQuoting();
+            ->getDriver()
+            ->isAutoQuotingEnabled();
         $this->getConnection()
-            ->driver()
-            ->autoQuoting(true);
+            ->getDriver()
+            ->enableAutoQuoting();
 
         $conditions = [
             'worker' => $job->getWorker(),
@@ -259,8 +258,8 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         $exists = $this->exists($conditions);
 
         $this->getConnection()
-            ->driver()
-            ->autoQuoting($quoting);
+            ->getDriver()
+            ->enableAutoQuoting($quoting);
 
         return $exists;
     }
@@ -271,11 +270,11 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     public function beforeSave()
     {
         $this->_quote = $this->getConnection()
-            ->driver()
-            ->autoQuoting();
+            ->getDriver()
+            ->isAutoQuotingEnabled();
         $this->getConnection()
-            ->driver()
-            ->autoQuoting(true);
+            ->getDriver()
+            ->enableAutoQuoting();
     }
 
     /**
@@ -284,7 +283,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     public function afterSave()
     {
         $this->getConnection()
-            ->driver()
-            ->autoQuoting($this->_quote);
+            ->getDriver()
+            ->enableAutoQuoting($this->_quote);
     }
 }
