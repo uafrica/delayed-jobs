@@ -15,7 +15,6 @@ if (empty($jobs)) {
         <th class="left"><?= __d('debug_kit', 'Sequence') ?></th>
         <th class="left"><?= __d('debug_kit', 'Priority') ?></th>
         <th class="left"><?= __d('debug_kit', 'Is queued?') ?></th>
-        <th class="left" style="width: 40%;"><?= __d('debug_kit', 'Payload') ?></th>
     </tr>
     <?php foreach ($jobs as $k => $job) : ?>
         <tr>
@@ -24,9 +23,6 @@ if (empty($jobs)) {
             <td class="left"><?= $job['sequence'] ?: 'None' ?></td>
             <td class="left"><?= $job['priority'] ?></td>
             <td class="left"><?= $job['pushedToBroker'] ? '&#x2714;' : '&#x2715;' ?></td>
-            <td class="left">
-                <pre><code><?= json_encode($job['payload'], JSON_PRETTY_PRINT) ?></code></pre>
-            </td>
         </tr>
     <?php endforeach; ?>
 </table>
