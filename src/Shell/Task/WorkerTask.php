@@ -37,7 +37,7 @@ class WorkerTask extends Shell
         $this->out('<info>Starting Job: ' . $jobId . '</info>', 1, Shell::VERBOSE);
 
         try {
-            $job = JobManager::instance()->fetchJob($jobId);
+            $job = JobManager::getInstance()->fetchJob($jobId);
             $this->out(' - Got job from DB', 1, Shell::VERBOSE);
         } catch (JobNotFoundException $e) {
             $this->out('<fail>Job ' . $jobId . ' not found (' . $e->getMessage() . ')</fail>', 1, Shell::VERBOSE);
@@ -61,7 +61,7 @@ class WorkerTask extends Shell
 
         $job->setManualRun(true);
         $start = microtime(true);
-        $response = JobManager::instance()->execute($job, $this->param('force'));
+        $response = JobManager::getInstance()->execute($job, $this->param('force'));
         $this->djLog(__('Done with: {0}', $job->getId()));
 
         if ($response instanceof Failed) {

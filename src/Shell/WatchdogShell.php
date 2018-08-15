@@ -207,7 +207,7 @@ class WatchdogShell extends AppShell
                     ]);
             }
 
-            if (JobManager::instance()->isSimilarJob($job)) {
+            if (JobManager::getInstance()->isSimilarJob($job)) {
                 $this->out(__('  <error>Already queued:</error> {0}', $job->getWorker()), 1, Shell::VERBOSE);
                 continue;
             }
@@ -387,7 +387,7 @@ class WatchdogShell extends AppShell
             return false;
         }
 
-        if (!JobManager::instance()->enqueuePersisted($job['id'], $job['priority'])) {
+        if (!JobManager::getInstance()->enqueuePersisted($job['id'], $job['priority'])) {
             $this->out(' :: <error>X</error>', 1, Shell::VERBOSE);
 
             return false;
@@ -401,7 +401,7 @@ class WatchdogShell extends AppShell
 
     public function revive()
     {
-        $stats = JobManager::instance()->getMessageBroker()->queueStatus();
+        $stats = JobManager::getInstance()->getMessageBroker()->queueStatus();
         if ($stats['messages'] > 0) {
             $this->out(__('<error>There are {0} messages currently queued</error>', $stats['messages']));
             $this->out('We cannot reliably determine which messages to requeue unless the RabbitMQ queue is empty.');
@@ -455,7 +455,7 @@ class WatchdogShell extends AppShell
             }
 
             $this->out(__(' - Queueing job <info>{0}</info>', $job['id']), 1, Shell::VERBOSE);
-            JobManager::instance()->enqueuePersisted($job['id'], $job['priority']);
+            JobManager::getInstance()->enqueuePersisted($job['id'], $job['priority']);
         }
     }
 

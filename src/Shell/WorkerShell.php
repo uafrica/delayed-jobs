@@ -179,7 +179,7 @@ class WorkerShell extends AppShell
     {
         $this->heartbeat();
 
-        $this->_manager = JobManager::instance();
+        $this->_manager = JobManager::getInstance();
         $this->_manager->getEventManager()->on('DelayedJob.beforeJobExecute', [$this, 'beforeExecute']);
         $this->_manager->getEventManager()->on('DelayedJob.afterJobExecute', [$this, 'afterExecute']);
         $this->_manager->getEventManager()->on('DelayedJob.afterJobCompleted', [$this, 'afterCompleted']);

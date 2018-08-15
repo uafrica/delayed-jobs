@@ -120,6 +120,12 @@ class Job
      * @var bool
      */
     protected $_manualRun = false;
+    /**
+     * Indicates that this job instance was pushed to the job broker
+     *
+     * @var bool
+     */
+    protected $_pushedToBroker = false;
 
     /**
      * Job constructor.
@@ -751,6 +757,25 @@ class Job
     public function setBrokerMessageBody($brokerMessageBody): Job
     {
         $this->_brokerMessageBody = $brokerMessageBody;
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPushedToBroker(): bool
+    {
+        return $this->_pushedToBroker;
+    }
+
+    /**
+     * @param bool $pushedToBroker
+     * @return $this
+     */
+    public function setPushedToBroker(bool $pushedToBroker): Job
+    {
+        $this->_pushedToBroker = $pushedToBroker;
 
         return $this;
     }

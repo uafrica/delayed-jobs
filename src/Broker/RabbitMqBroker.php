@@ -86,6 +86,7 @@ class RabbitMqBroker implements BrokerInterface
         ];
 
         $this->getDriver()->publishJob($jobData);
+        $job->setPushedToBroker(true);
     }
 
     /**

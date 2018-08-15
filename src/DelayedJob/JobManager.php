@@ -94,18 +94,23 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * Returns the globally available instance of a \DelayedJobs\DelayedJobs\DelayedJobsManager
+     * Set as the globally available instance
      *
-     * If called with the first parameter, it will be set as the globally available instance
+     * @param \DelayedJobs\DelayedJob\ManagerInterface|null $manager The manager interface to inject
+     * @return void
+     */
+    public static function setInstance(?ManagerInterface $manager)
+    {
+        static::$_instance = $manager;
+    }
+
+    /**
+     * Returns the globally available instance of a \DelayedJobs\DelayedJobs\JobsManager
      *
-     * @param \DelayedJobs\DelayedJob\ManagerInterface $manager Delayed jobs instance.
      * @return \DelayedJobs\DelayedJob\ManagerInterface the global delayed jobs manager
      */
-    public static function instance(ManagerInterface $manager = null): ManagerInterface
+    public static function getInstance(): ManagerInterface
     {
-        if ($manager instanceof ManagerInterface) {
-            static::$_instance = $manager;
-        }
         if (empty(static::$_instance)) {
             static::$_instance = new self(Configure::read('DelayedJobs'));
         }

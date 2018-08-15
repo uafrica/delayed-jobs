@@ -281,7 +281,7 @@ class MonitorShell extends AppShell
 
     protected function _rabbitStats()
     {
-        $rabbit_status = JobManager::instance()
+        $rabbit_status = JobManager::getInstance()
             ->getMessageBroker()
             ->queueStatus();
         if (empty($rabbit_status)) {
@@ -304,7 +304,7 @@ class MonitorShell extends AppShell
 
         $max_length = 50;
 
-        $rabbit_status = JobManager::instance()
+        $rabbit_status = JobManager::getInstance()
             ->getMessageBroker()
             ->queueStatus();
         if (empty($rabbit_status)) {
