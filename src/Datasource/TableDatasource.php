@@ -26,7 +26,7 @@ class TableDatasource extends BaseDatasource
      */
     protected function _table(): DatastoreInterface
     {
-        return $this->tableLocator()
+        return $this->getTableLocator()
             ->get($this->getConfig('tableName'));
     }
 
