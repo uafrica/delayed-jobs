@@ -69,7 +69,7 @@ class TestShell extends AppShell
 
         sleep(10);
 
-        $job = JobManager::instance()->fetchJob($job->getId());
+        $job = JobManager::getInstance()->fetchJob($job->getId());
 
         if ($job->getStatus() !== Job::STATUS_SUCCESS) {
             throw new \Exception('Successful job was not successful');
@@ -88,7 +88,7 @@ class TestShell extends AppShell
 
         sleep(10);
 
-        $job = JobManager::instance()->fetchJob($job->getId());
+        $job = JobManager::getInstance()->fetchJob($job->getId());
 
         if ($job->getStatus() !== Job::STATUS_BURIED) {
             throw new \Exception('Failed Job did not fail');

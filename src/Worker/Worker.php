@@ -40,7 +40,7 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
             unset($options['shell']);
         }
 
-        $this->eventManager()->on($this);
+        $this->getEventManager()->on($this);
     }
 
     /**
