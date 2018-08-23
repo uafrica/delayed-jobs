@@ -62,10 +62,10 @@ class ArchiveWorker extends Worker
         $this->_ensureTable($archiveTable);
 
         $connection = $archiveTable->getConnection();
-        $quote = $connection->driver()
-            ->autoQuoting();
-        $connection->driver()
-            ->autoQuoting(true);
+        $quote = $connection->getDriver()
+            ->isAutoQuotingEnabled();
+        $connection->getDriver()
+            ->enableAutoQuoting(true);
 
         $selectQuery = $delayedJobsTable->query()
             ->where(['status IN' => [Job::STATUS_BURIED, Job::STATUS_SUCCESS]]);
@@ -91,8 +91,8 @@ class ArchiveWorker extends Worker
             Log::debug('Archive cleaned.');
         }
 
-        $connection->driver()
-            ->autoQuoting($quote);
+        $connection->getDriver()
+            ->enableAutoQuoting($quote);
 
         return new Time(Configure::read('DelayedJobs.archive.recurring'));
     }
