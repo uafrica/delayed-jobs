@@ -11,7 +11,6 @@ use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\Job;
-use DelayedJobs\Model\Table\ArchiveTable;
 
 /**
  * Class ArchiveWorker
@@ -22,7 +21,7 @@ class ArchiveWorker extends Worker
      * @param $archiveTable
      * @return void
      */
-    protected function _ensureTable(ArchiveTable $archiveTable)
+    protected function _ensureTable($archiveTable)
     {
         try {
             $archiveTable->getSchema();
