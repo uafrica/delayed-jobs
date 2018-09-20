@@ -6,6 +6,7 @@ use Cake\Core\InstanceConfigTrait;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\MessageBrokerInterface;
+use DelayedJobs\Exception\BrokerReconnectionException;
 use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazySocketConnection;
@@ -190,6 +191,8 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             //Try again
             $this->getChannel()
                 ->basic_publish($message, $exchange, $routingKey);
+
+            throw new BrokerReconnectionException('We had to reconnect to publish a job.');
         }
     }
 
