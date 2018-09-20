@@ -203,7 +203,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
             'DelayedJob.beforeJobExecute' => 'beforeExecute',
             'DelayedJob.afterJobExecute' => 'afterExecute',
             'DelayedJob.afterJobCompleted' => 'afterCompleted',
-            'DelayedJob.heartbeat' => 'heartbeart',
+            'DelayedJob.heartbeat' => 'heartbeat',
             'DelayedJob.forceShutdown' => 'forceShutdown'
         ];
     }
