@@ -552,10 +552,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->dispatchEvent('DelayedJobs.afterJobQueue', [$job]);
         } catch (\Exception $e) {
             Log::emergency(__(
-                'RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
+                'Could not push job to broker. Response was: {0} with exception {1}. Job #{2} has not been queued. Hostname: {3}',
                 $e->getMessage(),
                 get_class($e),
-                $job->getId()
+                $job->getId(),
+                gethostname()
             ));
 
             throw new EnqueueException('Could not push job to broker.');
