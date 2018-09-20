@@ -6,9 +6,11 @@ use Cake\Core\InstanceConfigTrait;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\MessageBrokerInterface;
+use DelayedJobs\Exception\BrokerReconnectionException;
 use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazySocketConnection;
+use PhpAmqpLib\Exception\AMQPIOException;
 use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -157,7 +159,6 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     {
         $prefix = $this->getConfig('prefix');
         $routingKey = $this->getConfig('routingKey');
-        $channel = $this->getChannel();
 
         $messageProperties = [
             'delivery_mode' => 2,
@@ -173,7 +174,26 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $message = new AMQPMessage(json_encode($jobData['payload']), $messageProperties);
 
         $exchange = $prefix . ($jobData['delay'] > 0 ? 'delayed-exchange' : 'direct-exchange');
-        $channel->basic_publish($message, $exchange, $routingKey);
+
+        try {
+            $this->getChannel()
+                ->basic_publish($message, $exchange, $routingKey);
+        } catch (AMQPIOException $e) {
+            if ($this->_connection && $this->_connection->isConnected()) {
+                try {
+                    $this->_connection->close();
+                } catch (\Exception $e) {
+                    //Ignore this
+                }
+                $this->_connection = null;
+            }
+
+            //Try again
+            $this->getChannel()
+                ->basic_publish($message, $exchange, $routingKey);
+
+            throw new BrokerReconnectionException('We had to reconnect to publish a job.');
+        }
     }
 
     public function consume(callable $callback, callable $heartbeat)

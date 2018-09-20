@@ -29,4 +29,5 @@ class Worker extends Entity
     const SHUTDOWN_NO_WORKER = 'no worker';
     const SHUTDOWN_WRONG_PID = 'wrong pid';
     const SHUTDOWN_ERROR = 'an error occured';
+    const SHUTDOWN_MANAGER =' asked nicely by the manager';
 }

@@ -16,6 +16,7 @@ use DelayedJobs\Datasource\DatasourceInterface;
 use DelayedJobs\Datasource\TableDatasource;
 use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Exception\JobExecuteException;
+use DelayedJobs\Exception\BrokerReconnectionException;
 use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Exception\PausedException;
 use DelayedJobs\Result\Failed;
@@ -49,6 +50,19 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * @var \DelayedJobs\DelayedJob\ManagerInterface
      */
     protected static $_instance;
+
+    /**
+     * Flag to indicate if we are consuming at the moment or not
+     *
+     * @var bool
+     */
+    protected $consuming = false;
+    /**
+     * Flag to indicate we need to stop consuming
+     *
+     * @var bool
+     */
+    protected $stopConsuming = false;
 
     /**
      * @var \DelayedJobs\Datasource\DatasourceInterface
@@ -540,26 +554,31 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             throw new EnqueueException('Job has not been persisted.');
         }
 
-        try {
-            $event = $this->dispatchEvent('DelayedJobs.beforeJobQueue', [$job]);
-            if ($event->isStopped()) {
-                return;
-            }
+        $event = $this->dispatchEvent('DelayedJobs.beforeJobQueue', [$job]);
+        if ($event->isStopped()) {
+            return;
+        }
 
+        try {
             $this->getMessageBroker()
                 ->publishJob($job);
-
-            $this->dispatchEvent('DelayedJobs.afterJobQueue', [$job]);
+        } catch (BrokerReconnectionException $e) {
+            if ($this->consuming) {
+                $this->stopConsuming = true;
+            }
         } catch (\Exception $e) {
             Log::emergency(__(
-                'RabbitMQ server is down. Response was: {0} with exception {1}. Job #{2} has not been queued.',
+                'Could not push job to broker. Response was: {0} with exception {1}. Job #{2} has not been queued. Hostname: {3}',
                 $e->getMessage(),
                 get_class($e),
-                $job->getId()
+                $job->getId(),
+                gethostname()
             ));
 
             throw new EnqueueException('Could not push job to broker.');
         }
+
+        $this->dispatchEvent('DelayedJobs.afterJobQueue', [$job]);
     }
 
     /**
@@ -567,6 +586,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function startConsuming()
     {
+        $this->consuming = true;
         //This lambda is run for each message received from the broker
         $this->getMessageBroker()
             ->consume(function (Job $job, $retried = false) {
@@ -594,6 +614,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                 }
 
                 $this->execute($job); //Execute the job
+
+                if ($this->stopConsuming) {
+                    $this->dispatchEvent('DelayedJob.forceShutdown');
+                }
             }, function () {
                 $this->dispatchEvent('DelayedJob.heartbeat');
             });
@@ -604,6 +628,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function stopConsuming()
     {
+        $this->consuming = false;
+
         $this->getMessageBroker()
             ->stopConsuming();
     }
