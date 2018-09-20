@@ -7,6 +7,7 @@ use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\Event\Event;
+use Cake\Event\EventListenerInterface;
 use Cake\I18n\FrozenTime;
 use Cake\I18n\Time;
 use DelayedJobs\DelayedJob\JobManager;
@@ -27,7 +28,7 @@ use DelayedJobs\Traits\DebugLoggerTrait;
  * @property \DelayedJobs\Shell\Task\WorkerTask $Worker
  * @property \DelayedJobs\Shell\Task\ProcessManagerTask $ProcessManager
  */
-class WorkerShell extends AppShell
+class WorkerShell extends AppShell implements EventListenerInterface
 {
     use DebugLoggerTrait;
 
@@ -37,6 +38,7 @@ class WorkerShell extends AppShell
     const NO_WORKER_EXIT_CODE = 110;
     const WORKER_ERROR_EXIT_CODE = 120;
     const HEARTBEAT_TIME = 30;
+    const MANAGER_SHUTDOWN = 40;
 
     public $modelClass = 'DelayedJobs.DelayedJobs';
     public $tasks = ['DelayedJobs.Worker', 'DelayedJobs.ProcessManager'];
@@ -175,19 +177,52 @@ class WorkerShell extends AppShell
         $this->_stop($exitCode);
     }
 
+    /**
+     * Returns a list of events this object is implementing. When the class is registered
+     * in an event manager, each individual method will be associated with the respective event.
+     *
+     * ### Example:
+     *
+     * ```
+     *  public function implementedEvents()
+     *  {
+     *      return [
+     *          'Order.complete' => 'sendEmail',
+     *          'Article.afterBuy' => 'decrementInventory',
+     *          'User.onRegister' => ['callable' => 'logRegistration', 'priority' => 20, 'passParams' => true]
+     *      ];
+     *  }
+     * ```
+     *
+     * @return array associative array or event key names pointing to the function
+     * that should be called in the object when the respective event is fired
+     */
+    public function implementedEvents()
+    {
+        return [
+            'DelayedJob.beforeJobExecute' => 'beforeExecute',
+            'DelayedJob.afterJobExecute' => 'afterExecute',
+            'DelayedJob.afterJobCompleted' => 'afterCompleted',
+            'DelayedJob.heartbeat' => 'heartbeart',
+            'DelayedJob.forceShutdown' => 'forceShutdown'
+        ];
+    }
+
     public function main()
     {
         $this->heartbeat();
 
         $this->_manager = JobManager::getInstance();
-        $this->_manager->getEventManager()->on('DelayedJob.beforeJobExecute', [$this, 'beforeExecute']);
-        $this->_manager->getEventManager()->on('DelayedJob.afterJobExecute', [$this, 'afterExecute']);
-        $this->_manager->getEventManager()->on('DelayedJob.afterJobCompleted', [$this, 'afterCompleted']);
-        $this->_manager->getEventManager()->on('DelayedJob.heartbeat', [$this, 'heartbeat']);
+        $this->_manager->getEventManager()->on($this);
 
         $this->_manager->startConsuming();
 
         $this->stopHammerTime(Worker::SHUTDOWN_LOOP_EXIT);
+    }
+
+    public function forceShutdown()
+    {
+        $this->stopHammerTime(Worker::SHUTDOWN_MANAGER, static::MANAGER_SHUTDOWN);
     }
 
     public function heartbeat()
