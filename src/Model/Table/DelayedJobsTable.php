@@ -197,12 +197,6 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         }
 
         $next = $this->find()
-            ->select([
-                'id',
-                'sequence',
-                'priority',
-                'run_at'
-            ])
             ->where([
                 'id !=' => $job->getId(),
                 'status' => Job::STATUS_NEW,

@@ -676,13 +676,7 @@ class Job
      */
     public function getHistory(): array
     {
-        return !empty($this->_history) ? $this->_history : [[
-            'timestamp' => new FrozenTime(),
-            'microtime' => microtime(true),
-            'host_name' => $this->getHostName(),
-            'message' => 'Created',
-            'status' => $this->getStatus(),
-        ]];
+        return (array)$this->_history;
     }
 
     /**
@@ -700,9 +694,11 @@ class Job
      * Adds a history item
      *
      * @param string $message The message
+     * @param array $context Extra contextual information
+     * @param bool $changeMessage Should the last message be updated
      * @return $this
      */
-    public function addHistory($message = '')
+    public function addHistory($message = '', $context = [], bool $changeMessage = true)
     {
         if ($message instanceof \Throwable) {
             $message = $message->getMessage();
@@ -714,9 +710,10 @@ class Job
             'host_name' => $this->getHostName(),
             'message' => $message ?: '',
             'status' => $this->getStatus(),
+            'context' => $context
         ];
 
-        if (is_string($message)) {
+        if (is_string($message) && $changeMessage) {
             $this->setLastMessage($message);
         }
 

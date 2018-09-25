@@ -88,6 +88,14 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * @var \DelayedJobs\Broker\BrokerInterface
      */
     protected $_messageBroker;
+    /**
+     * @var null|\DelayedJobs\DelayedJob\Job
+     */
+    protected $_currentJob = null;
+    /**
+     * @var array
+     */
+    protected $_enqueuedJobs = [];
 
     /**
      * Constructor for class
@@ -108,17 +116,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * Set as the globally available instance
-     *
-     * @param \DelayedJobs\DelayedJob\ManagerInterface|null $manager The manager interface to inject
-     * @return void
-     */
-    public static function setInstance(?ManagerInterface $manager)
-    {
-        static::$_instance = $manager;
-    }
-
-    /**
      * Returns the globally available instance of a \DelayedJobs\DelayedJobs\JobsManager
      *
      * @return \DelayedJobs\DelayedJob\ManagerInterface the global delayed jobs manager
@@ -130,6 +127,17 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         return static::$_instance;
+    }
+
+    /**
+     * Set as the globally available instance
+     *
+     * @param \DelayedJobs\DelayedJob\ManagerInterface|null $manager The manager interface to inject
+     * @return void
+     */
+    public static function setInstance(?ManagerInterface $manager)
+    {
+        static::$_instance = $manager;
     }
 
     /**
@@ -170,8 +178,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     public function enqueue(Job $job, bool $skipPersist = false)
     {
         if ($skipPersist || $this->_persistToDatastore($job)) {
+            $this->_enqueuedJobs[] = (int)$job->getId();
             if ($job->getSequence() &&
                 $this->getDatasource()->currentlySequenced($job)) {
+                $this->addHistoryAndPersist($job, 'Not pushed to broker due to sequence.');
                 return;
             }
             $this->_pushToBroker($job);
@@ -192,31 +202,34 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param array $jobs
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs
      * @return void
      */
     public function enqueueBatch(array $jobs)
     {
+        foreach ($jobs as $job) {
+            $job->addHistory('Batch created', [
+                'parentJob' => $this->_currentJob ? $this->_currentJob->getId() : null
+            ]);
+        }
         $this->getDatasource()->persistJobs($jobs);
 
-        $sequenceMap = [];
-
         collection($jobs)
-            ->filter(function (Job $job) use (&$sequenceMap) {
+            ->filter(function (Job $job) {
+                $this->_enqueuedJobs[] = (int)$job->getId();
                 $jobSequence = $job->getSequence();
                 if (!$jobSequence) {
                     return true;
                 }
 
-                if (isset($sequenceMap[$jobSequence])) {
-                    return false;
+                //If true then the job sequence is already enqueued, don't push to the broker
+                $currentlySequenced = $this->getDatasource()->currentlySequenced($job);
+
+                if ($currentlySequenced) {
+                    $this->addHistoryAndPersist($job, 'Not pushed to broker due to sequence.');
                 }
 
-                $currentlySequenced = $this->getDatasource()
-                    ->currentlySequenced($job);
-                $sequenceMap[$jobSequence] = $currentlySequenced;
-
-                return !$currentlySequenced;
+                return $currentlySequenced === false; //If not currently sequenced, then carry on
             })
             ->each(function (Job $job) {
                 $this->_pushToBroker($job);
@@ -318,7 +331,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     public function lock(Job $job)
     {
         $job->setStatus(Job::STATUS_BUSY)
-            ->setStartTime(Time::now());
+            ->setStartTime(Time::now())
+            ->addHistory('Locked');
 
         $this->_persistToDatastore($job);
     }
@@ -335,7 +349,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         } elseif ($result instanceof \DateTimeInterface) {
             return (new Success($job, "Reoccur at {$result}"))->willRecur($result);
         } elseif ($result instanceof PausedException) {
-            return new Pause($job);
+            return new Pause($job, 'Execution paused');
         } elseif ($result instanceof \Error || $result instanceof NonRetryableException) {
             return (new Failed($job, $result->getMessage()))->willRetry(false)
                 ->setException($result);
@@ -356,10 +370,16 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         $job = $result->getJob();
 
+        $context = ['enqueuedJobs' => $this->_enqueuedJobs];
+
+        if ($result instanceof Failed && $result->getException()) {
+            $context['trace'] = $result->getException()->getTrace();
+        }
+
         $job->setStatus($result->getStatus())
             ->setEndTime(Time::now())
             ->setDuration($duration)
-            ->addHistory($result->getMessage());
+            ->addHistory($result->getMessage(), $context);
 
         if ($result->canRetry()) {
             $job->incrementRetries();
@@ -412,6 +432,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     protected function _executeJob(Job $job, JobWorkerInterface $jobWorker)
     {
+        $this->_currentJob = $job;
+
         $event = $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.beforeJobExecute', [$job]);
         if ($event->isStopped()) {
             return null;
@@ -448,6 +470,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->_handleResult($result, $duration);
 
             $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobCompleted', [$result]);
+
+            $this->_currentJob = null;
+            $this->_enqueuedJobs = [];
 
             return $result;
         }
@@ -525,6 +550,19 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
+     * @param \DelayedJobs\DelayedJob\Job $job The job instance
+     * @param mixed $message Message to add to history
+     *
+     * @return \DelayedJobs\DelayedJob\Job
+     */
+    public function addHistoryAndPersist(Job $job, $message): Job
+    {
+        $job->addHistory($message, [], false);
+
+        return $this->_persistToDatastore($job);
+    }
+
+    /**
      * @param \DelayedJobs\DelayedJob\Job $job Job being persisted
      * @return \DelayedJobs\DelayedJob\Job
      */
@@ -533,6 +571,12 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         $event = $this->dispatchEvent('DelayedJobs.beforePersist', [$job]);
         if ($event->isStopped()) {
             return $job;
+        }
+
+        if (!$job->getId()) {
+            $job->addHistory('Created', [
+                'parentJob' => $this->_currentJob ? $this->_currentJob->getId() : null
+            ]);
         }
 
         if (!$this->getDatasource()->persistJob($job)) {
@@ -560,13 +604,15 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         try {
-            $this->getMessageBroker()
-                ->publishJob($job);
+            $this->getMessageBroker()->publishJob($job);
+            $this->addHistoryAndPersist($job, 'Pushed to broker');
         } catch (BrokerReconnectionException $e) {
+            $this->addHistoryAndPersist($job, 'Reconnected to broker, and then pushed.');
             if ($this->consuming) {
                 $this->stopConsuming = true;
             }
         } catch (\Exception $e) {
+            $this->addHistoryAndPersist($job, $e);
             Log::emergency(__(
                 'Could not push job to broker. Response was: {0} with exception {1}. Job #{2} has not been queued. Hostname: {3}',
                 $e->getMessage(),
