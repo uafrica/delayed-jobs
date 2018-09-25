@@ -614,11 +614,12 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         } catch (\Exception $e) {
             $this->addHistoryAndPersist($job, $e);
             Log::emergency(__(
-                'Could not push job to broker. Response was: {0} with exception {1}. Job #{2} has not been queued. Hostname: {3}',
+                'Could not push job to broker. Response was: {0} with exception {1}. Job #{2} has not been queued. Hostname: {3}, Current job: {4}',
                 $e->getMessage(),
                 get_class($e),
                 $job->getId(),
-                gethostname()
+                gethostname(),
+                $this->_currentJob ? $this->_currentJob->getId() : null
             ));
 
             throw new EnqueueException('Could not push job to broker.');
