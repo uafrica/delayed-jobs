@@ -296,14 +296,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         $this->getDatasource()
             ->loadJob($job);
 
-        if ($job->getBrokerMessageBody()) {
-            $job->setPayloadKey(
-                'brokerMessageBody',
-                $job->getBrokerMessageBody(),
-                false
-            );//If there is a message body, ensure that it's not lost on a retry!
-        }
-
         return $job;
     }
 
