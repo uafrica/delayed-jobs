@@ -379,7 +379,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         $context = ['enqueuedJobs' => $this->_enqueuedJobs];
 
         if ($result instanceof Failed && $result->getException()) {
-            $context['trace'] = $result->getException()->getTrace();
+            $context['trace'] = $result->getException()->getTraceAsString();
         }
 
         $job->setStatus($result->getStatus())
