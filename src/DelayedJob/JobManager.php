@@ -581,9 +581,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         if (!$job->getId()) {
-            $job->addHistory('Created', [
-                'parentJob' => $this->_currentJob ? $this->_currentJob->getId() : null
-            ]);
+            $job
+                ->setHostName($this->getHostname())
+                ->addHistory('Created', [
+                    'parentJob' => $this->_currentJob ? $this->_currentJob->getId() : null
+                ]);
         }
 
         if (!$this->getDatasource()->persistJob($job)) {
