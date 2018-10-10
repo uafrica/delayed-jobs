@@ -144,6 +144,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function getHostname(): string
     {
+        if (empty ($this->_hostname)) {
+            $this->_hostname = gethostname();
+        }
+
         return $this->_hostname;
     }
 
