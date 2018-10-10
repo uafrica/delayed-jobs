@@ -3,6 +3,8 @@
 namespace DelayedJobs\Broker\Driver;
 
 use Cake\Core\InstanceConfigTrait;
+use Cake\Core\Retry\CommandRetry;
+use DelayedJobs\Broker\Driver\Retry\PhpAmqpLibReconnectStrategy;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\MessageBrokerInterface;
@@ -10,6 +12,7 @@ use DelayedJobs\Exception\BrokerReconnectionException;
 use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazySocketConnection;
+use PhpAmqpLib\Connection\AMQPSocketConnection;
 use PhpAmqpLib\Exception\AMQPIOException;
 use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
@@ -27,7 +30,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     /**
      *
      */
-    const TIMEOUT = 5; //In seconds
+    const TIMEOUT = 10; //In seconds
 
     /**
      * @var \PhpAmqpLib\Connection\AbstractConnection
@@ -48,6 +51,9 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
      * @var \DelayedJobs\DelayedJob\ManagerInterface
      */
     protected $_manager;
+
+    protected $_consumeCallback;
+    protected $_hearbeatCallback;
 
     /**
      * @param array $config
@@ -80,12 +86,12 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
      */
     public function getConnection()
     {
-        if ($this->_connection) {
+        if ($this->_connection && $this->_connection->isConnected()) {
             return $this->_connection;
         }
 
         $config = $this->getConfig();
-        $this->_connection = new AMQPLazySocketConnection(
+        $this->_connection = new AMQPSocketConnection(
             $config['host'],
             $config['port'],
             $config['user'],
@@ -95,10 +101,20 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             'AMQPLAIN',
             null,
             'en_US',
-            10
+            self::TIMEOUT,
+            false,
+            self::TIMEOUT
         );
 
         return $this->_connection;
+    }
+
+    /**
+     * @return void
+     */
+    public function clearChannel()
+    {
+        $this->_channel = null;
     }
 
     /**
@@ -155,6 +171,11 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $channel->queue_bind($prefix . 'queue', $prefix . 'direct-exchange', $routingKey);
     }
 
+    protected function getIoRetry()
+    {
+        return new CommandRetry(new PhpAmqpLibReconnectStrategy(), 2);
+    }
+
     public function publishJob(array $jobData)
     {
         $prefix = $this->getConfig('prefix');
@@ -175,25 +196,9 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
         $exchange = $prefix . ($jobData['delay'] > 0 ? 'delayed-exchange' : 'direct-exchange');
 
-        try {
-            $this->getChannel()
-                ->basic_publish($message, $exchange, $routingKey);
-        } catch (AMQPIOException $e) {
-            if ($this->_connection && $this->_connection->isConnected()) {
-                try {
-                    $this->_connection->close();
-                } catch (\Exception $e) {
-                    //Ignore this
-                }
-                $this->_connection = null;
-            }
-
-            //Try again
-            $this->getChannel()
-                ->basic_publish($message, $exchange, $routingKey);
-
-            throw new BrokerReconnectionException('We had to reconnect to publish a job.');
-        }
+        $this->getIoRetry()->run(function () use ($message, $exchange, $routingKey) {
+            $this->getChannel()->basic_publish($message, $exchange, $routingKey);
+        });
     }
 
     public function consume(callable $callback, callable $heartbeat)

@@ -57,12 +57,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * @var bool
      */
     protected $consuming = false;
-    /**
-     * Flag to indicate we need to stop consuming
-     *
-     * @var bool
-     */
-    protected $stopConsuming = false;
 
     /**
      * @var \DelayedJobs\Datasource\DatasourceInterface
@@ -615,11 +609,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         try {
             $this->getMessageBroker()->publishJob($job);
             $this->addHistoryAndPersist($job, 'Pushed to broker');
-        } catch (BrokerReconnectionException $e) {
-            $this->addHistoryAndPersist($job, 'Reconnected to broker, and then pushed.');
-            if ($this->consuming) {
-                $this->stopConsuming = true;
-            }
         } catch (\Exception $e) {
             $this->addHistoryAndPersist($job, $e);
             Log::emergency(__(
@@ -670,10 +659,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                 }
 
                 $this->execute($job); //Execute the job
-
-                if ($this->stopConsuming) {
-                    $this->dispatchEvent('DelayedJob.forceShutdown');
-                }
             }, function () {
                 $this->dispatchEvent('DelayedJob.heartbeat');
             });
