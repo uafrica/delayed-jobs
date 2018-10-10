@@ -13,6 +13,7 @@ use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPLazySocketConnection;
 use PhpAmqpLib\Connection\AMQPSocketConnection;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPIOException;
 use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
@@ -91,7 +92,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         }
 
         $config = $this->getConfig();
-        $this->_connection = new AMQPSocketConnection(
+        $this->_connection = new AMQPStreamConnection(
             $config['host'],
             $config['port'],
             $config['user'],
@@ -102,7 +103,6 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             null,
             'en_US',
             self::TIMEOUT,
-            false,
             self::TIMEOUT
         );
 
@@ -173,7 +173,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
     protected function getIoRetry()
     {
-        return new CommandRetry(new PhpAmqpLibReconnectStrategy(), 2);
+        return new CommandRetry(new PhpAmqpLibReconnectStrategy($this), 2);
     }
 
     public function publishJob(array $jobData)
