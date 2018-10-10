@@ -96,6 +96,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * @var array
      */
     protected $_enqueuedJobs = [];
+    /**
+     * @var string
+     */
+    protected $_hostname = '';
 
     /**
      * Constructor for class
@@ -111,6 +115,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     ) {
         $this->_datastore = $datastore;
         $this->_messageBroker = $messageBroker;
+        $this->_hostname = gethostname();
 
         $this->setConfig($config);
     }
@@ -138,6 +143,14 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     public static function setInstance(?ManagerInterface $manager)
     {
         static::$_instance = $manager;
+    }
+
+    /**
+     * @return string
+     */
+    public function getHostname(): string
+    {
+        return $this->_hostname;
     }
 
     /**
@@ -324,7 +337,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         $job->setStatus(Job::STATUS_BUSY)
             ->setStartTime(Time::now())
-            ->addHistory('Locked');
+            ->setHostName($this->getHostname())
+            ->addHistory('Locked for execution');
 
         $this->_persistToDatastore($job);
     }
@@ -424,6 +438,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     protected function _executeJob(Job $job, JobWorkerInterface $jobWorker)
     {
+        $this->lock($job);
+
         $this->_currentJob = $job;
 
         $event = $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.beforeJobExecute', [$job]);
@@ -502,7 +518,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
             return null;
         }
-        $this->lock($job);
 
         $jobWorker = new $className();
 

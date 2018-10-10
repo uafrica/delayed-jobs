@@ -101,7 +101,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
 
         $this->loadModel('DelayedJobs.Workers');
         $this->_myPID = getmypid();
-        $this->_hostName = php_uname('n');
+        $this->_hostName = gethostname();
         $this->_startTime = time();
 
         $worker_count = $this->Workers->find()
@@ -307,8 +307,6 @@ class WorkerShell extends AppShell implements EventListenerInterface
         $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
         $this->out(sprintf(' - Before job memory: <info>%s</info>', $this->_makeReadable($this->_beforeMemory)), 1, Shell::VERBOSE);
         $this->out(' - Executing job', 1, Shell::VERBOSE);
-
-        $job->setHostName($this->_hostName);
 
         pcntl_signal_dispatch();
         $this->_timeOfLastJob = microtime(true);
