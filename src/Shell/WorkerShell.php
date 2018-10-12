@@ -144,7 +144,11 @@ class WorkerShell extends AppShell implements EventListenerInterface
         $this->_signalReceived = $signal;
         $this->_manager->stopConsuming();
 
-        $this->out('<success>' . __('Received {signal}, will shutdown once current job is completed.', ['signal' => $signal]) . '</success>');
+        $this->out(
+            '<success>' .
+            __('Received {signal}, will shutdown once current job is completed.', ['signal' => $signal]) .
+            '</success>'
+        );
     }
 
     protected function _enableListeners()
