@@ -90,6 +90,11 @@ interface ManagerInterface
     public function stopConsuming();
 
     /**
+     * @return bool
+     */
+    public function isConsuming(): bool;
+
+    /**
      * @param \DelayedJobs\DelayedJob\Job $job
      * @return void
      */

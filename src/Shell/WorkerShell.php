@@ -87,6 +87,8 @@ class WorkerShell extends AppShell implements EventListenerInterface
      * @var float
      */
     protected $_timeOfLastJob;
+    protected $_signalReceived = null;
+    protected $_busy = false;
 
     /**
      * @inheritDoc
@@ -130,11 +132,30 @@ class WorkerShell extends AppShell implements EventListenerInterface
         parent::startup();
     }
 
+    /**
+     * @return void
+     */
+    protected function _processKillSignal($signal)
+    {
+        if (!$this->_busy) {
+            $this->stopHammerTime($signal);
+        }
+
+        $this->_signalReceived = $signal;
+        $this->_manager->stopConsuming();
+
+        $this->out(
+            '<success>' .
+            __('Received {signal}, will shutdown once current job is completed.', ['signal' => $signal]) .
+            '</success>'
+        );
+    }
+
     protected function _enableListeners()
     {
         $this->ProcessManager->getEventManager()
             ->on('CLI.signal', function (Event $event) {
-                $this->stopHammerTime(ProcessManagerTask::$signals[$event->getData('signo')] ?? 'Unknown');
+                $this->_processKillSignal(ProcessManagerTask::$signals[$event->getData('signo')] ?? 'Unknown');
             });
         $this->ProcessManager->handleKillSignals();
     }
@@ -165,7 +186,9 @@ class WorkerShell extends AppShell implements EventListenerInterface
     {
         $this->out('Shutting down...');
 
-        $this->_manager->stopConsuming();
+        if ($this->_manager->isConsuming()) {
+            $this->_manager->stopConsuming();
+        }
 
         if ($this->_worker) {
             $this->_worker->status = WorkersTable::STATUS_DEAD;
@@ -274,6 +297,10 @@ class WorkerShell extends AppShell implements EventListenerInterface
 
     protected function _checkSuicideStatus()
     {
+        if ($this->_signalReceived) {
+            $this->stopHammerTime($this->_signalReceived);
+        }
+
         if ($this->_suicideMode['enabled'] !== true) {
             return;
         }
@@ -298,6 +325,8 @@ class WorkerShell extends AppShell implements EventListenerInterface
 
             return false;
         }
+
+        $this->_busy = true;
 
         cli_set_process_title(sprintf('DJ Worker :: %s :: Working %s', $this->_workerId, $job->getId()));
 
@@ -386,6 +415,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
             $this->stopHammerTime(Worker::SHUTDOWN_ERROR, self::WORKER_ERROR_EXIT_CODE);
         }
 
+        $this->_busy = false;
         $this->_timeOfLastJob = microtime(true);
         $this->_checkSuicideStatus();
 

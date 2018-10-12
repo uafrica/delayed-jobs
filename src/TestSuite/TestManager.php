@@ -179,4 +179,12 @@ class TestManager implements ManagerInterface
     public function requeueJob(Job $job)
     {
     }
+
+    /**
+     * @return bool
+     */
+    public function isConsuming(): bool
+    {
+        return false;
+    }
 }
