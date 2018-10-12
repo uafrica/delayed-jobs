@@ -144,7 +144,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function getHostname(): string
     {
-        if (empty ($this->_hostname)) {
+        if (empty($this->_hostname)) {
             $this->_hostname = gethostname();
         }
 
@@ -193,6 +193,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             if ($job->getSequence() &&
                 $this->getDatasource()->currentlySequenced($job)) {
                 $this->addHistoryAndPersist($job, 'Not pushed to broker due to sequence.');
+
                 return;
             }
             $this->_pushToBroker($job);
