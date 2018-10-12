@@ -680,6 +680,14 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
+     * @return bool
+     */
+    public function isConsuming(): bool
+    {
+        return $this->consuming;
+    }
+
+    /**
      * @param \DelayedJobs\DelayedJob\Job $job
      * @return void
      */
