@@ -9,6 +9,10 @@ use DelayedJobs\DelayedJob\Job;
  */
 abstract class Result implements ResultInterface
 {
+    const TYPE_FAILED = Failed::class;
+    const TYPE_SUCCESS = Success::class;
+    const TYPE_PAUSE = Pause::class;
+
     /**
      * @var string
      */
@@ -32,6 +36,25 @@ abstract class Result implements ResultInterface
     {
         $this->_message = $message;
         $this->_job = $job;
+    }
+
+    /**
+     * @param string $class Class name to use (Either a FQCN, or a Cake style class)
+     * @param \DelayedJobs\DelayedJob\Job $job Job this is a result for.
+     * @param string $message
+     *
+     * @return \DelayedJobs\Result\ResultInterface
+     */
+    public static function create(string $class, $message = ''): ResultInterface
+    {
+        $className = App::className($class, 'Result');
+        $result = new $className($message);
+
+        if (!$result instanceof ResultInterface) {
+            throw new \InvalidArgumentException(sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class));
+        }
+
+        return $result;
     }
 
     /**
