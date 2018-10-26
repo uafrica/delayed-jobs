@@ -82,11 +82,12 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
 
     /**
      * @param \Cake\Event\Event $event The event
+     * @param \DelayedJobs\DelayedJob\Job $job The job to run
      * @param \DelayedJobs\Result\ResultInterface $result The job result
      * @param int $duration The duration of the execution in milliseconds
      * @return void
      */
-    public function afterExecute(Event $event, ResultInterface $result, int $duration)
+    public function afterExecute(Event $event, Job $job, ResultInterface $result, int $duration)
     {
     }
 }

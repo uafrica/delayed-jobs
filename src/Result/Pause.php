@@ -20,7 +20,7 @@ class Pause extends Result
     /**
      * @return bool
      */
-    public function canRetry(): bool
+    public function getRetry(): bool
     {
         return false;
     }

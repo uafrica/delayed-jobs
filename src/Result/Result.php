@@ -2,7 +2,7 @@
 
 namespace DelayedJobs\Result;
 
-use DelayedJobs\DelayedJob\Job;
+use Cake\Core\App;
 
 /**
  * Class Result
@@ -18,10 +18,6 @@ abstract class Result implements ResultInterface
      */
     private $_message;
     /**
-     * @var \DelayedJobs\DelayedJob\Job
-     */
-    private $_job;
-    /**
      * @var \DateTimeInterface|null
      */
     private $_recur;
@@ -32,10 +28,9 @@ abstract class Result implements ResultInterface
      * @param \DelayedJobs\DelayedJob\Job $job The job
      * @param string $message The message
      */
-    public function __construct(Job $job, $message = '')
+    public function __construct($message = '')
     {
         $this->_message = $message;
-        $this->_job = $job;
     }
 
     /**
@@ -43,12 +38,16 @@ abstract class Result implements ResultInterface
      * @param \DelayedJobs\DelayedJob\Job $job Job this is a result for.
      * @param string $message
      *
-     * @return \DelayedJobs\Result\ResultInterface
+     * @return static
      */
-    public static function create(string $class, $message = ''): ResultInterface
+    public static function create($message = '', ?string $class = null): ResultInterface
     {
-        $className = App::className($class, 'Result');
-        $result = new $className($message);
+        if (!$class) {
+            $className = App::className($class, 'Result');
+            $result = new $className($message);
+        } else {
+            $result = new static($message);
+        }
 
         if (!$result instanceof ResultInterface) {
             throw new \InvalidArgumentException(sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class));
@@ -69,19 +68,11 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @return \DelayedJobs\DelayedJob\Job
-     */
-    public function getJob(): Job
-    {
-        return $this->_job;
-    }
-
-    /**
      * @return string
      */
     public function getMessage(): string
     {
-        return (string)$this->_message;
+        return $this->_message;
     }
 
     /**
@@ -93,16 +84,8 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @return bool
-     */
-    public function canRetry(): bool
-    {
-        return $this->getRetry() && $this->getJob()->getRetries() < $this->getJob()->getMaxRetries();
-    }
-
-    /**
      * @param \DateTimeInterface|null $recur When to re-queue the job for.
-     * @return self
+     * @return static
      */
     public function willRecur(\DateTimeInterface $recur = null)
     {

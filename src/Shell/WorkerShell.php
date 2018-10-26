@@ -364,13 +364,13 @@ class WorkerShell extends AppShell implements EventListenerInterface
 
     /**
      * @param \Cake\Event\Event $event
+     * @param \DelayedJobs\DelayedJob\Job $job
      * @param \DelayedJobs\Result\ResultInterface $result
      * @param $duration
      * @return void
      */
-    public function afterExecute(Event $event, ResultInterface $result, $duration)
+    public function afterExecute(Event $event, Job $job, ResultInterface $result, $duration)
     {
-        $job = $result->getJob();
         $this->_lastJob = $job->getId();
         $this->_jobCount++;
         $this->out('', 1, Shell::VERBOSE);
