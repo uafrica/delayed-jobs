@@ -19,7 +19,7 @@ interface ResultInterface
     /**
      * @return \DateTimeInterface|null
      */
-    public function getRecur();
+    public function getRecur(): ?\DateTimeInterface;
 
     /**
      * @return bool
@@ -42,5 +42,5 @@ interface ResultInterface
      * @param \DateTimeInterface|null $recur When to re-queue the job for.
      * @return self
      */
-    public function willRecur(\DateTimeInterface $recur = null);
+    public function willRecur(?\DateTimeInterface $recur);
 }

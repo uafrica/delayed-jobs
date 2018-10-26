@@ -34,9 +34,8 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @param string $class Class name to use (Either a FQCN, or a Cake style class)
-     * @param \DelayedJobs\DelayedJob\Job $job Job this is a result for.
      * @param string $message
+     * @param string $class Class name to use (Either a FQCN, or a Cake style class)
      *
      * @return static
      */
@@ -78,7 +77,7 @@ abstract class Result implements ResultInterface
     /**
      * @return \DateTimeInterface|null
      */
-    public function getRecur()
+    public function getRecur(): ?\DateTimeInterface
     {
         return $this->_recur;
     }
@@ -87,7 +86,7 @@ abstract class Result implements ResultInterface
      * @param \DateTimeInterface|null $recur When to re-queue the job for.
      * @return static
      */
-    public function willRecur(\DateTimeInterface $recur = null)
+    public function willRecur(?\DateTimeInterface $recur)
     {
         $this->_recur = $recur;
 
