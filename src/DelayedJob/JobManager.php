@@ -646,6 +646,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                     $this->djLog($e->getMessage());
 
                     if ($retried) {
+                        $this->djLog(__('Failed to load job {0} even after retrying.  Message was: {1}', $job->getId(), $e->getMessage()));
                         $this->getMessageBroker()
                             ->nack($job);
 
@@ -654,8 +655,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
                     $this->djLog(__('Will retry job {0}', $job->getId()));
 
-                    // Sleep 100ms before requeuing the job... sometimes the broker (mostly RabbitMQ) is just too fast.
-                    usleep(100 * 1000);
+                    // Sleep 1s before requeuing the job... sometimes the broker (mostly RabbitMQ) is just too fast.
+                    sleep(1);
 
                     $this->requeueJob($job);
 
