@@ -186,7 +186,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
     {
         $this->out('Shutting down...');
 
-        if ($this->_manager->isConsuming()) {
+        if ($this->_manager && $this->_manager->isConsuming()) {
             $this->_manager->stopConsuming();
         }
 
