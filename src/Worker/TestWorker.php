@@ -5,6 +5,8 @@ namespace DelayedJobs\Worker;
 use Cake\Console\Shell;
 use Cake\I18n\Time;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\Result\Failed;
+use DelayedJobs\Result\Success;
 
 /**
  * Class TestWorker
@@ -21,9 +23,9 @@ class TestWorker implements JobWorkerInterface
         sleep(2);
         $time = (new Time())->i18nFormat();
         if ($job->getPayload('type') === 'success') {
-            return 'Successful test at ' . $time;
+            return Success::create('Successful test at ' . $time);
         }
 
-        throw new \Exception('Failing test at ' . $time . ' because ' . $job->getPayload()['type']);
+        return Failed::create('Failing test at ' . $time . ' because ' . $job->getPayload()['type']);
     }
 }

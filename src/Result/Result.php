@@ -40,7 +40,7 @@ abstract class Result implements ResultInterface
      */
     public static function create($message = '', ?string $class = null): ResultInterface
     {
-        if (!$class) {
+        if ($class) {
             $className = App::className($class, 'Result');
             $result = new $className($message);
         } else {

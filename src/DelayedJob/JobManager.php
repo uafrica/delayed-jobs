@@ -410,7 +410,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
             return;
         } elseif ($job->getStatus() === Job::STATUS_FAILED) {
-            $job->getStatus(Job::STATUS_BURIED);
+            $job->setStatus(Job::STATUS_BURIED);
         }
 
         $this->_persistToDatastore($job);
