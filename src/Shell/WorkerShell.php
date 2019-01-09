@@ -363,10 +363,10 @@ class WorkerShell extends AppShell implements EventListenerInterface
     }
 
     /**
-     * @param \Cake\Event\Event $event
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param \DelayedJobs\Result\ResultInterface $result
-     * @param $duration
+     * @param \Cake\Event\Event $event The event
+     * @param \DelayedJobs\DelayedJob\Job $job The Job
+     * @param \DelayedJobs\Result\ResultInterface $result The result
+     * @param int $duration The duration
      * @return void
      */
     public function afterExecute(Event $event, Job $job, ResultInterface $result, $duration)

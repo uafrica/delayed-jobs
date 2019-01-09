@@ -33,7 +33,7 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @param string $message
+     * @param string $message The message
      * @param string $class Class name to use (Either a FQCN, or a Cake style class)
      *
      * @return static
@@ -55,7 +55,7 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @param string $message
+     * @param string $message The message
      * @return self
      */
     public function setMessage(string $message = ''): Result
