@@ -38,10 +38,11 @@ interface BrokerInterface
     public function nack(Job $job, $requeue = false);
 
     /**
-     * @param string $body
-     * @param string $exchange
-     * @param string $routing_key
-     * @param array $priority
+     * @param string $body Message body
+     * @param string $exchange Exchange to route through
+     * @param string $routing_key Routing key
+     * @param int $priority Priority
+     * @param array $headers Headers
      * @return mixed
      */
     public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = []);

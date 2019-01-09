@@ -133,6 +133,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
     }
 
     /**
+     * @param int $signal
      * @return void
      */
     protected function _processKillSignal($signal)

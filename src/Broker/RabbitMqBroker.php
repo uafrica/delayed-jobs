@@ -167,7 +167,8 @@ class RabbitMqBroker implements BrokerInterface
      * @param string $body
      * @param string $exchange
      * @param string $routing_key
-     * @param array $priority
+     * @param int $priority
+     * @param array $headers
      * @return void
      */
     public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = [])
