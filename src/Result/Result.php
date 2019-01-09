@@ -2,21 +2,21 @@
 
 namespace DelayedJobs\Result;
 
-use DelayedJobs\DelayedJob\Job;
+use Cake\Core\App;
 
 /**
  * Class Result
  */
 abstract class Result implements ResultInterface
 {
+    const TYPE_FAILED = Failed::class;
+    const TYPE_SUCCESS = Success::class;
+    const TYPE_PAUSE = Pause::class;
+
     /**
      * @var string
      */
     private $_message;
-    /**
-     * @var \DelayedJobs\DelayedJob\Job
-     */
-    private $_job;
     /**
      * @var \DateTimeInterface|null
      */
@@ -25,17 +25,37 @@ abstract class Result implements ResultInterface
     /**
      * Result constructor.
      *
-     * @param \DelayedJobs\DelayedJob\Job $job The job
      * @param string $message The message
      */
-    public function __construct(Job $job, $message = '')
+    public function __construct($message = '')
     {
         $this->_message = $message;
-        $this->_job = $job;
     }
 
     /**
-     * @param string $message
+     * @param string $message The message
+     * @param string $class Class name to use (Either a FQCN, or a Cake style class)
+     *
+     * @return static
+     */
+    public static function create($message = '', ?string $class = null): ResultInterface
+    {
+        if (!$class) {
+            $className = App::className($class, 'Result');
+            $result = new $className($message);
+        } else {
+            $result = new static($message);
+        }
+
+        if (!$result instanceof ResultInterface) {
+            throw new \InvalidArgumentException(sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class));
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param string $message The message
      * @return self
      */
     public function setMessage(string $message = ''): Result
@@ -46,42 +66,26 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @return \DelayedJobs\DelayedJob\Job
-     */
-    public function getJob(): Job
-    {
-        return $this->_job;
-    }
-
-    /**
      * @return string
      */
     public function getMessage(): string
     {
-        return (string)$this->_message;
+        return $this->_message;
     }
 
     /**
      * @return \DateTimeInterface|null
      */
-    public function getRecur()
+    public function getRecur(): ?\DateTimeInterface
     {
         return $this->_recur;
     }
 
     /**
-     * @return bool
-     */
-    public function canRetry(): bool
-    {
-        return $this->getRetry() && $this->getJob()->getRetries() < $this->getJob()->getMaxRetries();
-    }
-
-    /**
      * @param \DateTimeInterface|null $recur When to re-queue the job for.
-     * @return self
+     * @return static
      */
-    public function willRecur(\DateTimeInterface $recur = null)
+    public function willRecur(?\DateTimeInterface $recur)
     {
         $this->_recur = $recur;
 

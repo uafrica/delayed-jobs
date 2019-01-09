@@ -16,7 +16,6 @@ use DelayedJobs\Datasource\DatasourceInterface;
 use DelayedJobs\Datasource\TableDatasource;
 use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Exception\JobExecuteException;
-use DelayedJobs\Exception\BrokerReconnectionException;
 use DelayedJobs\Exception\NonRetryableException;
 use DelayedJobs\Exception\PausedException;
 use DelayedJobs\Result\Failed;
@@ -351,30 +350,40 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         if ($result instanceof ResultInterface) {
             return $result;
-        } elseif ($result instanceof \DateTimeInterface) {
-            return (new Success($job, "Reoccur at {$result}"))->willRecur($result);
-        } elseif ($result instanceof PausedException) {
-            return new Pause($job, 'Execution paused');
-        } elseif ($result instanceof \Error || $result instanceof NonRetryableException) {
-            return (new Failed($job, $result->getMessage()))->willRetry(false)
-                ->setException($result);
-        } elseif ($result instanceof \Exception) {
-            return (new Failed($job, $result->getMessage()))->willRetry($job->getRetries() < $job->getMaxRetries())
+        }
+
+        if ($result instanceof \DateTimeInterface) {
+            return Success::create("Reoccur at {$result}")
+                ->willRecur($result);
+        }
+
+        if ($result instanceof PausedException) {
+            return new Pause('Execution paused');
+        }
+
+        if ($result instanceof \Error || $result instanceof NonRetryableException) {
+            return Failed::create($result->getMessage())
+                ->willRetry(false)
                 ->setException($result);
         }
 
-        return new Success($job, $result);
+        if ($result instanceof \Exception) {
+            return Failed::create($result->getMessage())
+                ->willRetry($job->getRetries() < $job->getMaxRetries())
+                ->setException($result);
+        }
+
+        return new Success($result);
     }
 
     /**
+     * @param \DelayedJobs\DelayedJob\Job $job The job
      * @param \DelayedJobs\Result\ResultInterface $result
      * @param $duration
      * @return void
      */
-    protected function _handleResult(ResultInterface $result, $duration)
+    protected function _handleResult(Job $job, ResultInterface $result, $duration)
     {
-        $job = $result->getJob();
-
         $context = ['enqueuedJobs' => $this->_enqueuedJobs];
 
         if ($result instanceof Failed && $result->getException()) {
@@ -386,7 +395,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             ->setDuration($duration)
             ->addHistory($result->getMessage(), $context);
 
-        if ($result->canRetry()) {
+        if ($job->getStatus() === Job::STATUS_FAILED &&
+            $result->getRetry() &&
+            $job->getRetries() < $job->getMaxRetries()
+        ) {
             $job->incrementRetries();
 
             $retryTime = $result->getRecur();
@@ -397,6 +409,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->enqueue($job);
 
             return;
+        } elseif ($job->getStatus() === Job::STATUS_FAILED) {
+            $job->getStatus(Job::STATUS_BURIED);
         }
 
         $this->_persistToDatastore($job);
@@ -405,7 +419,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->_enqueueRecurring($job, $result->getRecur());
         }
 
-        if ($job->getSequence() !== null && in_array($job->getStatus(), [Job::STATUS_SUCCESS, Job::STATUS_BURIED])) {
+        if ($job->getSequence() !== null && \in_array($job->getStatus(), [Job::STATUS_SUCCESS, Job::STATUS_BURIED])) {
             $this->enqueueNextSequence($job);
         }
     }
@@ -472,11 +486,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             }
 
             $duration = round((microtime(true) - $start) * 1000); //Duration in milliseconds
-            $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobExecute', [$result, $duration]);
+            $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobExecute', [$job, $result, $duration]);
 
-            $this->_handleResult($result, $duration);
+            $this->_handleResult($job, $result, $duration);
 
-            $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobCompleted', [$result]);
+            $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobCompleted', [$job, $result]);
 
             $this->_currentJob = null;
             $this->_enqueuedJobs = [];

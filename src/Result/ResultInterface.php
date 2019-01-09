@@ -1,9 +1,6 @@
 <?php
 
 namespace DelayedJobs\Result;
-
-use DelayedJobs\DelayedJob\Job;
-
 /**
  * Interface ResultInterface
  */
@@ -20,24 +17,14 @@ interface ResultInterface
     public function getMessage(): string;
 
     /**
-     * @return \DelayedJobs\DelayedJob\Job
-     */
-    public function getJob(): Job;
-
-    /**
      * @return \DateTimeInterface|null
      */
-    public function getRecur();
+    public function getRecur(): ?\DateTimeInterface;
 
     /**
      * @return bool
      */
     public function getRetry(): bool;
-
-    /**
-     * @return bool
-     */
-    public function canRetry(): bool;
 
     /**
      * @param bool $retry
@@ -55,5 +42,5 @@ interface ResultInterface
      * @param \DateTimeInterface|null $recur When to re-queue the job for.
      * @return self
      */
-    public function willRecur(\DateTimeInterface $recur = null);
+    public function willRecur(?\DateTimeInterface $recur);
 }
