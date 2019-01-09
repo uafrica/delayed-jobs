@@ -3,7 +3,7 @@
   "description": "A CakePHP Plugin to manage and process background jobs with priority and retries",
   "type": "cakephp-plugin",
   "require": {
-    "php": "^7.0",
+    "php": "^7.1",
     "cakephp/cakephp": "^3.6",
     "cakephp/migrations": "^1.5",
     "php-amqplib/php-amqplib": "^2.5"

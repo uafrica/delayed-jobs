@@ -10,8 +10,8 @@ the job queue.
 Requirements
 ------------
 
-* PHP 7.0+
-* CakePHP 3.4+
+* PHP 7.1+
+* CakePHP 3.6+
 * A database supported by CakePHP
 * A RabbitMQ instance with the [delayed message exchange](https://github.com/rabbitmq/rabbitmq-delayed-message-exchange)
 
@@ -28,8 +28,7 @@ Running a worker
 To run a single worker, run `bin/cake worker -v`.
 To run multiple workers, run `bin/cake watchdog --workers x` (Where _x_ is the number to run)
 
-It is recommended to put the `watchdog` command in a 5 to 10 minute cron job to ensure 
-that if a worker shuts down for any reason, it is restarted.  
+It is recommended to use something like SupervisorD to run multiple workers.
 
 Enqueuing a job
 ---------------
