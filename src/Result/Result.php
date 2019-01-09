@@ -70,7 +70,7 @@ abstract class Result implements ResultInterface
      */
     public function getMessage(): string
     {
-        return $this->_message;
+        return $this->_message ?: '';
     }
 
     /**
