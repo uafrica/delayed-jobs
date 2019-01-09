@@ -25,7 +25,6 @@ abstract class Result implements ResultInterface
     /**
      * Result constructor.
      *
-     * @param \DelayedJobs\DelayedJob\Job $job The job
      * @param string $message The message
      */
     public function __construct($message = '')
