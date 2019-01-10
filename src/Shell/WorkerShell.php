@@ -407,10 +407,11 @@ class WorkerShell extends AppShell implements EventListenerInterface
 
     /**
      * @param \Cake\Event\Event $event
+     * @param \DelayedJobs\DelayedJob\Job $job The Job
      * @param \DelayedJobs\Result\ResultInterface $result
      * @return void
      */
-    public function afterCompleted(Event $event, ResultInterface $result)
+    public function afterCompleted(Event $event, Job $job, ResultInterface $result)
     {
         if ($this->param('stop-on-failure') && $result instanceof Failed) {
             $this->stopHammerTime(Worker::SHUTDOWN_ERROR, self::WORKER_ERROR_EXIT_CODE);
