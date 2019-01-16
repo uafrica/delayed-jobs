@@ -47,6 +47,10 @@ class TestShell extends AppShell
         $this->out('<success>All queued. Check the table</success>');
     }
 
+    /**
+     * @throws \Exception
+     * @return void
+     */
     public function bulk()
     {
         $number = $this->param('number');

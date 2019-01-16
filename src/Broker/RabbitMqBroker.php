@@ -90,6 +90,9 @@ class RabbitMqBroker implements BrokerInterface
         $job->setPushedToBroker(true);
     }
 
+    /**
+     * @return void
+     */
     public function finishBatch(): void
     {
         $this->getDriver()->finishBatch();

@@ -88,7 +88,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param \DelayedJobs\DelayedJob\Job $job The job to persist
      * @return \DelayedJobs\DelayedJob\Job|null
      */
     public function persistJob(Job $job)
@@ -111,6 +111,11 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         return $job;
     }
 
+    /**
+     * @param \Cake\Collection\Collection $jobsToInsert Collection of Jobs to insert
+     * @throws \Exception
+     * @return void
+     */
     protected function batchInsertJobs(Collection $jobsToInsert): void
     {
         if ($jobsToInsert->isEmpty()) {
@@ -167,6 +172,11 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             ->enableAutoQuoting($quote);
     }
 
+    /**
+     * @param \Cake\Collection\Collection $jobsToUpdate Collection of Jobs to update
+     * @throws \Exception
+     * @return void
+     */
     protected function batchUpdateJobs(Collection $jobsToUpdate): void
     {
         $jobEntities = $jobsToUpdate
@@ -178,7 +188,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job[] $jobs
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs Array of jobs to persist
      * @return \DelayedJobs\DelayedJob\Job[]
      */
     public function persistJobs(array $jobs): array
