@@ -313,7 +313,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * @param int $timeout
+     * @param int $timeout Timeout to wait for
      *
      * @return bool
      */
@@ -330,7 +330,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param \DelayedJobs\DelayedJob\Job $job Job to ack
      *
      * @return mixed|void
      */
@@ -346,8 +346,8 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param bool $requeue
+     * @param \DelayedJobs\DelayedJob\Job $job Job to nack
+     * @param bool $requeue Should the message be requeued
      *
      * @return mixed|void
      */
@@ -363,11 +363,11 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * @param string $body
-     * @param string $exchange
-     * @param string $routing_key
-     * @param int $priority
-     * @param array $headers
+     * @param string $body Message body
+     * @param string $exchange Exchange to route through
+     * @param string $routing_key Routing key
+     * @param int $priority Priority
+     * @param array $headers Other headers
      * @return void
      */
     public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = [])
