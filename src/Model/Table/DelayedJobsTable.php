@@ -84,6 +84,17 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             $jobEntity->status = Job::STATUS_NEW;
         }
 
+        return $jobEntity;
+    }
+
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job
+     * @return \DelayedJobs\DelayedJob\Job|null
+     */
+    public function persistJob(Job $job)
+    {
+        $jobEntity = $this->convertJobToEntity($job);
+
         $options = [
             'atomic' => !$this->getConnection()->inTransaction()
         ];
@@ -100,14 +111,10 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         return $job;
     }
 
-    /**
-     * @param \DelayedJobs\DelayedJob\Job[] $jobs
-     * @return \DelayedJobs\DelayedJob\Job[]
-     */
-    public function persistJobs(array $jobs): array
+    protected function batchInsertJobs(Collection $jobsToInsert): void
     {
-        if (empty($jobs)) {
-            return [];
+        if ($jobsToInsert->isEmpty()) {
+            return;
         }
 
         $query = $this->query()
@@ -132,37 +139,64 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 'history',
             ]);
 
-        foreach ($jobs as $job) {
-            $jobData = $job->getData();
-            unset($jobData['id']);
-            $jobData['created'] = date('Y-m-d H:i:s');
-            $jobData['modified'] = date('Y-m-d H:i:s');
-            $query->values($jobData);
-        }
+        $jobsToInsert
+            ->each(function (Job $job) use ($query) {
+                $jobData = $job->getData();
+                unset($jobData['id']);
+                $jobData['created'] = date('Y-m-d H:i:s');
+                $jobData['modified'] = date('Y-m-d H:i:s');
+                $query->values($jobData);
+            });
 
         $connection = $this->getConnection();
-        $quote = $connection
-            ->getDriver()
+        $quote = $connection->getDriver()
             ->isAutoQuotingEnabled();
-        $connection
-            ->getDriver()
+        $connection->getDriver()
             ->enableAutoQuoting();
-        $connection->transactional(function () use ($query, &$jobs) {
+        $connection->transactional(function () use ($query, $jobsToInsert) {
             $statement = $query->execute();
             $firstId = $statement->lastInsertId($this->getTable(), 'id');
-            foreach ($jobs as $job) {
+            $jobsToInsert->each(function (Job $job) use (&$firstId) {
                 $job->setId($firstId++);
-            }
+            });
 
             return true;
         });
 
         $connection->getDriver()
             ->enableAutoQuoting($quote);
+    }
 
-        if (!$jobs) {
-            throw new EnqueueException('Job batch could not be persisted');
+    protected function batchUpdateJobs(Collection $jobsToUpdate): void
+    {
+        $jobEntities = $jobsToUpdate
+            ->map(function (Job $job) {
+                return $this->convertJobToEntity($job);
+            });
+
+        $this->saveMany($jobEntities->toList());
+    }
+
+    /**
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs
+     * @return \DelayedJobs\DelayedJob\Job[]
+     */
+    public function persistJobs(array $jobs): array
+    {
+        if (empty($jobs)) {
+            return [];
         }
+
+        $hasIdFilter = function (Job $job) {
+            return $job->getId();
+        };
+
+        $jobCollection = collection($jobs);
+        $jobsToInsert = $jobCollection->reject($hasIdFilter);
+        $jobsToUpdate = $jobCollection->filter($hasIdFilter);
+
+        $this->batchInsertJobs($jobsToInsert);
+        $this->batchUpdateJobs($jobsToUpdate);
 
         return $jobs;
     }
