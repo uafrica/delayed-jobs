@@ -67,6 +67,11 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         ]);
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job The job
+     *
+     * @return \DelayedJobs\Model\Entity\DelayedJob
+     */
     protected function convertJobToEntity(Job $job): DelayedJob
     {
         $jobData = $job->getData();
