@@ -2,12 +2,14 @@
 
 namespace DelayedJobs\Model\Table;
 
+use Cake\Collection\Collection;
 use Cake\Database\Schema\TableSchema;
 use Cake\I18n\Time;
 use Cake\ORM\Query;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\DatastoreInterface;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Traits\DebugLoggerTrait;
 
 /**
@@ -65,11 +67,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         ]);
     }
 
-    /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return \DelayedJobs\DelayedJob\Job|null
-     */
-    public function persistJob(Job $job)
+    protected function convertJobToEntity(Job $job): DelayedJob
     {
         $jobData = $job->getData();
         $jobEntity = $job->getEntity();

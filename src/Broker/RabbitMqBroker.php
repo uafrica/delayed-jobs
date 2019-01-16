@@ -65,9 +65,10 @@ class RabbitMqBroker implements BrokerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job to publish
+     * @param bool $batch Use batch publish
      * @return void
      */
-    public function publishJob(Job $job)
+    public function publishJob(Job $job, bool $batch = false)
     {
         $delay = $job->getRunAt()->isFuture() ? Time::now()->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
@@ -85,8 +86,13 @@ class RabbitMqBroker implements BrokerInterface
             'payload' => ['id' => $job->getId()]
         ];
 
-        $this->getDriver()->publishJob($jobData);
+        $this->getDriver()->publishJob($jobData, $batch);
         $job->setPushedToBroker(true);
+    }
+
+    public function finishBatch(): void
+    {
+        $this->getDriver()->finishBatch();
     }
 
     /**

@@ -218,6 +218,12 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function enqueueBatch(array $jobs)
     {
+        $event = $this->dispatchEvent('DelayedJobs.beforeBatchJobQueue', [$jobs]);
+
+        if ($event->isStopped()) {
+            return;
+        }
+
         foreach ($jobs as $job) {
             $job->addHistory('Batch created', [
                 'parentJob' => $this->_currentJob ? $this->_currentJob->getId() : null
@@ -225,7 +231,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
         $this->getDatasource()->persistJobs($jobs);
 
-        collection($jobs)
+        $jobCollection = collection($jobs)
             ->filter(function (Job $job) {
                 $this->_enqueuedJobs[] = (int)$job->getId();
                 $jobSequence = $job->getSequence();
@@ -243,8 +249,20 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                 return $currentlySequenced === false; //If not currently sequenced, then carry on
             })
             ->each(function (Job $job) {
-                $this->_pushToBroker($job);
+                $this->_pushToBroker($job, true);
             });
+
+        $this->getMessageBroker()->finishBatch();
+
+        $jobCollection = $jobCollection
+            ->each(function (Job $job) {
+                $job->addHistory('Pushed to broker with bulk');
+            });
+
+        $this->getDatasource()
+            ->persistJobs($jobs);
+
+        $this->dispatchEvent('DelayedJobs.afterBatchJobQueue', [$jobs]);
     }
 
     /**
@@ -612,9 +630,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job being pushed to broker
+     * @param bool $batch Use the batch technique to push the jobs
      * @return void
      */
-    protected function _pushToBroker(Job $job)
+    protected function _pushToBroker(Job $job, bool $batch = false)
     {
         if ($job->getId() === null) {
             throw new EnqueueException('Job has not been persisted.');
@@ -626,8 +645,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         try {
-            $this->getMessageBroker()->publishJob($job);
-            $this->addHistoryAndPersist($job, 'Pushed to broker');
+            $this->getMessageBroker()->publishJob($job, $batch);
+
+            if (!$batch) {
+                $this->addHistoryAndPersist($job, 'Pushed to broker');
+            }
         } catch (\Exception $e) {
             $this->addHistoryAndPersist($job, $e);
             Log::emergency(__(

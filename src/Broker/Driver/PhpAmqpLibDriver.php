@@ -134,6 +134,8 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             $this->_channel = $this->getConnection()->channel();
         }
 
+        $this->_channel->confirm_select();
+
         return $this->_channel;
     }
 
@@ -176,7 +178,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         return new CommandRetry(new PhpAmqpLibReconnectStrategy($this), 2);
     }
 
-    public function publishJob(array $jobData)
+    public function publishJob(array $jobData, bool $batch = false)
     {
         $prefix = $this->getConfig('prefix');
         $routingKey = $this->getConfig('routingKey');
@@ -196,9 +198,27 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
         $exchange = $prefix . ($jobData['delay'] > 0 ? 'delayed-exchange' : 'direct-exchange');
 
+        if ($batch) {
+            $channel = $this->getChannel();
+            $channel->batch_basic_publish($message, $exchange, $routingKey);
+
+            return;
+        }
+
         $this->getIoRetry()->run(function () use ($message, $exchange, $routingKey) {
-            $this->getChannel()->basic_publish($message, $exchange, $routingKey);
+            $channel = $this->getChannel();
+
+            $channel->basic_publish($message, $exchange, $routingKey);
+            $channel->wait_for_pending_acks(10);
         });
+    }
+
+    public function finishBatch(): void
+    {
+        $channel = $this->getChannel();
+
+        $channel->publish_batch();
+        $channel->wait_for_pending_acks(10);
     }
 
     public function consume(callable $callback, callable $heartbeat)
