@@ -20,7 +20,6 @@ class TestWorker implements JobWorkerInterface
      */
     public function __invoke(Job $job, Shell $shell = null)
     {
-        sleep(2);
         $time = (new Time())->i18nFormat();
         if ($job->getPayload('type') === 'success') {
             return Success::create('Successful test at ' . $time);

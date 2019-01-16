@@ -47,6 +47,34 @@ class TestShell extends AppShell
         $this->out('<success>All queued. Check the table</success>');
     }
 
+    public function bulk()
+    {
+        $number = $this->param('number');
+        $failureRate = $this->param('failure');
+        $this->out(__('<info>Creating {number} batch jobs, {failureRate}% will fail.</info>', compact('number', 'failureRate')));
+
+        $start = microtime(true);
+        $jobs = [];
+        $this->out('Generating jobs');
+        for ($i = 0; $i < $number; $i++) {
+            $isFailure = random_int(0, 100) < $failureRate;
+
+            $jobs[] = [
+                '_payload' => [
+                    'count' => $i,
+                    'type' => $isFailure ? 'fail' : 'success'
+                ]
+            ];
+        }
+
+        $this->out('Queueing jobs');
+        $this->enqueueBatch('DelayedJobs.Test', $jobs);
+
+        $time = round(microtime(true) - $start, 5);
+        $avgTime = round($time / $number, 5);
+        $this->out(__('<success>All queued. Check the table. Took {time} seconds at {avgTime} seconds per job</success>', compact('time', 'avgTime')));
+    }
+
     /**
      * @return bool
      * @throws \Exception Exception.
@@ -108,8 +136,25 @@ class TestShell extends AppShell
     {
         $options = parent::getOptionParser();
 
-        $options->addSubcommand('sequencing', [
+        $options
+            ->addSubcommand('sequencing', [
                 'help' => 'Sequencing'
+            ])
+            ->addSubcommand('bulk', [
+                'help' => 'Push bulk messages',
+                'parser' => [
+                    'options' => [
+                        'number' => [
+                            'short' => 'n',
+                            'help' => 'The number to bulk publish',
+                            'default' => 1000
+                        ],
+                        'failure' => [
+                            'help' => 'Failure rate in percentage. Default 10%',
+                            'default' => 10
+                        ]
+                    ]
+                ]
             ]);
 
         return $options;
