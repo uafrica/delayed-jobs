@@ -437,11 +437,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     protected function _dispatchWorkerEvent(JobWorkerInterface $jobWorker, $name, $data = null, $subject = null): Event
     {
         $event = new Event($name, $subject ?? $this, $data);
-        $this->getEventManager()
-            ->dispatch($event);
-        if ($jobWorker instanceof EventDispatcherInterface) {
-            $jobWorker->getEventManager()
-                ->dispatch($event);
+        try {
+            $this->getEventManager()->dispatch($event);
+            if ($jobWorker instanceof EventDispatcherInterface) {
+                $jobWorker->getEventManager()->dispatch($event);
+            }
+        } catch (\Throwable $e) {
+            //Ignore any issues in worker events
         }
 
         return $event;
@@ -535,7 +537,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return null;
         }
 
-        $jobWorker = new $className();
+        $jobWorker = new $className($job);
 
         if (!$jobWorker instanceof JobWorkerInterface) {
             Log::emergency("Worker class {$className} for job {$job->getId()} must be an instance of " .

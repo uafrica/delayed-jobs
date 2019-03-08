@@ -27,14 +27,21 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     protected $_shell;
 
     /**
+     * @var \DelayedJobs\DelayedJob\Job
+     */
+    protected $job;
+
+    /**
      * Construct the listener
      *
+     * @param \DelayedJobs\DelayedJob\Job|null $job The job being executed
      * @param array $options Allow child listeners to have options
      */
-    public function __construct(array $options = [])
+    public function __construct(Job $job = null, array $options = [])
     {
         $this->modelFactory('Table', [TableRegistry::class, 'get']);
 
+        $this->job = $job;
         if (isset($options['shell'])) {
             $this->_shell = $options['shell'];
             unset($options['shell']);
@@ -69,6 +76,11 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
             'DelayedJob.beforeJobExecute' => 'beforeExecute',
             'DelayedJob.afterJobExecute' => 'afterExecute'
         ];
+    }
+
+    public function getJob(): Job
+    {
+        return $this->job;
     }
 
     /**
