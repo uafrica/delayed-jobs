@@ -16,7 +16,7 @@ trait EnqueueTrait
      * @return \DelayedJobs\DelayedJob\Job
      * @throws \DelayedJobs\DelayedJob\Exception\JobDataException
      */
-    public function enqueue($worker, $payload = null, array $options = []): Job
+    protected function enqueue($worker, $payload = null, array $options = []): Job
     {
         if ($worker instanceof Job) {
             $job = $worker;
@@ -42,7 +42,7 @@ trait EnqueueTrait
      * @param array $options Default options for all jobs. Can be overridden with the `_options` key
      * @return \DelayedJobs\DelayedJob\Job[]
      */
-    public function enqueueBatch($worker, array $jobsToEnqueue, array $options = []): array
+    protected function enqueueBatch($worker, array $jobsToEnqueue, array $options = []): array
     {
         $jobs = [];
 
