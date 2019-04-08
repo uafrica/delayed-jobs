@@ -102,7 +102,6 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             'AMQPLAIN',
             null,
             'en_US',
-            self::TIMEOUT,
             self::TIMEOUT
         );
 

@@ -6,7 +6,7 @@
     "php": "^7.1",
     "cakephp/cakephp": "^3.6",
     "cakephp/migrations": "^1.5",
-    "php-amqplib/php-amqplib": "^2.5"
+    "php-amqplib/php-amqplib": "^2.9.1"
   },
   "require-dev": {
     "cakephp/app": "^3.6",
