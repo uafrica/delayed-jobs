@@ -776,4 +776,17 @@ class Job
 
         return $this;
     }
+
+    /**
+     * Check if max retries for the job has been reached.
+     *
+     * @return bool
+     */
+    public function maxRetriesReached(): bool
+    {
+        $jobRetries = $this->getRetries() + 1;
+        $maxRetries = $this->getMaxRetries();
+
+        return $jobRetries >= $maxRetries;
+    }
 }
