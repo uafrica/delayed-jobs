@@ -112,7 +112,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             'AMQPLAIN',
             null,
             'en_US',
-            self::TIMEOUT,
+            self::CONNECTION_TIMEOUT,
             self::READ_WRITE_TIMEOUT,
             null,
             true,
@@ -245,14 +245,14 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $time = microtime(true);
         while (count($channel->callbacks)) {
             try {
-                $channel->wait(null, false, static::TIMEOUT);
+                $channel->wait(null, false, static::CONNECTION_TIMEOUT);
             } catch (AMQPTimeoutException $e) {
                 $heartbeat();
             } catch (AMQPIOWaitException $e) {
                 $heartbeat();
             }
 
-            if (microtime(true) - $time >= static::TIMEOUT) {
+            if (microtime(true) - $time >= static::CONNECTION_TIMEOUT) {
                 $heartbeat();
                 $time = microtime(true);
             }
