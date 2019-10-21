@@ -29,9 +29,19 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     use InstanceConfigTrait;
 
     /**
-     *
+     * Connection timeout in seconds
      */
-    const TIMEOUT = 10; //In seconds
+    const CONNECTION_TIMEOUT = 10;
+    /**
+     * Read/write timeout (in seconds)
+     *
+     * Must be at least double heartbeat
+     */
+    const READ_WRITE_TIMEOUT = 620;
+    /**
+     * Heartbeat in seconds
+     */
+    const HEARTBEAT = 300;
 
     /**
      * @var \PhpAmqpLib\Connection\AbstractConnection
@@ -102,7 +112,11 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             'AMQPLAIN',
             null,
             'en_US',
-            self::TIMEOUT
+            self::TIMEOUT,
+            self::READ_WRITE_TIMEOUT,
+            null,
+            true,
+            self::HEARTBEAT
         );
 
         return $this->_connection;
