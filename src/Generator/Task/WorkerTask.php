@@ -5,6 +5,7 @@ namespace DelayedJobs\Generator\Task;
 use Cake\Core\App;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\WorkerFinder;
+use IdeHelper\Generator\Directive\Override;
 use IdeHelper\Generator\Task\TaskInterface;
 
 /**
@@ -26,7 +27,8 @@ class WorkerTask implements TaskInterface
             $map[$worker] = '\\' . static::CLASS_JOB . '::class';
         }
 
-        $result['\\' . static::CLASS_JOB . '::enqueue(0)'] = $map;
+        $directive = new Override('\\' . static::CLASS_JOB . '::enqueue(0)', $map);
+        $result[$directive->key()] = $directive;
 
         return $result;
     }
