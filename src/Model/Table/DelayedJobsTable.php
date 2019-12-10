@@ -235,6 +235,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             ->enableAutoQuoting();
 
         $conditions = [
+            'group' => $job->getGroup(),
             'worker' => $job->getWorker(),
             'status IN' => [
                 Job::STATUS_BUSY,
