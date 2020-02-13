@@ -1,4 +1,6 @@
 <?php
+use Exception;
+use Cake\Cache\Cache;
 /**
  * Copyright (c) uAfrica.com. (http://uafrica.com)
  *
@@ -46,7 +48,7 @@ Configure::write('App', [
         'templates' => [ROOT . 'App' . DS . 'Template' . DS]
     ]
 ]);
-Cake\Cache\Cache::config([
+Cache::config([
     '_cake_core_' => [
         'engine' => 'File',
         'prefix' => 'cake_core_',

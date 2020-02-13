@@ -20,7 +20,7 @@ class LockTest extends TestCase
     /**
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->Lock = $this->getMock('\\DelayedJobs\\Lock', ['running']);
@@ -29,7 +29,7 @@ class LockTest extends TestCase
     /**
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         $dir = new Folder(TMP . 'lock');

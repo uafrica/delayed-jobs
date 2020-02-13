@@ -1,8 +1,10 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Result;
 
 use DelayedJobs\DelayedJob\Job;
+use Throwable;
 
 /**
  * Class Failed
@@ -59,7 +61,7 @@ class Failed extends Result
      * @param null|\Throwable $exception
      * @return self
      */
-    public function setException(\Throwable $exception = null)
+    public function setException(?Throwable $exception = null)
     {
         $this->_exception = $exception;
 

@@ -1,12 +1,11 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Worker;
 
 use Cake\Core\Configure;
 use Cake\Database\Exception;
-use Cake\Database\Query;
 use Cake\Database\Schema\Table;
-use Cake\Datasource\ConnectionManager;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\ORM\TableRegistry;
@@ -56,7 +55,7 @@ class ArchiveWorker extends Worker
 
         $delayedJobsTable = TableRegistry::getTableLocator()->get('DelayedJobs.DelayedJobs');
         $archiveTable = TableRegistry::getTableLocator()->get('Archive', [
-            'table' => Configure::read('DelayedJobs.archive.tableName')
+            'table' => Configure::read('DelayedJobs.archive.tableName'),
         ]);
 
         $this->_ensureTable($archiveTable);
@@ -86,7 +85,7 @@ class ArchiveWorker extends Worker
             $time = new Time('-' . Configure::read('DelayedJobs.archive.timeLimit'));
             Log::debug('Cleaning archive. All jobs older than ' . $time);
             $archiveTable->deleteAll([
-                'created <=' => $time
+                'created <=' => $time,
             ]);
             Log::debug('Archive cleaned.');
         }

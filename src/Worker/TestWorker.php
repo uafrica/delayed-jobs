@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Worker;
 
@@ -18,7 +19,7 @@ class TestWorker implements JobWorkerInterface
      * @param \Cake\Console\Shell|null $shell An instance of the shell that the job is run in
      * @return bool
      */
-    public function __invoke(Job $job, Shell $shell = null)
+    public function __invoke(Job $job, ?Shell $shell = null)
     {
         sleep(2);
         $time = (new Time())->i18nFormat();

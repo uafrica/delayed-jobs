@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Model\Entity;
 
 use Cake\Event\EventDispatcherInterface;

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Traits;
 
@@ -12,7 +13,6 @@ use Cake\Log\Log;
  */
 trait DebugLoggerTrait
 {
-
     /**
      * @param $message
      * @return void

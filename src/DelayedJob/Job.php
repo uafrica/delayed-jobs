@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\DelayedJob;
 
@@ -10,21 +11,23 @@ use Cake\I18n\Time;
 use Cake\Utility\Hash;
 use Cake\Utility\Inflector;
 use DelayedJobs\DelayedJob\Exception\JobDataException;
+use InvalidArgumentException;
+use Throwable;
 
 /**
  * Class Job
  */
 class Job
 {
-    const STATUS_NEW = 1;
-    const STATUS_BUSY = 2;
-    const STATUS_BURIED = 3;
-    const STATUS_SUCCESS = 4;
-    const STATUS_KICK = 5;
-    const STATUS_FAILED = 6;
-    const STATUS_UNKNOWN = 7;
-    const STATUS_TEST_JOB = 8;
-    const STATUS_PAUSED = 9;
+    public const STATUS_NEW = 1;
+    public const STATUS_BUSY = 2;
+    public const STATUS_BURIED = 3;
+    public const STATUS_SUCCESS = 4;
+    public const STATUS_KICK = 5;
+    public const STATUS_FAILED = 6;
+    public const STATUS_UNKNOWN = 7;
+    public const STATUS_TEST_JOB = 8;
+    public const STATUS_PAUSED = 9;
 
     /**
      * @var string
@@ -143,7 +146,7 @@ class Job
         } elseif ($data instanceof EntityInterface) {
             $this->setDataFromEntity($data);
         } else {
-            throw new \InvalidArgumentException('$data is not an array or instance of ' . EntityInterface::class);
+            throw new InvalidArgumentException('$data is not an array or instance of ' . EntityInterface::class);
         }
     }
 
@@ -246,7 +249,7 @@ class Job
      * @param \Cake\Datasource\EntityInterface $entity
      * @return $this
      */
-    public function setEntity(EntityInterface $entity = null)
+    public function setEntity(?EntityInterface $entity = null)
     {
         $this->_baseEntity = $entity;
 
@@ -340,7 +343,7 @@ class Job
     /**
      * @param string $worker Class name
      * @return $this
-     * @throws JobDataException
+     * @throws \DelayedJobs\DelayedJob\Exception\JobDataException
      */
     public function setWorker($worker)
     {
@@ -527,7 +530,7 @@ class Job
      * @param \Cake\I18n\Time $run_at
      * @return $this
      */
-    public function setRunAt(Time $run_at = null)
+    public function setRunAt(?Time $run_at = null)
     {
         $this->_runAt = $run_at;
 
@@ -565,7 +568,7 @@ class Job
      * @param \Cake\I18n\Time $timeFailed
      * @return $this
      */
-    public function setTimeFailed(Time $timeFailed = null)
+    public function setTimeFailed(?Time $timeFailed = null)
     {
         $this->_timeFailed = $timeFailed;
 
@@ -586,7 +589,7 @@ class Job
      */
     public function setLastMessage($lastMessage)
     {
-        if ($lastMessage instanceof \Throwable) {
+        if ($lastMessage instanceof Throwable) {
             $lastMessage = $lastMessage->getMessage();
         }
 
@@ -607,7 +610,7 @@ class Job
      * @param \Cake\I18n\Time $startTime
      * @return $this
      */
-    public function setStartTime(Time $startTime = null)
+    public function setStartTime(?Time $startTime = null)
     {
         $this->_startTime = $startTime;
 
@@ -626,7 +629,7 @@ class Job
      * @param \Cake\I18n\Time $endTime
      * @return $this
      */
-    public function setEndTime(Time $endTime = null)
+    public function setEndTime(?Time $endTime = null)
     {
         $this->_endTime = $endTime;
 
@@ -700,7 +703,7 @@ class Job
      */
     public function addHistory($message = '', $context = [], bool $changeMessage = true)
     {
-        if ($message instanceof \Throwable) {
+        if ($message instanceof Throwable) {
             $message = $message->getMessage();
         }
 
@@ -710,7 +713,7 @@ class Job
             'host_name' => $this->getHostName(),
             'message' => $message ?: '',
             'status' => $this->getStatus(),
-            'context' => $context
+            'context' => $context,
         ];
 
         if (is_string($message) && $changeMessage) {
@@ -749,7 +752,7 @@ class Job
 
     /**
      * @param mixed $brokerMessageBody
-     * @return Job
+     * @return \DelayedJobs\DelayedJob\Job
      */
     public function setBrokerMessageBody($brokerMessageBody): Job
     {

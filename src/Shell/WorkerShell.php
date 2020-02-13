@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
@@ -10,8 +12,8 @@ use Cake\Event\Event;
 use Cake\Event\EventListenerInterface;
 use Cake\I18n\FrozenTime;
 use Cake\I18n\Time;
-use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\JobManager;
 use DelayedJobs\Model\Entity\Worker;
 use DelayedJobs\Model\Table\WorkersTable;
 use DelayedJobs\Result\Failed;
@@ -32,13 +34,13 @@ class WorkerShell extends AppShell implements EventListenerInterface
 {
     use DebugLoggerTrait;
 
-    const TIMEOUT = 10; //In seconds
-    const MAXFAIL = 5;
-    const SUICIDE_EXIT_CODE = 100;
-    const NO_WORKER_EXIT_CODE = 110;
-    const WORKER_ERROR_EXIT_CODE = 120;
-    const HEARTBEAT_TIME = 30;
-    const MANAGER_SHUTDOWN = 40;
+    public const TIMEOUT = 10; //In seconds
+    public const MAXFAIL = 5;
+    public const SUICIDE_EXIT_CODE = 100;
+    public const NO_WORKER_EXIT_CODE = 110;
+    public const WORKER_ERROR_EXIT_CODE = 120;
+    public const HEARTBEAT_TIME = 30;
+    public const MANAGER_SHUTDOWN = 40;
 
     public $modelClass = 'DelayedJobs.DelayedJobs';
     public $tasks = ['DelayedJobs.Worker', 'DelayedJobs.ProcessManager'];
@@ -64,7 +66,9 @@ class WorkerShell extends AppShell implements EventListenerInterface
     protected $_jobCount = 0;
     protected $_lastJob;
     protected $_myPID;
-    /** @var int */
+    /**
+     * @var int
+     */
     protected $_beforeMemory;
     private $_pulse = false;
     /**
@@ -80,7 +84,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
         'enabled' => false,
         'jobCount' => 100,
         'idleTimeout' => 120,
-        'memoryLimit' => false
+        'memoryLimit' => false,
     ];
     /**
      * Time that the last job was executed
@@ -113,7 +117,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
                     WorkersTable::STATUS_RUNNING,
                     WorkersTable::STATUS_SHUTDOWN,
                     WorkersTable::STATUS_TO_KILL,
-                ]
+                ],
             ])
             ->count();
         $this->_workerName = $this->_hostName . '-' . $worker_count;
@@ -228,7 +232,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
             'DelayedJob.afterJobExecute' => 'afterExecute',
             'DelayedJob.afterJobCompleted' => 'afterCompleted',
             'DelayedJob.heartbeat' => 'heartbeat',
-            'DelayedJob.forceShutdown' => 'forceShutdown'
+            'DelayedJob.forceShutdown' => 'forceShutdown',
         ];
     }
 
@@ -306,7 +310,8 @@ class WorkerShell extends AppShell implements EventListenerInterface
             return;
         }
 
-        if ($this->_jobCount >= $this->_suicideMode['jobCount'] ||
+        if (
+            $this->_jobCount >= $this->_suicideMode['jobCount'] ||
             microtime(true) - $this->_timeOfLastJob >= $this->_suicideMode['idleTimeout'] ||
             ($this->_suicideMode['memoryLimit'] !== false && $this->_suicideMode['memoryLimit'] * 1024 * 1024 <= memory_get_usage(true))
         ) {
@@ -354,7 +359,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
         static $units = ['B', 'kiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
         $step = 1024;
         $i = 0;
-        while (($size / $step) > 0.9) {
+        while ($size / $step > 0.9) {
             $size /= $step;
             $i++;
         }

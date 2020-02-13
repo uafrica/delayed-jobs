@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
@@ -25,7 +27,7 @@ class TestShell extends AppShell
 
         $rand = random_int(0, time());
         $failures = [
-            1, 5, 6
+            1, 5, 6,
         ];
         for ($i = 0; $i < 10; $i++) {
             $this->enqueue(
@@ -33,7 +35,7 @@ class TestShell extends AppShell
                 ['type' => in_array($i, $failures) ? 'fail' : 'success'],
                 [
                     'maxRetries' => 2,
-                    'sequence' => 'TestJob::' . $rand
+                    'sequence' => 'TestJob::' . $rand,
                 ]
             );
             sleep(1);
@@ -109,7 +111,7 @@ class TestShell extends AppShell
         $options = parent::getOptionParser();
 
         $options->addSubcommand('sequencing', [
-                'help' => 'Sequencing'
+                'help' => 'Sequencing',
             ]);
 
         return $options;

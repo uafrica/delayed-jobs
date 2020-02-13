@@ -1,9 +1,7 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\DelayedJob;
-
-use Cake\Console\Shell;
-use DelayedJobs\DelayedJob\Job;
 
 /**
  * Interface DelayedJobManagerInterface

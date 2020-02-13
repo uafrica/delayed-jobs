@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Model\Table;
 
@@ -14,18 +15,18 @@ use DelayedJobs\Model\Entity\Worker;
  */
 class WorkersTable extends Table
 {
-    const STATUS_IDLE = 1;
-    const STATUS_RUNNING = 2;
-    const STATUS_TO_KILL = 3;
-    const STATUS_UNKNOWN = 4;
-    const STATUS_SHUTDOWN = 5;
-    const STATUS_DEAD = 6;
+    public const STATUS_IDLE = 1;
+    public const STATUS_RUNNING = 2;
+    public const STATUS_TO_KILL = 3;
+    public const STATUS_UNKNOWN = 4;
+    public const STATUS_SHUTDOWN = 5;
+    public const STATUS_DEAD = 6;
 
     /**
      * @param array $config
      * @return void
      */
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
         $this->addBehavior('Timestamp');
         $this->setTable('delayed_job_workers');
@@ -58,7 +59,7 @@ class WorkersTable extends Table
             'worker_name' => $worker_name,
             'pid' => $pid,
             'status' => self::STATUS_RUNNING,
-            'pulse' => new Time()
+            'pulse' => new Time(),
         ];
 
         $host = $this->newEntity($data);
@@ -76,10 +77,10 @@ class WorkersTable extends Table
     {
         return $query
             ->where([
-                'Workers.host_name' => $options['host']
+                'Workers.host_name' => $options['host'],
             ])
             ->order([
-                'Workers.worker_name'
+                'Workers.worker_name',
             ]);
     }
 
@@ -92,7 +93,7 @@ class WorkersTable extends Table
     {
         $conditions = [
             'Workers.host_name' => $host_name,
-            'Workers.worker_name' => $worker_name
+            'Workers.worker_name' => $worker_name,
         ];
 
         $host = $this

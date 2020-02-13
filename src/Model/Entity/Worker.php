@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Model\Entity;
 
@@ -23,11 +24,11 @@ use Cake\ORM\Entity;
  */
 class Worker extends Entity
 {
-    const SHUTDOWN_SUICIDE = 'suicide';
-    const SHUTDOWN_STATUS = 'asked nicely by status';
-    const SHUTDOWN_LOOP_EXIT = 'loop exited';
-    const SHUTDOWN_NO_WORKER = 'no worker';
-    const SHUTDOWN_WRONG_PID = 'wrong pid';
-    const SHUTDOWN_ERROR = 'an error occured';
-    const SHUTDOWN_MANAGER = ' asked nicely by the manager';
+    public const SHUTDOWN_SUICIDE = 'suicide';
+    public const SHUTDOWN_STATUS = 'asked nicely by status';
+    public const SHUTDOWN_LOOP_EXIT = 'loop exited';
+    public const SHUTDOWN_NO_WORKER = 'no worker';
+    public const SHUTDOWN_WRONG_PID = 'wrong pid';
+    public const SHUTDOWN_ERROR = 'an error occured';
+    public const SHUTDOWN_MANAGER = ' asked nicely by the manager';
 }

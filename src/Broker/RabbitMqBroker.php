@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Broker;
 
@@ -22,7 +23,7 @@ class RabbitMqBroker implements BrokerInterface
         'driver' => PhpAmqpLibDriver::class,
         'prefix' => '',
         'routingKey' => '',
-        'qos' => 1
+        'qos' => 1,
     ];
 
     /**
@@ -82,7 +83,7 @@ class RabbitMqBroker implements BrokerInterface
         $jobData = [
             'priority' => $jobPriority,
             'delay' => $delay,
-            'payload' => ['id' => $job->getId()]
+            'payload' => ['id' => $job->getId()],
         ];
 
         $this->getDriver()->publishJob($jobData);
@@ -136,8 +137,8 @@ class RabbitMqBroker implements BrokerInterface
             'port' => 15672,
             'auth' => [
                 'username' => $config['user'],
-                'password' => $config['pass']
-            ]
+                'password' => $config['pass'],
+            ],
         ]);
         try {
             $queue_data = $client->get(sprintf(
@@ -145,7 +146,7 @@ class RabbitMqBroker implements BrokerInterface
                 urlencode($config['path']),
                 Configure::read('dj.service.name') . '-queue'
             ), [], [
-                'type' => 'json'
+                'type' => 'json',
                 ]);
         } catch (Exception $e) {
             return [];
@@ -159,7 +160,7 @@ class RabbitMqBroker implements BrokerInterface
         return [
             'messages' => $data['messages'],
             'messages_ready' => $data['messages_ready'],
-            'messages_unacknowledged' => $data['messages_unacknowledged']
+            'messages_unacknowledged' => $data['messages_unacknowledged'],
         ];
     }
 

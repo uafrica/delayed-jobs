@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Shell\Helper;
 
@@ -9,11 +10,8 @@ use Cake\Console\Helper;
  */
 class SparklineHelper extends Helper
 {
-    /**
-     *
-     */
-    const TICKS = [
-        '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'
+    public const TICKS = [
+        '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█',
     ];
 
     /**
@@ -26,7 +24,7 @@ class SparklineHelper extends Helper
             'data' => [],
             'length' => 10,
             'title' => '',
-            'formatter' => '%6.2f'
+            'formatter' => '%6.2f',
         ];
 
         $args += $default;
@@ -67,11 +65,11 @@ class SparklineHelper extends Helper
 
         $max = max($data_points);
         $min = min($data_points);
-        $per_tick = (($max - $min) << 8) / (count(self::TICKS) - 1);
+        $per_tick = ($max - $min << 8) / (count(self::TICKS) - 1);
         $per_tick = $per_tick < 1 ? 1 : $per_tick;
         $ticks = [];
         foreach ($data_points as $data_point) {
-            $tick_index = (($data_point - $min) << 8) / $per_tick;
+            $tick_index = ($data_point - $min << 8) / $per_tick;
             $ticks[] = self::TICKS[$tick_index];
         }
 

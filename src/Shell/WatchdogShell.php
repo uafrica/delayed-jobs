@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Shell;
 
@@ -11,11 +12,9 @@ use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\Time;
 use Cake\ORM\TableRegistry;
-use DelayedJobs\Broker\PhpAmqpLibBroker;
+use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
-use DelayedJobs\DelayedJob\EnqueueTrait;
-use DelayedJobs\Lock;
 use DelayedJobs\Model\Entity\Worker;
 use DelayedJobs\Model\Table\WorkersTable;
 use DelayedJobs\Process;
@@ -31,7 +30,7 @@ class WatchdogShell extends AppShell
 {
     use EnqueueTrait;
 
-    const BASEPATH = ROOT . '/bin/cake DelayedJobs.worker ';
+    public const BASEPATH = ROOT . '/bin/cake DelayedJobs.worker ';
     public $Lock;
     public $modelClass = 'DelayedJobs.Workers';
     protected $_workers;
@@ -135,7 +134,7 @@ class WatchdogShell extends AppShell
         $hostname = php_uname('n');
         $workers = $this->Workers->find()
             ->where([
-                'host_name' => $hostname
+                'host_name' => $hostname,
             ]);
 
         if ($workers->count() === 0) {
@@ -179,7 +178,7 @@ class WatchdogShell extends AppShell
         $hostname = php_uname('n');
         $workers = $this->Workers->find()
             ->where([
-                'host_name' => $hostname
+                'host_name' => $hostname,
             ]);
         foreach ($workers as $worker) {
             $this->_kill($worker->pid, $worker->worker_name);
@@ -203,7 +202,7 @@ class WatchdogShell extends AppShell
                         'group' => 'Recurring',
                         'priority' => 100,
                         'maxRetries' => 5,
-                        'runAt' => new Time('+30 seconds')
+                        'runAt' => new Time('+30 seconds'),
                     ]);
             }
 
@@ -314,7 +313,7 @@ class WatchdogShell extends AppShell
         $this->out(' - Waiting for all workers to stop');
         $workers = $this->Workers->find()
             ->where([
-                'host_name' => $host_name
+                'host_name' => $host_name,
             ]);
 
         foreach ($workers as $worker) {
@@ -354,7 +353,7 @@ class WatchdogShell extends AppShell
 
         $workers = $this->Workers->find()
             ->where([
-                'host_name' => $host_name
+                'host_name' => $host_name,
             ]);
         if ($workers->count() == 0) {
             $this->out('<error>No workers running</error>');
@@ -377,11 +376,13 @@ class WatchdogShell extends AppShell
             ->get('DelayedJobs.DelayedJobs')
             ->get($this->args[0]);
 
-        if (!in_array($job->status, [
+        if (
+            !in_array($job->status, [
             Job::STATUS_NEW,
             Job::STATUS_FAILED,
             Job::STATUS_PAUSED,
-        ])) {
+            ])
+        ) {
             $this->out(__('<error>{0} could not be queued - status is {1}</error>', $job->id, $job->status));
 
             return false;
@@ -417,7 +418,7 @@ class WatchdogShell extends AppShell
             ->where([
                 'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
                 'run_at <=' => Time::now(),
-                'sequence is not' => null
+                'sequence is not' => null,
             ])
             ->enableHydration(false)
             ->map(function ($sequence) {
@@ -426,10 +427,10 @@ class WatchdogShell extends AppShell
                     ->where([
                         'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
                         'run_at <=' => Time::now(),
-                        'sequence' => $sequence['sequence']
+                        'sequence' => $sequence['sequence'],
                     ])
                     ->order([
-                        'id' => 'ASC'
+                        'id' => 'ASC',
                     ])
                     ->enableHydration(false)
                     ->first();
@@ -440,12 +441,12 @@ class WatchdogShell extends AppShell
             ->where([
                 'status in' => [Job::STATUS_NEW, Job::STATUS_FAILED],
                 'run_at <=' => Time::now(),
-                'sequence is' => null
+                'sequence is' => null,
             ])
             ->enableHydration(false)
             ->all();
 
-        /* @var \DelayedJobs\Model\Entity\DelayedJob[] $allJobs */
+        /** @var \DelayedJobs\Model\Entity\DelayedJob[] $allJobs */
         $allJobs = $sequences->append($no_sequences);
         $isVerbose = $this->_io->level() < Shell::VERBOSE;
         foreach ($allJobs as $job) {
@@ -473,10 +474,10 @@ class WatchdogShell extends AppShell
                     'options' => [
                         'workers' => [
                             'help' => 'Number of workers to run',
-                            'default' => $this->_autoWorker()
-                        ]
-                    ]
-                ]
+                            'default' => $this->_autoWorker(),
+                        ],
+                    ],
+                ],
             ])
             ->addSubcommand('stop-workers', [
                 'help' => 'Stops workers',
@@ -485,19 +486,19 @@ class WatchdogShell extends AppShell
                         'wait' => [
                             'help' => 'Wait for workers to stop.',
                             'default' => false,
-                            'boolean' => true
-                        ]
-                    ]
-                ]
+                            'boolean' => true,
+                        ],
+                    ],
+                ],
             ])
             ->addSubcommand('recurring', [
-                'help' => 'Fires the recurring event and creates the initial recurring job instance'
+                'help' => 'Fires the recurring event and creates the initial recurring job instance',
             ])
             ->addSubcommand('reload', [
-                'help' => 'Restarts all running worker hosts'
+                'help' => 'Restarts all running worker hosts',
             ])
             ->addSubcommand('revive', [
-                'help' => 'Requeues all new or failed jobs that should be in RabbitMQ'
+                'help' => 'Requeues all new or failed jobs that should be in RabbitMQ',
             ])
             ->addSubcommand('requeue', [
                 'help ' => 'Requeues a job',
@@ -505,18 +506,18 @@ class WatchdogShell extends AppShell
                     'arguments' => [
                         'id' => [
                             'help' => 'Job id',
-                            'required' => true
-                        ]
-                    ]
-                ]
+                            'required' => true,
+                        ],
+                    ],
+                ],
             ])
             ->addOption('qos', [
                 'help' => 'Sets the QOS value for workers',
-                'default' => 1
+                'default' => 1,
             ])
             ->addOption('workers', [
                 'help' => 'Number of workers to run',
-                'default' => $this->_autoWorker()
+                'default' => $this->_autoWorker(),
             ]);
 
         return $options;

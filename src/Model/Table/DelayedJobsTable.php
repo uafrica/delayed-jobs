@@ -1,10 +1,9 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Model\Table;
 
 use Cake\Database\Schema\TableSchema;
-use Cake\I18n\Time;
-use Cake\ORM\Query;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\DatastoreInterface;
 use DelayedJobs\DelayedJob\Job;
@@ -24,7 +23,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
      * @return void
      * @codeCoverageIgnore
      */
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
         $this->addBehavior('Timestamp');
 
@@ -60,8 +59,8 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 Job::STATUS_BUSY,
                 Job::STATUS_FAILED,
                 Job::STATUS_UNKNOWN,
-                Job::STATUS_PAUSED
-            ]
+                Job::STATUS_PAUSED,
+            ],
         ]);
     }
 
@@ -78,8 +77,8 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         }
         $this->patchEntity($jobEntity, $jobData, [
             'accessibleFields' => [
-                '*' => true
-            ]
+                '*' => true,
+            ],
         ]);
 
         if (!$jobEntity->status) {
@@ -87,7 +86,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         }
 
         $options = [
-            'atomic' => !$this->getConnection()->inTransaction()
+            'atomic' => !$this->getConnection()->inTransaction(),
         ];
 
         $result = $this->save($jobEntity, $options);
@@ -242,8 +241,8 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 Job::STATUS_NEW,
                 Job::STATUS_PAUSED,
                 Job::STATUS_FAILED,
-                Job::STATUS_UNKNOWN
-            ]
+                Job::STATUS_UNKNOWN,
+            ],
         ];
 
         if (!empty($job->getId())) {

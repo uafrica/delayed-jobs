@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\DelayedJob;
 
@@ -19,8 +20,8 @@ class DebugKitJobManager extends JobManager
 
     public function __construct(
         array $config = [],
-        \DelayedJobs\Datasource\DatasourceInterface $datastore = null,
-        \DelayedJobs\Broker\BrokerInterface $messageBroker = null
+        ?DatasourceInterface $datastore = null,
+        ?BrokerInterface $messageBroker = null
     ) {
         $this->jobLog = $config['debugKitLog'];
         unset($config['debugKitLog']);

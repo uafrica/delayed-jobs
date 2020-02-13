@@ -1,23 +1,23 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Database\Type;
 
 use Cake\Database\Driver;
-use Cake\Database\Type;
+use Cake\Database\TypeFactory;
 use Cake\Log\Log;
 use PDO;
 
 /**
  * Class JsonType
  */
-class SerializeType extends Type
+class SerializeType extends TypeFactory
 {
-
     /**
      * Casts given value from a database type to PHP equivalent
      *
      * @param mixed $value value to be converted to PHP equivalent
-     * @param Driver $driver object from which database preferences and configuration will be extracted
+     * @param \Cake\Database\Driver $driver object from which database preferences and configuration will be extracted
      * @return mixed
      */
     public function toPHP($value, Driver $driver)
@@ -58,7 +58,7 @@ class SerializeType extends Type
      * Casts given value from a PHP type to one acceptable by database
      *
      * @param mixed $value value to be converted to database equivalent
-     * @param Driver $driver object from which database preferences and configuration will be extracted
+     * @param \Cake\Database\Driver $driver object from which database preferences and configuration will be extracted
      * @return mixed
      */
     public function toDatabase($value, Driver $driver)
@@ -70,7 +70,7 @@ class SerializeType extends Type
      * Casts give value to Statement equivalent
      *
      * @param mixed $value value to be converted to PHP equivalent
-     * @param Driver $driver object from which database preferences and configuration will be extracted
+     * @param \Cake\Database\Driver $driver object from which database preferences and configuration will be extracted
      * @return mixed
      */
     public function toStatement($value, Driver $driver)

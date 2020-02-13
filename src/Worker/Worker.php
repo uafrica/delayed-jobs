@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Worker;
 
 use Cake\Datasource\ModelAwareTrait;
@@ -7,7 +9,6 @@ use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
 use Cake\Event\EventListenerInterface;
 use Cake\ORM\TableRegistry;
-use DelayedJobs\DelayedJob\DelayedJobInterface;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Result\ResultInterface;
@@ -37,7 +38,7 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
      * @param \DelayedJobs\DelayedJob\Job|null $job The job being executed
      * @param array $options Allow child listeners to have options
      */
-    public function __construct(Job $job = null, array $options = [])
+    public function __construct(?Job $job = null, array $options = [])
     {
         $this->modelFactory('Table', [TableRegistry::class, 'get']);
 
@@ -74,7 +75,7 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     {
         return [
             'DelayedJob.beforeJobExecute' => 'beforeExecute',
-            'DelayedJob.afterJobExecute' => 'afterExecute'
+            'DelayedJob.afterJobExecute' => 'afterExecute',
         ];
     }
 

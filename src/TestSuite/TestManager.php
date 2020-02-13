@@ -1,13 +1,12 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\TestSuite;
 
 use Cake\Core\InstanceConfigTrait;
-use Cake\Utility\Text;
-use Cake\Console\Shell;
-use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\ManagerInterface;
 
 /**
  * Class TestDelayedJobManager
@@ -107,7 +106,7 @@ class TestManager implements ManagerInterface
      * @return \DelayedJobs\DelayedJob\Job
      * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
-    public function fetchJob($jobId): \DelayedJobs\DelayedJob\Job
+    public function fetchJob($jobId): Job
     {
         if (isset(static::$_jobs[$jobId])) {
             return static::$_jobs[$jobId];

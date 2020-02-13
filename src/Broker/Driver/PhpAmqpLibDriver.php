@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Broker\Driver;
 
@@ -7,18 +8,14 @@ use Cake\Core\Retry\CommandRetry;
 use DelayedJobs\Broker\Driver\Retry\PhpAmqpLibReconnectStrategy;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\ManagerInterface;
-use DelayedJobs\DelayedJob\MessageBrokerInterface;
-use DelayedJobs\Exception\BrokerReconnectionException;
 use DelayedJobs\Traits\DebugLoggerTrait;
 use PhpAmqpLib\Connection\AbstractConnection;
-use PhpAmqpLib\Connection\AMQPLazySocketConnection;
-use PhpAmqpLib\Connection\AMQPSocketConnection;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
-use PhpAmqpLib\Exception\AMQPIOException;
 use PhpAmqpLib\Exception\AMQPIOWaitException;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
+use Throwable;
 
 /**
  * Class PhpAmqpLibDriver
@@ -31,17 +28,17 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     /**
      * Connection timeout in seconds
      */
-    const CONNECTION_TIMEOUT = 10;
+    public const CONNECTION_TIMEOUT = 10;
     /**
      * Read/write timeout (in seconds)
      *
      * Must be at least double heartbeat
      */
-    const READ_WRITE_TIMEOUT = 620;
+    public const READ_WRITE_TIMEOUT = 620;
     /**
      * Heartbeat in seconds
      */
-    const HEARTBEAT = 300;
+    public const HEARTBEAT = 300;
 
     /**
      * @var \PhpAmqpLib\Connection\AbstractConnection
@@ -71,7 +68,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
      * @param \DelayedJobs\DelayedJob\ManagerInterface $manager
      * @param \PhpAmqpLib\Connection\AbstractConnection|null $connection
      */
-    public function __construct(array $config = [], ManagerInterface $manager, AbstractConnection $connection = null)
+    public function __construct(array $config = [], ManagerInterface $manager, ?AbstractConnection $connection = null)
     {
         $this->setConfig($config);
 
@@ -141,7 +138,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
         try {
             $this->_channel = $this->getConnection()->channel();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             //If something went wrong, catch it, disconnect and try again.
             unset($this->_connection);
             $this->_channel = $this->getConnection()->channel();
@@ -159,8 +156,8 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $channel->exchange_declare($prefix . 'delayed-exchange', 'x-delayed-message', false, true, false, false, false, [
             'x-delayed-type' => [
                 'S',
-                'direct'
-            ]
+                'direct',
+            ],
         ]);
     }
 
@@ -170,7 +167,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $channel = $this->getChannel();
 
         $channel->queue_declare($prefix . 'queue', false, true, false, false, false, [
-            'x-max-priority' => ['s', $maximumPriority]
+            'x-max-priority' => ['s', $maximumPriority],
         ]);
     }
 
@@ -196,7 +193,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
         $messageProperties = [
             'delivery_mode' => 2,
-            'priority' => $jobData['priority']
+            'priority' => $jobData['priority'],
         ];
 
         if ($jobData['delay'] > 0) {
@@ -314,7 +311,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $message = new AMQPMessage($body, [
             'priority' => $priority,
             'delivery_mode' => 2,
-            'application_headers' => $messageHeaders
+            'application_headers' => $messageHeaders,
         ]);
         $channel->basic_publish($message, $exchange, $routing_key);
     }

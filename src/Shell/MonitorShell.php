@@ -1,11 +1,11 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Shell;
 
 use App\Shell\AppShell;
 use Cake\Console\ConsoleOptionParser;
 use Cake\I18n\Time;
-use DelayedJobs\Broker\PhpAmqpLibBroker;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
 
@@ -15,7 +15,7 @@ use DelayedJobs\DelayedJob\JobManager;
  */
 class MonitorShell extends AppShell
 {
-    const STATUS_MAP = [
+    public const STATUS_MAP = [
         'waiting' => 'Waiting',
         Job::STATUS_NEW => 'New',
         Job::STATUS_BUSY => 'Busy',
@@ -37,29 +37,29 @@ class MonitorShell extends AppShell
     {
         $statuses = $this->DelayedJobs->find('list', [
             'keyField' => 'status',
-            'valueField' => 'counter'
+            'valueField' => 'counter',
         ])
             ->select([
                 'status',
                 'counter' => $this->DelayedJobs->find()
                     ->func()
-                    ->count('id')
+                    ->count('id'),
             ])
             ->where([
-                'not' => ['status' => Job::STATUS_NEW]
+                'not' => ['status' => Job::STATUS_NEW],
             ])
             ->group(['status'])
             ->toArray();
         $statuses['waiting'] = $this->DelayedJobs->find()
             ->where([
                 'status' => Job::STATUS_NEW,
-                'run_at >' => new Time()
+                'run_at >' => new Time(),
             ])
             ->count();
         $statuses[Job::STATUS_NEW] = $this->DelayedJobs->find()
             ->where([
                 'status' => Job::STATUS_NEW,
-                'run_at <=' => new Time()
+                'run_at <=' => new Time(),
             ])
             ->count();
 
@@ -76,12 +76,12 @@ class MonitorShell extends AppShell
         $available_rates = [
             '30 seconds',
             '5 minutes',
-            '1 hour'
+            '1 hour',
         ];
         $conditions = [];
         if ($status) {
             $conditions = [
-                'status' => $status
+                'status' => $status,
             ];
         }
         $return = [];
@@ -112,7 +112,7 @@ class MonitorShell extends AppShell
             ])
             ->where($conditions)
             ->order([
-                'DelayedJobs.id' => 'ASC'
+                'DelayedJobs.id' => 'ASC',
             ]);
 
         return $jobs;
@@ -133,7 +133,7 @@ class MonitorShell extends AppShell
             ])
             ->where($conditions)
             ->order([
-                'DelayedJobs.id' => 'ASC'
+                'DelayedJobs.id' => 'ASC',
             ]);
 
         return $jobs;
@@ -183,7 +183,7 @@ class MonitorShell extends AppShell
 
         $data = [
             0 => array_values(self::STATUS_MAP),
-            1 => []
+            1 => [],
         ];
 
         foreach (self::STATUS_MAP as $status => $name) {
@@ -241,7 +241,7 @@ class MonitorShell extends AppShell
             ->output([
                 'data' => $created_points,
                 'title' => 'Created / s',
-                'length' => $max_length
+                'length' => $max_length,
             ]);
         $this->out("\t\t" .
             sprintf(
@@ -256,7 +256,7 @@ class MonitorShell extends AppShell
             ->output([
                 'data' => $completed_points,
                 'title' => 'Completed / s',
-                'length' => $max_length
+                'length' => $max_length,
             ]);
 
         $this->out("\t\t" .
@@ -274,7 +274,7 @@ class MonitorShell extends AppShell
                     'data' => $status_points[$status],
                     'title' => $name . "\t",
                     'length' => $max_length,
-                    'formatter' => '%7d'
+                    'formatter' => '%7d',
                 ]);
         }
     }
@@ -293,7 +293,7 @@ class MonitorShell extends AppShell
         $this->helper('Table')
             ->output([
                 ['Ready', 'Unacked'],
-                [$rabbit_status['messages_ready'], $rabbit_status['messages_unacknowledged']]
+                [$rabbit_status['messages_ready'], $rabbit_status['messages_unacknowledged']],
             ]);
     }
 
@@ -326,7 +326,7 @@ class MonitorShell extends AppShell
                 'data' => $ready_points,
                 'title' => 'MQ Ready',
                 'length' => $max_length,
-                'formatter' => '%7d'
+                'formatter' => '%7d',
             ]);
 
         $this->helper('DelayedJobs.Sparkline')
@@ -334,7 +334,7 @@ class MonitorShell extends AppShell
                 'data' => $unacked_points,
                 'title' => 'MQ Unacked',
                 'length' => $max_length,
-                'formatter' => '%7d'
+                'formatter' => '%7d',
             ]);
     }
 
@@ -343,28 +343,28 @@ class MonitorShell extends AppShell
         $last_completed = $this->DelayedJobs->find()
             ->select(['id', 'last_message', 'end_time', 'worker',  'end_time', 'duration'])
             ->where([
-                'status' => Job::STATUS_SUCCESS
+                'status' => Job::STATUS_SUCCESS,
             ])
             ->order([
-                'end_time' => 'DESC'
+                'end_time' => 'DESC',
             ])
             ->first();
         $last_failed = $this->DelayedJobs->find()
             ->select(['id', 'last_message', 'failed_at', 'worker'])
             ->where([
-                'status' => Job::STATUS_FAILED
+                'status' => Job::STATUS_FAILED,
             ])
             ->order([
-                'failed_at' => 'DESC'
+                'failed_at' => 'DESC',
             ])
             ->first();
         $last_buried = $this->DelayedJobs->find()
             ->select(['id', 'last_message', 'failed_at', 'worker'])
             ->where([
-                'status' => Job::STATUS_BURIED
+                'status' => Job::STATUS_BURIED,
             ])
             ->order([
-                'failed_at' => 'DESC'
+                'failed_at' => 'DESC',
             ])
             ->first();
 
@@ -420,26 +420,26 @@ class MonitorShell extends AppShell
                 'group',
                 'host_name',
                 'worker',
-                'start_time'
+                'start_time',
             ])
             ->where([
-                'status' => Job::STATUS_BUSY
+                'status' => Job::STATUS_BUSY,
             ])
             ->order([
-                'start_time' => 'ASC'
+                'start_time' => 'ASC',
             ])
             ->all();
         $this->hr();
         $this->out('Running jobs');
         $data = [
-            ['Id', 'Host',  'Run time']
+            ['Id', 'Host',  'Run time'],
         ];
         foreach ($running_jobs as $running_job) {
             $row = [
                 $running_job->id,
                 $running_job->host_name,
                 $running_job->worker,
-                $running_job->start_time->diffInSeconds()
+                $running_job->start_time->diffInSeconds(),
             ];
             $data[] = $row;
         }
@@ -499,19 +499,19 @@ class MonitorShell extends AppShell
             ->addOption('snapshot', [
                 'help' => 'Generate a single snapshot of the delayed job service',
                 'boolean' => true,
-                'short' => 's'
+                'short' => 's',
             ])
             ->addOption('basic-stats', [
                 'help' => 'Show basic information with sparklines',
                 'boolean' => true,
                 'default' => false,
-                'short' => 'b'
+                'short' => 'b',
             ])
             ->addOption('hide-jobs', [
                 'help' => 'Hide active jobs',
                 'boolean' => true,
                 'default' => false,
-                'short' => 'j'
+                'short' => 'j',
             ]);
 
         return $options;

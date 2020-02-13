@@ -15,7 +15,7 @@ class DelayedJobsControllerTest extends IntegrationTestCase
 
     public $fixtures = ['plugin.DelayedJobs.DelayedJobs'];
 
-    public function tearDown() {
+    public function tearDown(): void {
         parent::tearDown();
         TableRegistry::clear();
     }

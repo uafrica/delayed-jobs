@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs;
 
@@ -16,6 +17,7 @@ class RecurringJobBuilder
      * @param array $jobInfo
      * @return void
      */
+
     /**
      * @param array $jobInfo
      * @return void

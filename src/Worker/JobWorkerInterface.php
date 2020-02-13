@@ -1,8 +1,8 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Worker;
 
-use Cake\Console\Shell;
 use DelayedJobs\DelayedJob\Job;
 
 /**

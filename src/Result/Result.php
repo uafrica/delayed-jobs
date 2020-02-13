@@ -1,17 +1,20 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Result;
 
 use Cake\Core\App;
+use DateTimeInterface;
+use InvalidArgumentException;
 
 /**
  * Class Result
  */
 abstract class Result implements ResultInterface
 {
-    const TYPE_FAILED = Failed::class;
-    const TYPE_SUCCESS = Success::class;
-    const TYPE_PAUSE = Pause::class;
+    public const TYPE_FAILED = Failed::class;
+    public const TYPE_SUCCESS = Success::class;
+    public const TYPE_PAUSE = Pause::class;
 
     /**
      * @var string
@@ -48,7 +51,7 @@ abstract class Result implements ResultInterface
         }
 
         if (!$result instanceof ResultInterface) {
-            throw new \InvalidArgumentException(sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class));
+            throw new InvalidArgumentException(sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class));
         }
 
         return $result;
@@ -76,7 +79,7 @@ abstract class Result implements ResultInterface
     /**
      * @return \DateTimeInterface|null
      */
-    public function getRecur(): ?\DateTimeInterface
+    public function getRecur(): ?DateTimeInterface
     {
         return $this->_recur;
     }
@@ -85,7 +88,7 @@ abstract class Result implements ResultInterface
      * @param \DateTimeInterface|null $recur When to re-queue the job for.
      * @return static
      */
-    public function willRecur(?\DateTimeInterface $recur)
+    public function willRecur(?DateTimeInterface $recur)
     {
         $this->_recur = $recur;
 

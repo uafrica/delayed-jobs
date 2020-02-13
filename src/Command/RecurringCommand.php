@@ -1,11 +1,11 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Command;
 
 use Cake\Console\Arguments;
 use Cake\Console\Command;
 use Cake\Console\ConsoleIo;
-use Cake\Console\Shell;
 use Cake\Event\Event;
 use Cake\Event\EventManager;
 use Cake\I18n\Time;
@@ -42,7 +42,7 @@ class RecurringCommand extends Command
                         'group' => 'Recurring',
                         'priority' => 100,
                         'maxRetries' => 5,
-                        'runAt' => new Time('+30 seconds')
+                        'runAt' => new Time('+30 seconds'),
                     ]);
             }
 
@@ -59,5 +59,4 @@ class RecurringCommand extends Command
 
         $io->success(__('{0} recurring jobs queued', $queueCount));
     }
-
 }

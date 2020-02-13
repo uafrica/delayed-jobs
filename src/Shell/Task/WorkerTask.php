@@ -1,11 +1,13 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Shell\Task;
 
 use Cake\Console\ConsoleOptionParser;
 use Cake\Console\Shell;
+use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
-use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\Result\Failed;
 use DelayedJobs\Result\Pause;
 use DelayedJobs\Result\Success;
@@ -115,13 +117,13 @@ class WorkerTask extends Shell
             ->addOption('force', [
                 'short' => 'f',
                 'help' => 'Force the job to run, even if failed, or successful',
-                'boolean' => true
+                'boolean' => true,
             ])
             ->addArgument(
                 'jobId',
                 [
                     'help' => 'Job ID to run',
-                    'required' => true
+                    'required' => true,
                 ]
             );
 

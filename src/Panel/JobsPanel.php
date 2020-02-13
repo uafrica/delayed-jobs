@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Panel;
 
@@ -28,9 +29,9 @@ class JobsPanel extends DebugPanel
      */
     public function initialize()
     {
-        $log = $this->jobLog = new \ArrayObject;
+        $log = $this->jobLog = new \ArrayObject();
         $jobManager = new DebugKitJobManager(Configure::read('DelayedJobs') + [
-            'debugKitLog' => $log
+            'debugKitLog' => $log,
         ]);
         JobManager::setInstance($jobManager);
     }
@@ -43,7 +44,7 @@ class JobsPanel extends DebugPanel
     public function data()
     {
         return [
-            'jobs' => isset($this->jobLog) ? $this->jobLog->getArrayCopy() : []
+            'jobs' => isset($this->jobLog) ? $this->jobLog->getArrayCopy() : [],
         ];
     }
 

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs;
 
 /* An easy way to keep in track of external processes.
@@ -9,7 +11,6 @@ namespace DelayedJobs;
 
 class Process
 {
-
     /**
      * @var
      */

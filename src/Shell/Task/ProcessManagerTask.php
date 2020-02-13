@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 //Borrowed from https://github.com/FriendsOfCake/process-manager until that is available via composer
 
 namespace DelayedJobs\Shell\Task;
@@ -27,7 +29,6 @@ use Exception;
  */
 class ProcessManagerTask extends Shell
 {
-
     use EventDispatcherTrait;
 
     /**
@@ -102,7 +103,7 @@ class ProcessManagerTask extends Shell
         61 => 'SIGRTMAX-3',
         62 => 'SIGRTMAX-2',
         63 => 'SIGRTMAX-1',
-        64 => 'SIGRTMAX'
+        64 => 'SIGRTMAX',
     ];
 
     /**
@@ -116,7 +117,7 @@ class ProcessManagerTask extends Shell
     public function processOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         return $parser->addOption('process_id', [
-            'help' => 'A process identifier to make locking work with Supervisor'
+            'help' => 'A process identifier to make locking work with Supervisor',
         ]);
     }
 
@@ -138,7 +139,7 @@ class ProcessManagerTask extends Shell
             $signo = $signal;
             $signalName = static::$signals[$signal];
         } else {
-            if (false === ($pos = array_search($signal, static::$signals))) {
+            if (($pos = array_search($signal, static::$signals)) === false) {
                 throw new Exception('Unknown signal: %s', $signal);
             }
             $signo = $pos;
