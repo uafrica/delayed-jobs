@@ -23,7 +23,7 @@ class WorkersTable extends Table
     public const STATUS_DEAD = 6;
 
     /**
-     * @param array $config
+     * @param array $config Config
      * @return void
      */
     public function initialize(array $config): void
@@ -35,13 +35,13 @@ class WorkersTable extends Table
     }
 
     /**
-     * @param \Cake\Validation\Validator $validator
+     * @param \Cake\Validation\Validator $validator Validate
      * @return \Cake\Validation\Validator
      */
     public function validationDefault(Validator $validator): Validator
     {
         $validator
-            ->notEmpty('host_name');
+            ->notEmptyString('host_name');
 
         return $validator;
     }
@@ -71,9 +71,9 @@ class WorkersTable extends Table
     /**
      * @param \Cake\ORM\Query $query
      * @param array $options
-     * @return $this
+     * @return \Cake\ORM\Query
      */
-    public function findForHost(Query $query, array $options)
+    public function findForHost(Query $query, array $options): Query
     {
         return $query
             ->where([

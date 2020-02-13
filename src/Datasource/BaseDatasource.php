@@ -20,7 +20,7 @@ abstract class BaseDatasource implements DatasourceInterface
     /**
      * BaseDatasource constructor.
      *
-     * @param array $config
+     * @param array $config Config array
      */
     public function __construct($config = [])
     {

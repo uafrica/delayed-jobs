@@ -17,7 +17,7 @@ interface DatasourceInterface
     public function persistJob(Job $job);
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job[] $jobs
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs Array of jobs
      * @return array
      */
     public function persistJobs(array $jobs): array;
@@ -53,12 +53,8 @@ interface DatasourceInterface
     public function isSimilarJob(Job $job): bool;
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param \DelayedJobs\DelayedJob\Job $job Job instance
      * @return void
-     */
-    /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return mixed
      */
     public function loadJob(Job $job);
 }

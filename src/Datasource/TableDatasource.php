@@ -27,8 +27,14 @@ class TableDatasource extends BaseDatasource
      */
     protected function _table(): DatastoreInterface
     {
-        return $this->getTableLocator()
+        $table = $this->getTableLocator()
             ->get($this->getConfig('tableName'));
+
+        if (!$table instanceof DatastoreInterface) {
+            throw new \RuntimeException($this->getConfig('tableName') . ' is not an instance of ' . DatastoreInterface::class);
+        }
+
+        return $table;
     }
 
     /**

@@ -79,6 +79,9 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
         ];
     }
 
+    /**
+     * @return \DelayedJobs\DelayedJob\Job
+     */
     public function getJob(): Job
     {
         return $this->job;

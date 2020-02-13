@@ -5,9 +5,10 @@ namespace DelayedJobs\Worker;
 
 use Cake\Core\Configure;
 use Cake\Database\Exception;
-use Cake\Database\Schema\Table;
+use Cake\Database\Schema\TableSchema;
 use Cake\I18n\Time;
 use Cake\Log\Log;
+use Cake\ORM\Table;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\Job;
 
@@ -17,10 +18,10 @@ use DelayedJobs\DelayedJob\Job;
 class ArchiveWorker extends Worker
 {
     /**
-     * @param $archiveTable
+     * @param \Cake\ORM\Table $archiveTable Archive table instance
      * @return void
      */
-    protected function _ensureTable($archiveTable)
+    protected function _ensureTable(Table $archiveTable)
     {
         try {
             $archiveTable->getSchema();
@@ -33,11 +34,11 @@ class ArchiveWorker extends Worker
             }
             $columns['payload']['type'] = 'binary';
             $columns['options']['type'] = 'binary';
-            $archiveTableSchema = new Table($archiveTable->table(), $columns);
-            $archiveTableSchema->addConstraint('primary', $djSchema->constraint('primary'));
-            $createSql = $archiveTableSchema->createSql($archiveTable->connection());
+            $archiveTableSchema = new TableSchema($archiveTable->getTable(), $columns);
+            $archiveTableSchema->addConstraint('primary', $djSchema->getConstraint('primary'));
+            $createSql = $archiveTableSchema->createSql($archiveTable->getConnection());
             foreach ($createSql as $createSqlQuery) {
-                $archiveTable->connection()
+                $archiveTable->getConnection()
                     ->query($createSqlQuery);
             }
         }
