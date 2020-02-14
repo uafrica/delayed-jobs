@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Test\TestCase\Controller;
 
 use Cake\ORM\TableRegistry;
@@ -12,7 +14,6 @@ use Fabricate\Fabricate;
  */
 class DelayedJobsControllerTest extends IntegrationTestCase
 {
-
     public $fixtures = ['plugin.DelayedJobs.DelayedJobs'];
 
     public function tearDown(): void
@@ -25,7 +26,8 @@ class DelayedJobsControllerTest extends IntegrationTestCase
      * @return void
      * @covers ::index
      */
-    public function testIndex() {
+    public function testIndex()
+    {
         $count = 10;
         $jobs = Fabricate::create('DelayedJobs.DelayedJobs', $count);
 

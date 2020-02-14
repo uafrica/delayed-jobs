@@ -9,7 +9,6 @@ use Cake\TestSuite\Fixture\TestFixture;
  */
 class DelayedJobWorkersFixture extends TestFixture
 {
-
     /**
      * Fields
      *
@@ -49,7 +48,7 @@ class DelayedJobWorkersFixture extends TestFixture
             'created' => '2016-01-15 09:40:10',
             'modified' => '2016-01-15 09:40:10',
             'status' => 1,
-            'pulse' => '2016-01-15 09:40:10'
+            'pulse' => '2016-01-15 09:40:10',
         ],
     ];
 }

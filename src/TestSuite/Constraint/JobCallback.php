@@ -1,8 +1,7 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\TestSuite\Constraint;
-
-use PHPUnit\Framework\Constraint\Callback;
 
 /**
  * Class JobCallback
@@ -34,11 +33,19 @@ class JobCallback extends JobConstraintBase
         $this->matchType = $type;
     }
 
+    /**
+     * @return string
+     */
     public function toString(): string
     {
         return 'is accepted by specified callback';
     }
 
+    /**
+     * @param mixed $other Other arguments
+     *
+     * @return bool
+     */
     protected function matches($other): bool
     {
         $jobs = $this->getJobs();

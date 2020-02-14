@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Command;
 
@@ -303,10 +304,12 @@ class WorkerCommand extends Command implements EventListenerInterface
             return;
         }
 
-        if ($this->jobCount >= $this->suicideMode['jobCount'] ||
+        if (
+            $this->jobCount >= $this->suicideMode['jobCount'] ||
             microtime(true) - $this->timeOfLastJob >= $this->suicideMode['idleTimeout'] ||
             ($this->suicideMode['memoryLimit'] !== false &&
-                $this->suicideMode['memoryLimit'] * 1024 * 1024 <= memory_get_usage(true))) {
+                $this->suicideMode['memoryLimit'] * 1024 * 1024 <= memory_get_usage(true))
+        ) {
             $this->stopHammerTime(Worker::SHUTDOWN_SUICIDE, static::SUICIDE_EXIT_CODE);
         }
     }
@@ -332,9 +335,11 @@ class WorkerCommand extends Command implements EventListenerInterface
      */
     public function beforeExecute(EventInterface $event, Job $job): bool
     {
-        if ($this->worker &&
+        if (
+            $this->worker &&
             ($this->worker->status === WorkersTable::STATUS_SHUTDOWN ||
-                $this->worker->status === WorkersTable::STATUS_TO_KILL)) {
+                $this->worker->status === WorkersTable::STATUS_TO_KILL)
+        ) {
             $event->stopPropagation();
 
             return false;

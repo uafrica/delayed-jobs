@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Test\TestCase;
 
@@ -11,7 +12,6 @@ use Cake\TestSuite\TestCase;
  */
 class LockTest extends TestCase
 {
-
     /**
      * @var \DelayedJobs\Lock
      */

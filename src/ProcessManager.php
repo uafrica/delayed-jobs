@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace DelayedJobs;
 
-use Cake\Console\ConsoleOptionParser;
-use Cake\Console\Shell;
 use Cake\Event\Event;
 use Cake\Event\EventDispatcherTrait;
 use Cake\Log\LogTrait;
@@ -118,7 +116,7 @@ class ProcessManager
     public function signal($signal, callable $callback): void
     {
         if (!extension_loaded('pcntl')) {
-            return ;
+            return;
         }
 
         if (is_numeric($signal)) {

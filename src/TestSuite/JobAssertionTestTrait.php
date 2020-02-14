@@ -6,7 +6,6 @@ namespace DelayedJobs\TestSuite;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\TestSuite\Constraint\JobCallback;
 use DelayedJobs\TestSuite\Constraint\JobCount;
-use PHPUnit\Framework\Constraint\Callback;
 
 /**
  * Class JobAssertionTrait

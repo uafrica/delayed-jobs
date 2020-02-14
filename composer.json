@@ -17,8 +17,8 @@
     "dereuromark/cakephp-ide-helper": "For maximum IDE support, especially around enqueue() usage."
   },
   "scripts": {
-    "cs-check": "phpcs --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/",
-    "cs-fix": "phpcbf --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/"
+    "cs-check": "phpcs --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/ tests/",
+    "cs-fix": "phpcbf --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/ tests/"
   },
   "license": "MIT",
   "authors": [

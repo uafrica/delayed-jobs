@@ -6,8 +6,6 @@ namespace DelayedJobs\Command;
 use Cake\Console\Arguments;
 use Cake\Console\Command;
 use Cake\Console\ConsoleIo;
-use Cake\Event\Event;
-use Cake\Event\EventManager;
 use Cake\I18n\Time;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Command;
 
@@ -24,7 +25,7 @@ class RequeueCommand extends Command
 
         $options->addArgument('jobId', [
             'help' => 'Job id',
-            'required' => true
+            'required' => true,
         ]);
 
         return $options;
@@ -39,15 +40,17 @@ class RequeueCommand extends Command
             ->get('DelayedJobs.DelayedJobs')
             ->get($args->getArgument('jobId'));
 
-        if (!in_array(
-            $job->status,
-            [
+        if (
+            !in_array(
+                $job->status,
+                [
                 Job::STATUS_NEW,
                 Job::STATUS_FAILED,
                 Job::STATUS_PAUSED,
-            ],
-            true
-        )) {
+                ],
+                true
+            )
+        ) {
             $io->out(__('<error>{0} could not be queued - status is {1}</error>', $job->id, $job->status));
 
             return self::CODE_ERROR;
@@ -60,5 +63,4 @@ class RequeueCommand extends Command
 
         return self::CODE_SUCCESS;
     }
-
 }

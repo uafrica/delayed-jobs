@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Copyright (c) uAfrica.com. (http://uafrica.com)
  *
@@ -12,7 +14,6 @@
 
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
-use Cake\Core\Plugin;
 use Cake\Datasource\ConnectionManager;
 
 date_default_timezone_set('UTC');
@@ -42,8 +43,8 @@ Configure::write('App', [
     'namespace' => 'App',
     'paths' => [
         'plugins' => [ROOT . 'Plugin' . DS],
-        'templates' => [ROOT . 'App' . DS . 'Template' . DS]
-    ]
+        'templates' => [ROOT . 'App' . DS . 'Template' . DS],
+    ],
 ]);
 Cache::config([
     '_cake_core_' => [
@@ -57,7 +58,7 @@ Cache::config([
         'prefix' => 'cake_model_',
         'serialize' => true,
         'path' => '/tmp',
-    ]
+    ],
 ]);
 if (!getenv('db_dsn')) {
     putenv('db_dsn=sqlite:///:memory:?quoteIdentifiers=1');

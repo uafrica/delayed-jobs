@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace DelayedJobs\TestSuite\Constraint;
 
-use Cake\TestSuite\TestEmailTransport;
 use DelayedJobs\TestSuite\TestManager;
 use PHPUnit\Framework\Constraint\Constraint;
 

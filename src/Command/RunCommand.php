@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Command;
 
@@ -132,13 +133,13 @@ class RunCommand extends Command
         $options = parent::getOptionParser();
 
         $options->addOption(
-                'force',
-                [
+            'force',
+            [
                     'short' => 'f',
                     'help' => 'Force the job to run, even if failed, or successful',
                     'boolean' => true,
                 ]
-            )
+        )
             ->addOption(
                 'debug',
                 [
