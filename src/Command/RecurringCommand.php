@@ -28,15 +28,11 @@ class RecurringCommand extends Command
     {
         $io->out('Locating recurring jobs.');
 
-        //Event is deprecated
-        $event = new Event('DelayedJobs.recurring', $this);
-        $event->result = RecurringJobBuilder::retrieve();
-        EventManager::instance()
-            ->dispatch($event);
+        $recuringJobs = RecurringJobBuilder::retrieve();
 
-        $io->verbose(__('{0} recurring jobs to queue', count($event->result)));
+        $io->verbose(__('{0} recurring jobs to queue', count($recuringJobs)));
         $queueCount = 0;
-        foreach ($event->result as $job) {
+        foreach ($recuringJobs as $job) {
             if (!$job instanceof Job) {
                 $job = new Job($job + [
                         'group' => 'Recurring',

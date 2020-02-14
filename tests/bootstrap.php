@@ -1,6 +1,4 @@
 <?php
-use Exception;
-use Cake\Cache\Cache;
 /**
  * Copyright (c) uAfrica.com. (http://uafrica.com)
  *
@@ -11,12 +9,11 @@ use Cake\Cache\Cache;
  * @link          http://uafrica.com uAfrica.com Project
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
+
+use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Core\Plugin;
 use Cake\Datasource\ConnectionManager;
-use Cake\Routing\DispatcherFactory;
-use CakeFabricate\Adaptor\CakeFabricateAdaptor;
-use Fabricate\Fabricate;
 
 date_default_timezone_set('UTC');
 
@@ -69,17 +66,3 @@ if (!getenv('DB')) {
     putenv('DB=sqlite');
 }
 ConnectionManager::config('test', ['url' => getenv('db_dsn')]);
-Plugin::load('DelayedJobs', [
-    'path' => dirname(dirname(__FILE__)) . DS,
-]);
-Plugin::load('Crud', [
-    'path' => dirname(dirname(__FILE__)) . DS . 'vendor' . DS . 'friendsofcake' . DS . 'crud' . DS
-]);
-
-DispatcherFactory::add('Asset');
-DispatcherFactory::add('Routing');
-DispatcherFactory::add('ControllerFactory');
-
-Fabricate::config(function ($config) {
-    $config->adaptor = new CakeFabricateAdaptor();
-});
