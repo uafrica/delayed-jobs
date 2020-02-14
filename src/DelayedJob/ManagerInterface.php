@@ -36,6 +36,7 @@ interface ManagerInterface
      *
      * @param int $jobId Job to fetch
      * @return \DelayedJobs\DelayedJob\Job
+     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
     public function fetchJob($jobId): Job;
 
