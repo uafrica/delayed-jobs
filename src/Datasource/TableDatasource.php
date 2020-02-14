@@ -31,15 +31,16 @@ class TableDatasource extends BaseDatasource
             ->get($this->getConfig('tableName'));
 
         if (!$table instanceof DatastoreInterface) {
-            throw new \RuntimeException($this->getConfig('tableName') . ' is not an instance of ' . DatastoreInterface::class);
+            throw new \RuntimeException(
+                $this->getConfig('tableName') . ' is not an instance of ' . DatastoreInterface::class
+            );
         }
 
         return $table;
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job to persist
-     * @return \DelayedJobs\DelayedJob\Job|bool
+     * {@inheritDoc}
      */
     public function persistJob(Job $job)
     {
@@ -48,8 +49,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * @param array $jobs
-     * @return array
+     * {@inheritDoc}
      */
     public function persistJobs(array $jobs): array
     {
@@ -58,10 +58,9 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * @param int $jobId The job to get
-     * @return \DelayedJobs\DelayedJob\Job|null
+     * {@inheritDoc}
      */
-    public function fetchJob($jobId)
+    public function fetchJob(int $jobId): Job
     {
         $job = $this->_table()
             ->fetchJob($jobId);
@@ -74,10 +73,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * Returns true if a job of the same sequence is already persisted and waiting execution.
-     *
-     * @param \DelayedJobs\DelayedJob\Job $job The job to check for
-     * @return bool
+     * {@inheritDoc}
      */
     public function currentlySequenced(Job $job): bool
     {
@@ -86,22 +82,16 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * Gets the next job in the sequence
-     *
-     * @param \DelayedJobs\DelayedJob\Job $job Job to get next sequence for
-     * @return \DelayedJobs\DelayedJob\Job|null
+     * {@inheritDoc}
      */
-    public function fetchNextSequence(Job $job)
+    public function fetchNextSequence(Job $job): ?Job
     {
         return $this->_table()
             ->fetchNextSequence($job);
     }
 
     /**
-     * Checks if there already is a job with the same class waiting
-     *
-     * @param \DelayedJobs\DelayedJob\Job $job Job to check
-     * @return bool
+     * {@inheritDoc}
      */
     public function isSimilarJob(Job $job): bool
     {
@@ -110,19 +100,17 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return $this
-     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
+     * {@inheritDoc}
      */
-    public function loadJob(Job $job)
+    public function loadJob(Job $job): Job
     {
-        $jobEntity = $this->_table()
-            ->find()
-            ->where(['id' => $job->getId()])
-            ->first();
+        $jobEntity = $this->_table()->fetchJobEntity($job->getId());
 
         if ($jobEntity === null) {
-            throw new JobNotFoundException(sprintf('Job with id "%s" does not exist in the datastore.', $job->getId()));
+            throw new JobNotFoundException(sprintf(
+                'Job with id "%s" does not exist in the datastore.',
+                $job->getId()
+            ));
         }
 
         return $job->setDataFromEntity($jobEntity);

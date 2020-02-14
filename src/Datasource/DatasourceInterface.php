@@ -24,9 +24,10 @@ interface DatasourceInterface
 
     /**
      * @param int $jobId The job to get
-     * @return \DelayedJobs\DelayedJob\Job|null
+     * @return \DelayedJobs\DelayedJob\Job
+     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
-    public function fetchJob($jobId);
+    public function fetchJob(int $jobId): Job;
 
     /**
      * Returns true if a job of the same sequence is already persisted and waiting execution.
@@ -42,7 +43,7 @@ interface DatasourceInterface
      * @param \DelayedJobs\DelayedJob\Job $job Job to get next sequence for
      * @return \DelayedJobs\DelayedJob\Job|null
      */
-    public function fetchNextSequence(Job $job);
+    public function fetchNextSequence(Job $job): ?Job;
 
     /**
      * Checks if there already is a job with the same class waiting
@@ -54,7 +55,8 @@ interface DatasourceInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job instance
-     * @return void
+     * @return \DelayedJobs\DelayedJob\Job
+     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
-    public function loadJob(Job $job);
+    public function loadJob(Job $job): Job;
 }

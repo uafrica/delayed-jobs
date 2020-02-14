@@ -28,7 +28,7 @@ class MonitorShell extends AppShell
 
     public $modelClass = 'DelayedJobs.Workers';
 
-    public $loop_counter;
+    public $loopCounter;
 
     /**
      * @return array
@@ -67,8 +67,8 @@ class MonitorShell extends AppShell
     }
 
     /**
-     * @param $field
-     * @param null $status
+     * @param string $field Field
+     * @param string|null $status Status
      * @return array
      */
     protected function _jobRates($field, $status = null)
@@ -93,13 +93,13 @@ class MonitorShell extends AppShell
     }
 
     /**
-     * @param $host_id
+     * @param string $hostId The host id
      * @return \Cake\ORM\Query
      */
-    protected function _getRunningByHost($host_id)
+    protected function _getRunningByHost($hostId)
     {
         $conditions = [
-            'DelayedJobs.host_name' => $host_id,
+            'DelayedJobs.host_name' => $hostId,
             'DelayedJobs.status' => Job::STATUS_BUSY,
         ];
         $jobs = $this->DelayedJobs->find()
@@ -118,6 +118,9 @@ class MonitorShell extends AppShell
         return $jobs;
     }
 
+    /**
+     * @return \Cake\ORM\Query
+     */
     protected function _getRunning()
     {
         $conditions = [
@@ -139,9 +142,16 @@ class MonitorShell extends AppShell
         return $jobs;
     }
 
-    protected function _jobsPerSecond($conditions = [], $field = 'created', $time_range = '-1 hour')
+    /**
+     * @param array $conditions Conditions
+     * @param string $field Field
+     * @param string $timeRange Time range
+     *
+     * @return float|int
+     */
+    protected function _jobsPerSecond($conditions = [], $field = 'created', $timeRange = '-1 hour')
     {
-        $start_time = new Time($time_range);
+        $start_time = new Time($timeRange);
         $current_time = new Time();
         $second_count = $current_time->diffInSeconds($start_time);
         $conditions[$this->DelayedJobs->aliasField($field) . ' > '] = $start_time;
@@ -152,6 +162,9 @@ class MonitorShell extends AppShell
         return $count / $second_count;
     }
 
+    /**
+     * @return void
+     */
     protected function _basicStats()
     {
         static $peak_created_rate = 0.0;
@@ -193,6 +206,9 @@ class MonitorShell extends AppShell
         $this->helper('Table')->output($data);
     }
 
+    /**
+     * @return void
+     */
     protected function _basicStatsWithCharts()
     {
         static $created_points = [];
@@ -209,7 +225,7 @@ class MonitorShell extends AppShell
         $peak_created_rate = $created_rate[0] > $peak_created_rate ? $created_rate[0] : $peak_created_rate;
         $peak_completed_rate = $completed_rate[0] > $peak_completed_rate ? $completed_rate[0] : $peak_completed_rate;
 
-        if (empty($created_points) || $this->loop_counter % 4 === 0) {
+        if (empty($created_points) || $this->loopCounter % 4 === 0) {
             $created_points[] = $created_rate[0];
             $completed_points[] = $completed_rate[0];
 
@@ -279,6 +295,9 @@ class MonitorShell extends AppShell
         }
     }
 
+    /**
+     * @return void
+     */
     protected function _rabbitStats()
     {
         $rabbit_status = JobManager::getInstance()
@@ -297,6 +316,9 @@ class MonitorShell extends AppShell
             ]);
     }
 
+    /**
+     * @return void
+     */
     protected function _rabbitStatsWithCharts()
     {
         static $ready_points = [];
@@ -311,7 +333,7 @@ class MonitorShell extends AppShell
             return;
         }
 
-        if (empty($ready_points) || $this->loop_counter % 4 === 0) {
+        if (empty($ready_points) || $this->loopCounter % 4 === 0) {
             $ready_points[] = $rabbit_status['messages_ready'];
             $unacked_points[] = $rabbit_status['messages_unacknowledged'];
         }
@@ -338,10 +360,13 @@ class MonitorShell extends AppShell
             ]);
     }
 
+    /**
+     * @return void
+     */
     protected function _historicJobs()
     {
         $last_completed = $this->DelayedJobs->find()
-            ->select(['id', 'last_message', 'end_time', 'worker',  'end_time', 'duration'])
+            ->select(['id', 'last_message', 'end_time', 'worker', 'end_time', 'duration'])
             ->where([
                 'status' => Job::STATUS_SUCCESS,
             ])
@@ -371,7 +396,8 @@ class MonitorShell extends AppShell
         $output = [];
         if (!empty($last_completed)) {
             $output[] = __(
-                'Last completed: <info>{0}</info> (<comment>{1}</comment>) @ <info>{2}</info> :: <info>{3}</info> seconds',
+                'Last completed: <info>{0}</info> (<comment>{1}</comment>) @ 
+<info>{2}</info> :: <info>{3}</info> seconds',
                 $last_completed->id,
                 $last_completed->worker,
                 $last_completed->end_time ? $last_completed->end_time->i18nFormat() : '',
@@ -412,6 +438,9 @@ class MonitorShell extends AppShell
         }
     }
 
+    /**
+     * @return void
+     */
     protected function _activeJobs()
     {
         $running_jobs = $this->DelayedJobs->find()
@@ -432,7 +461,7 @@ class MonitorShell extends AppShell
         $this->hr();
         $this->out('Running jobs');
         $data = [
-            ['Id', 'Host',  'Run time'],
+            ['Id', 'Host', 'Run time'],
         ];
         foreach ($running_jobs as $running_job) {
             $row = [
@@ -446,6 +475,9 @@ class MonitorShell extends AppShell
         $this->helper('Table')->output($data);
     }
 
+    /**
+     * @return void
+     */
     public function main()
     {
         $this->loadModel('DelayedJobs.DelayedJobs');
@@ -453,7 +485,7 @@ class MonitorShell extends AppShell
         $this->start_time = time();
         $this->clear();
         while (true) {
-            if ($this->loop_counter % 100 !== 0 && $this->param('basic-stats')) {
+            if ($this->loopCounter % 100 !== 0 && $this->param('basic-stats')) {
                 $this->out("\e[0;0H");
             } else {
                 $this->clear();
@@ -480,9 +512,9 @@ class MonitorShell extends AppShell
             }
             usleep(250000);
 
-            $this->loop_counter++;
-            if ($this->loop_counter > 1000) {
-                $this->loop_counter = 0;
+            $this->loopCounter++;
+            if ($this->loopCounter > 1000) {
+                $this->loopCounter = 0;
             }
         }
     }

@@ -8,7 +8,7 @@ use Cake\Console\ConsoleOptionParser;
 use Cake\Console\Shell;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\RecordNotFoundException;
-use Cake\Event\Event;
+use Cake\Event\EventInterface;
 use Cake\Event\EventListenerInterface;
 use Cake\I18n\FrozenTime;
 use Cake\I18n\Time;
@@ -95,7 +95,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
     protected $_busy = false;
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function startup()
     {
@@ -156,15 +156,21 @@ class WorkerShell extends AppShell implements EventListenerInterface
         );
     }
 
+    /**
+     * @return void
+     */
     protected function _enableListeners()
     {
         $this->ProcessManager->getEventManager()
-            ->on('CLI.signal', function (Event $event) {
+            ->on('CLI.signal', function (EventInterface $event) {
                 $this->_processKillSignal(ProcessManagerTask::$signals[$event->getData('signo')] ?? 'Unknown');
             });
         $this->ProcessManager->handleKillSignals();
     }
 
+    /**
+     * @return void
+     */
     protected function _welcome()
     {
         $this->clear();
@@ -183,8 +189,8 @@ class WorkerShell extends AppShell implements EventListenerInterface
     }
 
     /**
-     * @param $reason
-     * @param int $exitCode
+     * @param string $reason Reason for stop
+     * @param int $exitCode Exit code
      * @return void
      */
     public function stopHammerTime($reason, $exitCode = 0)
@@ -225,7 +231,7 @@ class WorkerShell extends AppShell implements EventListenerInterface
      * @return array associative array or event key names pointing to the function
      * that should be called in the object when the respective event is fired
      */
-    public function implementedEvents()
+    public function implementedEvents(): array
     {
         return [
             'DelayedJob.beforeJobExecute' => 'beforeExecute',
@@ -236,6 +242,9 @@ class WorkerShell extends AppShell implements EventListenerInterface
         ];
     }
 
+    /**
+     * @return void
+     */
     public function main()
     {
         $this->heartbeat();
@@ -248,11 +257,17 @@ class WorkerShell extends AppShell implements EventListenerInterface
         $this->stopHammerTime(Worker::SHUTDOWN_LOOP_EXIT);
     }
 
+    /**
+     * @return void
+     */
     public function forceShutdown()
     {
         $this->stopHammerTime(Worker::SHUTDOWN_MANAGER, static::MANAGER_SHUTDOWN);
     }
 
+    /**
+     * @return void
+     */
     public function heartbeat()
     {
         $this->out('<success>Heartbeat</success>', 1, Shell::VERBOSE);
@@ -300,6 +315,9 @@ class WorkerShell extends AppShell implements EventListenerInterface
         $this->_checkSuicideStatus();
     }
 
+    /**
+     * @return void
+     */
     protected function _checkSuicideStatus()
     {
         if ($this->_signalReceived) {
@@ -313,20 +331,24 @@ class WorkerShell extends AppShell implements EventListenerInterface
         if (
             $this->_jobCount >= $this->_suicideMode['jobCount'] ||
             microtime(true) - $this->_timeOfLastJob >= $this->_suicideMode['idleTimeout'] ||
-            ($this->_suicideMode['memoryLimit'] !== false && $this->_suicideMode['memoryLimit'] * 1024 * 1024 <= memory_get_usage(true))
+            ($this->_suicideMode['memoryLimit'] !== false &&
+                $this->_suicideMode['memoryLimit'] * 1024 * 1024 <= memory_get_usage(true))
         ) {
             $this->stopHammerTime(Worker::SHUTDOWN_SUICIDE, static::SUICIDE_EXIT_CODE);
         }
     }
 
     /**
-     * @param \Cake\Event\Event $event
-     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param \Cake\Event\EventInterface $event Event
+     * @param \DelayedJobs\DelayedJob\Job $job Job
      * @return bool
      */
-    public function beforeExecute(Event $event, Job $job)
+    public function beforeExecute(EventInterface $event, Job $job)
     {
-        if ($this->_worker && ($this->_worker->status === WorkersTable::STATUS_SHUTDOWN || $this->_worker->status === WorkersTable::STATUS_TO_KILL)) {
+        if (
+            $this->_worker && ($this->_worker->status === WorkersTable::STATUS_SHUTDOWN ||
+                $this->_worker->status === WorkersTable::STATUS_TO_KILL)
+        ) {
             $event->stopPropagation();
 
             return false;
@@ -340,7 +362,14 @@ class WorkerShell extends AppShell implements EventListenerInterface
 
         $this->_beforeMemory = memory_get_usage(true);
         $this->out(sprintf(' - <info>%s</info>', $job->getWorker()), 1, Shell::VERBOSE);
-        $this->out(sprintf(' - Before job memory: <info>%s</info>', $this->_makeReadable($this->_beforeMemory)), 1, Shell::VERBOSE);
+        $this->out(
+            sprintf(
+                ' - Before job memory: <info>%s</info>',
+                $this->_makeReadable($this->_beforeMemory)
+            ),
+            1,
+            Shell::VERBOSE
+        );
         $this->out(' - Executing job', 1, Shell::VERBOSE);
 
         pcntl_signal_dispatch();
@@ -350,8 +379,8 @@ class WorkerShell extends AppShell implements EventListenerInterface
     }
 
     /**
-     * @param $size
-     * @param int $precision
+     * @param float $size The size
+     * @param int $precision How many
      * @return string
      */
     private function _makeReadable($size, $precision = 2)
@@ -368,13 +397,13 @@ class WorkerShell extends AppShell implements EventListenerInterface
     }
 
     /**
-     * @param \Cake\Event\Event $event The event
+     * @param \Cake\Event\EventInterface $event The event
      * @param \DelayedJobs\DelayedJob\Job $job The Job
      * @param \DelayedJobs\Result\ResultInterface $result The result
      * @param int $duration The duration
      * @return void
      */
-    public function afterExecute(Event $event, Job $job, ResultInterface $result, $duration)
+    public function afterExecute(EventInterface $event, Job $job, ResultInterface $result, $duration)
     {
         $this->_lastJob = $job->getId();
         $this->_jobCount++;
@@ -390,13 +419,35 @@ class WorkerShell extends AppShell implements EventListenerInterface
                 $this->out($result->getException()->getTraceAsString(), 1, Shell::VERBOSE);
             }
         } elseif ($result instanceof Pause) {
-            $this->out(sprintf('<info> - Execution paused</info> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
+            $this->out(
+                sprintf(
+                    '<info> - Execution paused</info> :: <info>%s</info>',
+                    $result->getMessage()
+                ),
+                1,
+                Shell::VERBOSE
+            );
         } else {
-            $this->out(sprintf('<success> - Execution successful</success> :: <info>%s</info>', $result->getMessage()), 1, Shell::VERBOSE);
+            $this->out(
+                sprintf(
+                    '<success> - Execution successful</success> :: <info>%s</info>',
+                    $result->getMessage()
+                ),
+                1,
+                Shell::VERBOSE
+            );
         }
 
         $nowMem = memory_get_usage(true);
-        $this->out(sprintf(' - After job memory: <info>%s</info> (Change %s)', $this->_makeReadable($nowMem), $this->_makeReadable($nowMem - $this->_beforeMemory)), 1, Shell::VERBOSE);
+        $this->out(
+            sprintf(
+                ' - After job memory: <info>%s</info> (Change %s)',
+                $this->_makeReadable($nowMem),
+                $this->_makeReadable($nowMem - $this->_beforeMemory)
+            ),
+            1,
+            Shell::VERBOSE
+        );
         $this->out(sprintf(' - Took: %.2f seconds', $duration / 1000), 1, Shell::VERBOSE);
 
         if ($this->_io->level() === Shell::NORMAL) {
@@ -406,17 +457,23 @@ class WorkerShell extends AppShell implements EventListenerInterface
             } elseif ($result instanceof Pause) {
                 $fin = '<info>❙ ❙</info>';
             }
-            $this->out(sprintf('%s %d %.2fs (%s)', $fin, $job->getId(), $duration / 1000, $this->_makeReadable($nowMem)));
+            $this->out(sprintf(
+                '%s %d %.2fs (%s)',
+                $fin,
+                $job->getId(),
+                $duration / 1000,
+                $this->_makeReadable($nowMem)
+            ));
         }
     }
 
     /**
-     * @param \Cake\Event\Event $event
+     * @param \Cake\Event\EventInterface $event The event
      * @param \DelayedJobs\DelayedJob\Job $job The Job
-     * @param \DelayedJobs\Result\ResultInterface $result
+     * @param \DelayedJobs\Result\ResultInterface $result The result
      * @return void
      */
-    public function afterCompleted(Event $event, Job $job, ResultInterface $result)
+    public function afterCompleted(EventInterface $event, Job $job, ResultInterface $result)
     {
         if ($this->param('stop-on-failure') && $result instanceof Failed) {
             $this->stopHammerTime(Worker::SHUTDOWN_ERROR, self::WORKER_ERROR_EXIT_CODE);

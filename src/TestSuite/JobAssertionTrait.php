@@ -11,23 +11,23 @@ use DelayedJobs\DelayedJob\Job;
 trait JobAssertionTrait
 {
     /**
-     * @param $expectedCount
-     * @param $haystack
-     * @param string $message
+     * @param int $expectedCount How many expected
+     * @param mixed $haystack The haystack
+     * @param string $message The message if false
      * @return mixed
      */
     abstract public function assertCount($expectedCount, $haystack, $message = '');
 
     /**
-     * @param $condition
-     * @param string $message
+     * @param bool $condition The condition
+     * @param string $message The message
      * @return mixed
      */
     abstract public static function assertTrue($condition, $message = '');
 
     /**
-     * @param $count
-     * @param string $message
+     * @param int $count How many jobs
+     * @param string $message Message if bad
      * @return void
      */
     public function assertJobCount($count, $message = '')
@@ -36,8 +36,8 @@ trait JobAssertionTrait
     }
 
     /**
-     * @param callable $callback
-     * @param string $message
+     * @param callable $callback Callable
+     * @param string $message Message
      * @return void
      */
     public function assertEachJob(callable $callback, $message = '')
@@ -55,8 +55,8 @@ trait JobAssertionTrait
     }
 
     /**
-     * @param callable $callback
-     * @param string $message
+     * @param callable $callback Callback
+     * @param string $message Message
      * @return void
      */
     public function assertJob(callable $callback, $message = '')
@@ -74,8 +74,8 @@ trait JobAssertionTrait
     }
 
     /**
-     * @param callable $callback
-     * @param string $message
+     * @param callable $callback Callabke
+     * @param string $message Message
      * @return void
      */
     public function assertNotJob(callable $callback, $message = '')
@@ -93,8 +93,8 @@ trait JobAssertionTrait
     }
 
     /**
-     * @param $worker
-     * @param string $message
+     * @param string $worker Worker name
+     * @param string $message Message
      * @return void
      */
     public function assertJobWorker($worker, $message = '')
@@ -107,8 +107,8 @@ trait JobAssertionTrait
     }
 
     /**
-     * @param $worker
-     * @param string $message
+     * @param string $worker Worker name
+     * @param string $message Message
      * @return void
      */
     public function assertNotJobWorker($worker, $message = '')

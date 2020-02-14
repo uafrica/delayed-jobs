@@ -110,9 +110,8 @@ class ProcessManagerTask extends Shell
      * Gets the option parser instance and configures it.
      * By overriding this method you can configure the ConsoleOptionParser before returning it.
      *
-     * @param \Cake\Console\ConsoleOptionParser $parser
+     * @param \Cake\Console\ConsoleOptionParser $parser Parser
      * @return \Cake\Console\ConsoleOptionParser
-     * @link http://book.cakephp.org/2.0/en/console-and-shells.html#Shell::getOptionParser
      */
     public function processOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
@@ -139,7 +138,8 @@ class ProcessManagerTask extends Shell
             $signo = $signal;
             $signalName = static::$signals[$signal];
         } else {
-            if (($pos = array_search($signal, static::$signals)) === false) {
+            $pos = array_search($signal, static::$signals);
+            if ($pos === false) {
                 throw new Exception('Unknown signal: %s', $signal);
             }
             $signo = $pos;
@@ -153,6 +153,10 @@ class ProcessManagerTask extends Shell
         $this->log(sprintf('Successfully subscribed to signal %s (%d)', $signalName, $signo), 'debug');
     }
 
+    /**
+     * @return void
+     * @throws \Exception
+     */
     public function handleKillSignals()
     {
         $callback = function ($signo) {

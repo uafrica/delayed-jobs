@@ -47,16 +47,16 @@ class WorkersTable extends Table
     }
 
     /**
-     * @param $host_name
-     * @param $worker_name
-     * @param $pid
+     * @param string $hostName Host name
+     * @param string $workerName Worker name
+     * @param string $pid PID
      * @return bool|\Cake\Datasource\EntityInterface|mixed
      */
-    public function started($host_name, $worker_name, $pid)
+    public function started($hostName, $workerName, $pid)
     {
         $data = [
-            'host_name' => $host_name,
-            'worker_name' => $worker_name,
+            'host_name' => $hostName,
+            'worker_name' => $workerName,
             'pid' => $pid,
             'status' => self::STATUS_RUNNING,
             'pulse' => new Time(),
@@ -69,8 +69,8 @@ class WorkersTable extends Table
     }
 
     /**
-     * @param \Cake\ORM\Query $query
-     * @param array $options
+     * @param \Cake\ORM\Query $query Query
+     * @param array $options Options
      * @return \Cake\ORM\Query
      */
     public function findForHost(Query $query, array $options): Query
@@ -85,15 +85,15 @@ class WorkersTable extends Table
     }
 
     /**
-     * @param $host_name
-     * @param $worker_name
+     * @param string $hostName Host name
+     * @param string $workerName Worker name
      * @return array|\Cake\Datasource\EntityInterface|null
      */
-    public function getWorker($host_name, $worker_name)
+    public function getWorker($hostName, $workerName)
     {
         $conditions = [
-            'Workers.host_name' => $host_name,
-            'Workers.worker_name' => $worker_name,
+            'Workers.host_name' => $hostName,
+            'Workers.worker_name' => $workerName,
         ];
 
         $host = $this
@@ -105,8 +105,8 @@ class WorkersTable extends Table
     }
 
     /**
-     * @param \DelayedJobs\Model\Entity\Worker $worker
-     * @param $status
+     * @param \DelayedJobs\Model\Entity\Worker $worker Worker instance
+     * @param string $status Status
      * @return void
      */
     public function setStatus(Worker $worker, $status)

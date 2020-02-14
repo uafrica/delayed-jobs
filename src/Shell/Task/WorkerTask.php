@@ -25,6 +25,9 @@ class WorkerTask extends Shell
      */
     public $modelClass = 'DelayedJobs.DelayedJobs';
 
+    /**
+     * @return bool|int|void|null
+     */
     public function main()
     {
         if (isset($this->args[0])) {
@@ -52,7 +55,7 @@ class WorkerTask extends Shell
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param \DelayedJobs\DelayedJob\Job $job The job
      * @return void
      */
     public function executeJob(Job $job)
@@ -86,8 +89,8 @@ class WorkerTask extends Shell
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param \DelayedJobs\Result\Failed $response
+     * @param \DelayedJobs\DelayedJob\Job $job The job
+     * @param \DelayedJobs\Result\Failed $response Failed response
      * @return void
      * @throws \Throwable
      */
@@ -97,7 +100,14 @@ class WorkerTask extends Shell
             throw $response->getException();
         }
 
-        $this->out(sprintf('<error> - Execution failed</error> :: <info>%s</info>', $response->getMessage()), 1, Shell::VERBOSE);
+        $this->out(
+            sprintf(
+                '<error> - Execution failed</error> :: <info>%s</info>',
+                $response->getMessage()
+            ),
+            1,
+            Shell::VERBOSE
+        );
         if ($response->getException()) {
             $this->out($response->getException()->getTraceAsString(), 1, Shell::VERBOSE);
         }

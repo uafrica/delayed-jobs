@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace DelayedJobs\DelayedJob;
 
+use Cake\Chronos\ChronosInterface;
 use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
@@ -28,6 +29,7 @@ class Job
     public const STATUS_UNKNOWN = 7;
     public const STATUS_TEST_JOB = 8;
     public const STATUS_PAUSED = 9;
+    public const MAX_PRIORITY = 255;
 
     /**
      * @var string
@@ -179,7 +181,7 @@ class Job
     }
 
     /**
-     * @param bool $manualRun
+     * @param bool $manualRun Is this job being manually run?
      * @return self
      */
     public function setManualRun(bool $manualRun): self
@@ -217,11 +219,11 @@ class Job
     }
 
     /**
-     * @param array $data
-     * @return $this
+     * @param array $data Array of data
+     * @return self
      * @throws \DelayedJobs\DelayedJob\Exception\JobDataException
      */
-    public function setData(array $data)
+    public function setData(array $data): self
     {
         foreach ($data as $key => $value) {
             $method = 'set' . Inflector::camelize($key);
@@ -234,10 +236,10 @@ class Job
     }
 
     /**
-     * @param \Cake\Datasource\EntityInterface $entity
-     * @return $this
+     * @param \Cake\Datasource\EntityInterface $entity An entity to get the data from
+     * @return self
      */
-    public function setDataFromEntity(EntityInterface $entity)
+    public function setDataFromEntity(EntityInterface $entity): self
     {
         $this->setData($entity->toArray());
         $this->setEntity($entity);
@@ -246,10 +248,10 @@ class Job
     }
 
     /**
-     * @param \Cake\Datasource\EntityInterface $entity
-     * @return $this
+     * @param \Cake\Datasource\EntityInterface $entity Entity that this job was created from
+     * @return self
      */
-    public function setEntity(?EntityInterface $entity = null)
+    public function setEntity(?EntityInterface $entity = null): self
     {
         $this->_baseEntity = $entity;
 
@@ -259,7 +261,7 @@ class Job
     /**
      * @return \Cake\Datasource\EntityInterface|null
      */
-    public function getEntity()
+    public function getEntity(): ?EntityInterface
     {
         return $this->_baseEntity;
     }
@@ -267,16 +269,16 @@ class Job
     /**
      * @return int|null
      */
-    public function getId()
+    public function getId(): ?int
     {
         return $this->_id;
     }
 
     /**
-     * @param int $id
-     * @return $this
+     * @param int $id ID for this job
+     * @return self
      */
-    public function setId($id)
+    public function setId($id): self
     {
         $this->_id = $id;
 
@@ -292,11 +294,11 @@ class Job
     }
 
     /**
-     * @param int $retries
+     * @param int $retries Number of retries this job has done
      *
-     * @return $this
+     * @return self
      */
-    public function setRetries($retries)
+    public function setRetries($retries): self
     {
         $this->_retries = $retries;
 
@@ -304,9 +306,9 @@ class Job
     }
 
     /**
-     * @return $this
+     * @return self
      */
-    public function incrementRetries()
+    public function incrementRetries(): self
     {
         $this->_retries++;
 
@@ -323,9 +325,9 @@ class Job
 
     /**
      * @param int $maxRetries Max retries
-     * @return $this
+     * @return self
      */
-    public function setMaxRetries($maxRetries)
+    public function setMaxRetries($maxRetries): self
     {
         $this->_maxRetries = min($maxRetries, Configure::read('DelayedJobs.maximum.maxRetries'));
 
@@ -333,19 +335,19 @@ class Job
     }
 
     /**
-     * @return mixed
+     * @return string
      */
-    public function getWorker()
+    public function getWorker(): string
     {
         return $this->_worker;
     }
 
     /**
      * @param string $worker Class name
-     * @return $this
+     * @return self
      * @throws \DelayedJobs\DelayedJob\Exception\JobDataException
      */
-    public function setWorker($worker)
+    public function setWorker($worker): self
     {
         $className = App::className($worker, 'Worker', 'Worker');
 
@@ -361,7 +363,7 @@ class Job
     /**
      * @return string
      */
-    public function getGroup()
+    public function getGroup(): string
     {
         if (!empty($this->_group)) {
             return $this->_group;
@@ -371,10 +373,10 @@ class Job
     }
 
     /**
-     * @param string $group
-     * @return $this
+     * @param string $group What group does this job
+     * @return self
      */
-    public function setGroup($group)
+    public function setGroup($group): self
     {
         $this->_group = $group;
 
@@ -390,13 +392,13 @@ class Job
     }
 
     /**
-     * @param int $priority
-     * @return $this
+     * @param int $priority Job priority
+     * @return self
      */
-    public function setPriority($priority)
+    public function setPriority($priority): self
     {
-        if ($priority > 255) {
-            $priority = 255;
+        if ($priority > self::MAX_PRIORITY) {
+            $priority = self::MAX_PRIORITY;
         } elseif ($priority < 0) {
             $priority = 0;
         }
@@ -422,9 +424,9 @@ class Job
     /**
      * @param array $payload Payload array
      * @param bool $defaults Use as defaults
-     * @return $this
+     * @return self
      */
-    public function setPayload(array $payload, $defaults = false)
+    public function setPayload(array $payload, bool $defaults = false): self
     {
         if ($defaults === false) {
             $this->_payload = $payload;
@@ -439,9 +441,9 @@ class Job
      * @param string $key The key to use
      * @param mixed $value The value
      * @param bool $overwrite Overwrite the value. If false they will be merged
-     * @return $this
+     * @return self
      */
-    public function setPayloadKey($key, $value, $overwrite = true)
+    public function setPayloadKey(string $key, $value, bool $overwrite = true): self
     {
         if (!$overwrite && isset($this->_payload[$key])) {
             $this->_payload[$key] = Hash::merge((array)$this->_payload[$key], (array)$value);
@@ -463,10 +465,10 @@ class Job
     }
 
     /**
-     * @param array $options
-     * @return $this
+     * @param array $options Array of options for the job
+     * @return self
      */
-    public function setOptions($options)
+    public function setOptions($options): self
     {
         $this->_options = $options;
 
@@ -476,9 +478,9 @@ class Job
     /**
      * @param string $option The option name
      * @param  mixed $value The value
-     * @return $this
+     * @return self
      */
-    public function setOption($option, $value)
+    public function setOption($option, $value): self
     {
         $this->_options[$option] = $value;
 
@@ -490,7 +492,7 @@ class Job
      * @param mixed $default Default value to use
      * @return mixed
      */
-    public function getOption($option, $default = null)
+    public function getOption(string $option, $default = null)
     {
         return Hash::get($this->_options, $option, $default);
     }
@@ -498,16 +500,16 @@ class Job
     /**
      * @return string|null
      */
-    public function getSequence()
+    public function getSequence(): ?string
     {
         return $this->_sequence;
     }
 
     /**
-     * @param string $sequence
-     * @return $this
+     * @param string $sequence Sequence for the job
+     * @return self
      */
-    public function setSequence($sequence = null)
+    public function setSequence(?string $sequence = null): self
     {
         $this->_sequence = $sequence;
 
@@ -527,12 +529,12 @@ class Job
     }
 
     /**
-     * @param \Cake\I18n\Time $run_at
-     * @return $this
+     * @param \Cake\Chronos\ChronosInterface|null $runAt Time for the job to run
+     * @return self
      */
-    public function setRunAt(?Time $run_at = null)
+    public function setRunAt(?ChronosInterface $runAt = null): self
     {
-        $this->_runAt = $run_at;
+        $this->_runAt = $runAt;
 
         return $this;
     }
@@ -546,10 +548,10 @@ class Job
     }
 
     /**
-     * @param int $status
-     * @return $this
+     * @param int $status Job status
+     * @return self
      */
-    public function setStatus($status)
+    public function setStatus(int $status): self
     {
         $this->_status = $status;
 
@@ -559,16 +561,16 @@ class Job
     /**
      * @return \Cake\I18n\Time|null
      */
-    public function getTimeFailed()
+    public function getTimeFailed(): ?Time
     {
         return $this->_timeFailed;
     }
 
     /**
-     * @param \Cake\I18n\Time $timeFailed
-     * @return $this
+     * @param \Cake\I18n\Time $timeFailed The time that the job failed
+     * @return self
      */
-    public function setTimeFailed(?Time $timeFailed = null)
+    public function setTimeFailed(?Time $timeFailed = null): self
     {
         $this->_timeFailed = $timeFailed;
 
@@ -584,10 +586,10 @@ class Job
     }
 
     /**
-     * @param string|\Throwable $lastMessage
-     * @return $this
+     * @param string|\Throwable $lastMessage Last message
+     * @return self
      */
-    public function setLastMessage($lastMessage)
+    public function setLastMessage($lastMessage): self
     {
         if ($lastMessage instanceof Throwable) {
             $lastMessage = $lastMessage->getMessage();
@@ -601,16 +603,16 @@ class Job
     /**
      * @return \Cake\I18n\Time|null
      */
-    public function getStartTime()
+    public function getStartTime(): ?Time
     {
         return $this->_startTime;
     }
 
     /**
-     * @param \Cake\I18n\Time $startTime
-     * @return $this
+     * @param \Cake\I18n\Time $startTime Time the job started running
+     * @return self
      */
-    public function setStartTime(?Time $startTime = null)
+    public function setStartTime(?Time $startTime = null): self
     {
         $this->_startTime = $startTime;
 
@@ -620,16 +622,16 @@ class Job
     /**
      * @return \Cake\I18n\Time|null
      */
-    public function getEndTime()
+    public function getEndTime(): ?Time
     {
         return $this->_endTime;
     }
 
     /**
-     * @param \Cake\I18n\Time $endTime
-     * @return $this
+     * @param \Cake\I18n\Time|null $endTime Time the job stopped running
+     * @return self
      */
-    public function setEndTime(?Time $endTime = null)
+    public function setEndTime(?Time $endTime = null): self
     {
         $this->_endTime = $endTime;
 
@@ -645,10 +647,10 @@ class Job
     }
 
     /**
-     * @param int $duration
-     * @return $this
+     * @param int $duration Job duration in microseconds
+     * @return self
      */
-    public function setDuration($duration)
+    public function setDuration($duration): self
     {
         $this->_duration = $duration;
 
@@ -664,10 +666,10 @@ class Job
     }
 
     /**
-     * @param string $hostName
-     * @return $this
+     * @param string $hostName The host running the job
+     * @return self
      */
-    public function setHostName($hostName)
+    public function setHostName($hostName): self
     {
         $this->_hostName = $hostName;
 
@@ -683,12 +685,12 @@ class Job
     }
 
     /**
-     * @param array $history
-     * @return $this
+     * @param array $history Array of job history
+     * @return self
      */
-    public function setHistory($history)
+    public function setHistory(array $history): self
     {
-        $this->_history = (array)$history;
+        $this->_history = $history;
 
         return $this;
     }
@@ -696,12 +698,12 @@ class Job
     /**
      * Adds a history item
      *
-     * @param string $message The message
+     * @param string|\Throwable $message The message
      * @param array $context Extra contextual information
      * @param bool $changeMessage Should the last message be updated
-     * @return $this
+     * @return self
      */
-    public function addHistory($message = '', $context = [], bool $changeMessage = true)
+    public function addHistory($message = '', array $context = [], bool $changeMessage = true): self
     {
         if ($message instanceof Throwable) {
             $message = $message->getMessage();
@@ -733,9 +735,9 @@ class Job
 
     /**
      * @param object $brokerMessage The broker message
-     * @return $this
+     * @return self
      */
-    public function setBrokerMessage($brokerMessage)
+    public function setBrokerMessage($brokerMessage): self
     {
         $this->_brokerMessage = $brokerMessage;
 
@@ -751,10 +753,10 @@ class Job
     }
 
     /**
-     * @param mixed $brokerMessageBody
-     * @return \DelayedJobs\DelayedJob\Job
+     * @param mixed $brokerMessageBody The body of the message (We don't know the type)
+     * @return self
      */
-    public function setBrokerMessageBody($brokerMessageBody): Job
+    public function setBrokerMessageBody($brokerMessageBody): self
     {
         $this->_brokerMessageBody = $brokerMessageBody;
 
@@ -770,10 +772,10 @@ class Job
     }
 
     /**
-     * @param bool $pushedToBroker
-     * @return $this
+     * @param bool $pushedToBroker Has the job been pushed to the broker
+     * @return self
      */
-    public function setPushedToBroker(bool $pushedToBroker): Job
+    public function setPushedToBroker(bool $pushedToBroker): self
     {
         $this->_pushedToBroker = $pushedToBroker;
 

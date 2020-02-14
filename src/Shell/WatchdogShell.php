@@ -15,9 +15,6 @@ use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\JobManager;
-use DelayedJobs\Model\Entity\Worker;
-use DelayedJobs\Model\Table\WorkersTable;
-use DelayedJobs\Process;
 use DelayedJobs\RecurringJobBuilder;
 
 /**
@@ -30,6 +27,9 @@ class WatchdogShell extends AppShell
 {
     use EnqueueTrait;
 
+    /**
+     * @return void
+     */
     protected function _welcome()
     {
         if (!Configure::check('DelayedJobs')) {
@@ -42,6 +42,10 @@ class WatchdogShell extends AppShell
         $this->hr();
     }
 
+    /**
+     * @return void
+     * @throws \DelayedJobs\DelayedJob\Exception\JobDataException
+     */
     public function recurring()
     {
         $this->out('Firing recurring event.');
@@ -73,6 +77,9 @@ class WatchdogShell extends AppShell
         }
     }
 
+    /**
+     * @return bool
+     */
     public function requeue()
     {
         $job = TableRegistry::getTableLocator()
@@ -103,6 +110,9 @@ class WatchdogShell extends AppShell
         return true;
     }
 
+    /**
+     * @return void
+     */
     public function revive()
     {
         $stats = JobManager::getInstance()->getMessageBroker()->queueStatus();

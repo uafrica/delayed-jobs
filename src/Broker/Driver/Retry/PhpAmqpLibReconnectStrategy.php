@@ -13,7 +13,7 @@ use PhpAmqpLib\Exception\AMQPIOException;
  */
 class PhpAmqpLibReconnectStrategy implements RetryStrategyInterface
 {
-    public const WAIT_BEFORE_RECONNECT_uS = 1000000;
+    public const WAIT_BEFORE_RECONNECT_US = 1000000;
 
     /**
      * The connection to check for validity
@@ -41,7 +41,7 @@ class PhpAmqpLibReconnectStrategy implements RetryStrategyInterface
      * @param int $retryCount The number of times the action has been already called
      * @return bool Whether or not it is OK to retry the action
      */
-    public function shouldRetry(Exception $exception, $retryCount)
+    public function shouldRetry(Exception $exception, $retryCount): bool
     {
         if (!$exception instanceof AMQPIOException) {
             return false;
@@ -53,12 +53,12 @@ class PhpAmqpLibReconnectStrategy implements RetryStrategyInterface
     /**
      * @return bool
      */
-    protected function reconnect()
+    protected function reconnect(): bool
     {
         try {
             $connection = $this->driver->getConnection();
             $connection->reconnect();
-            usleep(WAIT_BEFORE_RECONNECT_uS);
+            usleep(self::WAIT_BEFORE_RECONNECT_US);
 
             return $connection->isConnected();
         } catch (Exception $e) {

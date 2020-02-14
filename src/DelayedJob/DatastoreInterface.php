@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace DelayedJobs\DelayedJob;
 
+use Cake\Datasource\EntityInterface;
+
 /**
  * Interface DelayedJobDatastoreInterface
  */
@@ -10,13 +12,13 @@ interface DatastoreInterface
 {
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job to persist
-     * @return \DelayedJobs\DelayedJob\Job|bool
+     * @return \DelayedJobs\DelayedJob\Job
      */
-    public function persistJob(Job $job);
+    public function persistJob(Job $job): Job;
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job[] $jobs
-     * @return array
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs Array of jobs to persist
+     * @return \DelayedJobs\DelayedJob\Job[]
      */
     public function persistJobs(array $jobs): array;
 
@@ -24,7 +26,14 @@ interface DatastoreInterface
      * @param int $jobId The job to get
      * @return \DelayedJobs\DelayedJob\Job|null
      */
-    public function fetchJob($jobId);
+    public function fetchJob(int $jobId): ?Job;
+
+    /**
+     * @param int $jobId Job to get
+     *
+     * @return \Cake\Datasource\EntityInterface|null
+     */
+    public function fetchJobEntity(int $jobId): ?EntityInterface;
 
     /**
      * Returns true if a job of the same sequence is already persisted and waiting execution.
@@ -40,7 +49,7 @@ interface DatastoreInterface
      * @param \DelayedJobs\DelayedJob\Job $job Job to get next sequence for
      * @return \DelayedJobs\DelayedJob\Job|null
      */
-    public function fetchNextSequence(Job $job);
+    public function fetchNextSequence(Job $job): ?Job;
 
     /**
      * Checks if there already is a job with the same class waiting

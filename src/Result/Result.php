@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace DelayedJobs\Result;
 
+use Cake\Chronos\ChronosInterface;
 use Cake\Core\App;
-use DateTimeInterface;
 use InvalidArgumentException;
 
 /**
@@ -21,9 +21,13 @@ abstract class Result implements ResultInterface
      */
     private $_message;
     /**
-     * @var \DateTimeInterface|null
+     * @var \Cake\Chronos\ChronosInterface|null
      */
-    private $_recur;
+    private $_nextRun;
+    /**
+     * @var bool
+     */
+    private $_retry = true;
 
     /**
      * Result constructor.
@@ -51,7 +55,9 @@ abstract class Result implements ResultInterface
         }
 
         if (!$result instanceof ResultInterface) {
-            throw new InvalidArgumentException(sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class));
+            throw new InvalidArgumentException(
+                sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class)
+            );
         }
 
         return $result;
@@ -61,7 +67,7 @@ abstract class Result implements ResultInterface
      * @param string $message The message
      * @return self
      */
-    public function setMessage(string $message = ''): Result
+    public function setMessage(string $message = ''): self
     {
         $this->_message = $message;
 
@@ -77,40 +83,49 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @return \DateTimeInterface|null
+     * @return \Cake\Chronos\ChronosInterface|null
      */
-    public function getRecur(): ?DateTimeInterface
+    public function getNextRun(): ?ChronosInterface
     {
-        return $this->_recur;
+        return $this->_nextRun;
     }
 
     /**
-     * @param \DateTimeInterface|null $recur When to re-queue the job for.
+     * @param \Cake\Chronos\ChronosInterface|null $recur When to re-queue the job for.
      * @return static
      */
-    public function willRecur(?DateTimeInterface $recur)
+    public function setNextRun(?ChronosInterface $recur): self
     {
-        $this->_recur = $recur;
+        $this->_nextRun = $recur;
 
         return $this;
     }
 
     /**
-     * Most results will not retry
-     *
      * @return bool
      */
     public function getRetry(): bool
     {
-        return false;
+        return $this->_retry ? true : false;
     }
 
     /**
-     * @param bool $retry
      * @return self
      */
-    public function willRetry(bool $retry = true)
+    public function willRetry(): self
     {
+        $this->_retry = true;
+
+        return $this;
+    }
+
+    /**
+     * @return self
+     */
+    public function wontRetry(): self
+    {
+        $this->_retry = false;
+
         return $this;
     }
 }

@@ -18,6 +18,13 @@ class DebugKitJobManager extends JobManager
      */
     protected $jobLog;
 
+    /**
+     * DebugKitJobManager constructor.
+     *
+     * @param array $config Config
+     * @param \DelayedJobs\Datasource\DatasourceInterface|null $datastore Datastore
+     * @param \DelayedJobs\Broker\BrokerInterface|null $messageBroker Message broker
+     */
     public function __construct(
         array $config = [],
         ?DatasourceInterface $datastore = null,
@@ -33,7 +40,7 @@ class DebugKitJobManager extends JobManager
      * @param \DelayedJobs\DelayedJob\Job $job The job instance
      * @return void
      */
-    protected function pushToLog(Job $job)
+    protected function pushToLog(Job $job): void
     {
         $jobData = [
             'id' => $job->getId(),
@@ -47,11 +54,9 @@ class DebugKitJobManager extends JobManager
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job that needs to be enqueued
-     * @param bool $skipPersist Skip the persistance step (e.g. it's already been persisted
-     * @return void
+     * {@inheritDoc}
      */
-    public function enqueue(Job $job, bool $skipPersist = false)
+    public function enqueue(Job $job, bool $skipPersist = false): void
     {
         parent::enqueue($job, $skipPersist);
 
@@ -59,10 +64,9 @@ class DebugKitJobManager extends JobManager
     }
 
     /**
-     * @param array $jobs
-     * @return void
+     * {@inheritDoc}
      */
-    public function enqueueBatch(array $jobs)
+    public function enqueueBatch(array $jobs): void
     {
         parent::enqueueBatch($jobs);
 

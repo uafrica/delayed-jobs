@@ -20,8 +20,8 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     use EventDispatcherTrait;
 
     /**
-     * @param $stream
-     * @param null $property
+     * @param resource|string $stream Stream
+     * @param string|null $property Property to set
      * @return bool|string
      */
     protected function _getStream($stream, $property = null)
@@ -37,7 +37,7 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     }
 
     /**
-     * @param $options Options.
+     * @param resource|string $options Options.
      * @return string
      */
     protected function _getOptions($options)
@@ -46,7 +46,7 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     }
 
     /**
-     * @param $payload
+     * @param resource|string $payload Payload
      * @return bool|string
      */
     protected function _getPayload($payload)

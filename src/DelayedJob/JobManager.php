@@ -3,12 +3,14 @@ declare(strict_types=1);
 
 namespace DelayedJobs\DelayedJob;
 
+use Cake\Chronos\ChronosInterface;
 use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Core\InstanceConfigTrait;
 use Cake\Event\Event;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
+use Cake\Event\EventInterface;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use DateTimeInterface;
@@ -138,7 +140,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      * @param \DelayedJobs\DelayedJob\ManagerInterface|null $manager The manager interface to inject
      * @return void
      */
-    public static function setInstance(?ManagerInterface $manager)
+    public static function setInstance(?ManagerInterface $manager): void
     {
         static::$_instance = $manager;
     }
@@ -187,10 +189,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job Job that needs to be enqueued
-     * @param bool $skipPersist Skip the persistance step (e.g. it's already been persisted
+     * @param bool $skipPersist Skip the persistance step (e.g. it's already been persisted)
      * @return void
      */
-    public function enqueue(Job $job, bool $skipPersist = false)
+    public function enqueue(Job $job, bool $skipPersist = false): void
     {
         if ($skipPersist || $this->_persistToDatastore($job)) {
             $this->_enqueuedJobs[] = (int)$job->getId();
@@ -207,11 +209,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param int $id The ID to enqueue
-     * @param int $priority The priority of the job
-     * @return void
+     * {@inheritDoc}
      */
-    public function enqueuePersisted($id, $priority)
+    public function enqueuePersisted($id, $priority): void
     {
         $job = new Job(compact('id', 'priority'));
 
@@ -220,10 +220,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job[] $jobs
-     * @return void
+     * {@inheritDoc}
      */
-    public function enqueueBatch(array $jobs)
+    public function enqueueBatch(array $jobs): void
     {
         foreach ($jobs as $job) {
             $job->addHistory('Batch created', [
@@ -255,10 +254,10 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param $retryCount
+     * @param int $retryCount Number of times the job has retried
      * @return \Cake\I18n\Time
      */
-    protected function _calculateRetryTime($retryCount): Time
+    protected function _calculateRetryTime(int $retryCount): Time
     {
         if ($this->getConfig('DelayedJobs.retryTimes.' . $retryCount)) {
             $growthFactor = $this->getConfig('DelayedJobs.retryTimes.' . $retryCount);
@@ -275,11 +274,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param \DateTimeInterface $result
+     * @param \DelayedJobs\DelayedJob\Job $job Job to enqueue as recurring
+     * @param \Cake\Chronos\ChronosInterface $runAt Time that the job should repeat
      * @return void
      */
-    protected function _enqueueRecurring(Job $job, DateTimeInterface $result)
+    protected function _enqueueRecurring(Job $job, ChronosInterface $runAt)
     {
         //Recurring job
         if ($this->isSimilarJob($job)) {
@@ -287,15 +286,12 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         $recurringJob = clone $job;
-        $recurringJob->setRunAt($result);
+        $recurringJob->setRunAt($runAt);
         $this->enqueue($recurringJob);
     }
 
     /**
-     * Gets the Job instance for a specific job
-     *
-     * @param int $jobId Job to fetch
-     * @return \DelayedJobs\DelayedJob\Job
+     * {@inheritDoc}
      */
     public function fetchJob($jobId): Job
     {
@@ -306,7 +302,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     /**
      * Populates an existing job object with datasource data
      *
-     * @param \DelayedJobs\DelayedJob\Job $job
+     * @param \DelayedJobs\DelayedJob\Job $job Job to run
      * @return \DelayedJobs\DelayedJob\Job
      */
     public function loadJob(Job $job): Job
@@ -318,10 +314,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * Gets the current status for a requested jobid
-     *
-     * @param int $jobId Job to get status for
-     * @return int
+     * {@inheritDoc}
      */
     public function getStatus($jobId): int
     {
@@ -335,8 +328,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return void
+     * {@inheritDoc}
      */
     public function lock(Job $job)
     {
@@ -349,8 +341,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param $result
+     * @param \DelayedJobs\DelayedJob\Job $job Job we're busy with
+     * @param mixed $result The result of the job
      * @return \DelayedJobs\Result\ResultInterface
      */
     protected function _buildResultObject(Job $job, $result): ResultInterface
@@ -361,7 +353,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
         if ($result instanceof DateTimeInterface) {
             return Success::create("Reoccur at {$result}")
-                ->willRecur($result);
+                ->setNextRun($result);
         }
 
         if ($result instanceof PausedException) {
@@ -370,13 +362,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
         if ($result instanceof Error || $result instanceof NonRetryableException) {
             return Failed::create($result->getMessage())
-                ->willRetry(false)
+                ->willRetry()
                 ->setException($result);
         }
 
         if ($result instanceof Exception) {
             return Failed::create($result->getMessage())
-                ->willRetry($job->getRetries() < $job->getMaxRetries())
+                ->willRetry()
                 ->setException($result);
         }
 
@@ -385,11 +377,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
     /**
      * @param \DelayedJobs\DelayedJob\Job $job The job
-     * @param \DelayedJobs\Result\ResultInterface $result
-     * @param $duration
+     * @param \DelayedJobs\Result\ResultInterface $result The result of the job
+     * @param int $duration Duration of the job
      * @return void
      */
-    protected function _handleResult(Job $job, ResultInterface $result, $duration)
+    protected function _handleResult(Job $job, ResultInterface $result, int $duration): void
     {
         $context = ['enqueuedJobs' => $this->_enqueuedJobs];
 
@@ -412,7 +404,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         ) {
             $job->incrementRetries();
 
-            $retryTime = $result->getRecur();
+            $retryTime = $result->getNextRun();
             if ($retryTime === null) {
                 $retryTime = $this->_calculateRetryTime($job->getRetries());
             }
@@ -426,8 +418,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
         $this->_persistToDatastore($job);
 
-        if ($result->getRecur()) {
-            $this->_enqueueRecurring($job, $result->getRecur());
+        if ($result->getNextRun()) {
+            $this->_enqueueRecurring($job, $result->getNextRun());
         }
 
         if ($job->getSequence() !== null && \in_array($job->getStatus(), [Job::STATUS_SUCCESS, Job::STATUS_BURIED])) {
@@ -436,14 +428,18 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\Worker\JobWorkerInterface $jobWorker
-     * @param $name
-     * @param null $data
-     * @param null $subject
-     * @return \Cake\Event\Event
+     * @param \DelayedJobs\Worker\JobWorkerInterface $jobWorker Job worker
+     * @param string $name Event name
+     * @param array|null $data Data for the event
+     * @param mixed|null $subject Event subject (If not set, then the subject will be the job manager)
+     * @return \Cake\Event\EventInterface
      */
-    protected function _dispatchWorkerEvent(JobWorkerInterface $jobWorker, $name, $data = null, $subject = null): Event
-    {
+    protected function _dispatchWorkerEvent(
+        JobWorkerInterface $jobWorker,
+        $name,
+        ?array $data = null,
+        $subject = null
+    ): EventInterface {
         $event = new Event($name, $subject ?? $this, $data);
         try {
             $this->getEventManager()->dispatch($event);
@@ -458,11 +454,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param \DelayedJobs\Worker\JobWorkerInterface $jobWorker
+     * @param \DelayedJobs\DelayedJob\Job $job Job to run
+     * @param \DelayedJobs\Worker\JobWorkerInterface $jobWorker Worker to run
      * @return \DelayedJobs\Result\ResultInterface|null
      */
-    protected function _executeJob(Job $job, JobWorkerInterface $jobWorker)
+    protected function _executeJob(Job $job, JobWorkerInterface $jobWorker): ?ResultInterface
     {
         $this->lock($job);
 
@@ -492,7 +488,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $result = $exc;
         } finally {
             $this->getMessageBroker()
-                ->ack($job);
+                ->acknowledge($job);
 
             if (!$result instanceof ResultInterface) {
                 $result = $this->_buildResultObject($job, $result);
@@ -513,12 +509,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param bool $force
-     * @return \DelayedJobs\Result\ResultInterface|null
-     * @throws \DelayedJobs\DelayedJob\Exception\JobExecuteException
+     * {@inheritDoc}
      */
-    public function execute(Job $job, $force = false)
+    public function execute(Job $job, bool $force = false): ?\DelayedJobs\Result\ResultInterface
     {
         $className = App::className($job->getWorker(), 'Worker', 'Worker');
 
@@ -534,7 +527,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         ) {
             $this->djLog(__('Job {0} has already been processed', $job->getId()));
             $this->getMessageBroker()
-                ->ack($job);
+                ->acknowledge($job);
 
             return null;
         }
@@ -542,7 +535,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         if ($force === false && $job->getStatus() === Job::STATUS_BUSY) {
             $this->djLog(__('Job {0} is already being processed', $job->getId()));
             $this->getMessageBroker()
-                ->ack($job);
+                ->acknowledge($job);
 
             return null;
         }
@@ -553,7 +546,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             Log::emergency("Worker class {$className} for job {$job->getId()} must be an instance of " .
                 JobWorkerInterface::class);
             $this->getMessageBroker()
-                ->ack($job);
+                ->acknowledge($job);
 
             return null;
         }
@@ -562,10 +555,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return void
+     * {@inheritDoc}
      */
-    public function enqueueNextSequence(Job $job)
+    public function enqueueNextSequence(Job $job): void
     {
         $nextJob = $this->getDatasource()
             ->fetchNextSequence($job);
@@ -576,8 +568,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return bool
+     * {@inheritDoc}
      */
     public function isSimilarJob(Job $job): bool
     {
@@ -646,7 +637,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         } catch (Exception $e) {
             $this->addHistoryAndPersist($job, $e);
             Log::emergency(__(
-                'Could not push job to broker. Response was: {0} with exception {1}. Job #{2} has not been queued. Hostname: {3}, Current job: {4}',
+                'Could not push job to broker. Response was: {0} with exception {1}. ' .
+                'Job #{2} has not been queued. Hostname: {3}, Current job: {4}',
                 $e->getMessage(),
                 get_class($e),
                 $job->getId(),
@@ -661,9 +653,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @return void
+     * {@inheritDoc}
      */
-    public function startConsuming()
+    public function startConsuming(): void
     {
         $this->consuming = true;
         //This lambda is run for each message received from the broker
@@ -676,9 +668,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                     $this->djLog($e->getMessage());
 
                     if ($retried) {
-                        $this->djLog(__('Failed to load job {0} even after retrying.  Message was: {1}', $job->getId(), $e->getMessage()));
+                        $this->djLog(__(
+                            'Failed to load job {0} even after retrying.  Message was: {1}',
+                            $job->getId(),
+                            $e->getMessage()
+                        ));
                         $this->getMessageBroker()
-                            ->nack($job);
+                            ->negativeAcknowledge($job);
 
                         return;
                     }
@@ -700,9 +696,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @return void
+     * {@inheritDoc}
      */
-    public function stopConsuming()
+    public function stopConsuming(): void
     {
         $this->consuming = false;
 
@@ -711,7 +707,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @return bool
+     * {@inheritDoc}
      */
     public function isConsuming(): bool
     {
@@ -719,12 +715,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return void
+     * {@inheritDoc}
      */
-    public function requeueJob(Job $job)
+    public function requeueJob(Job $job): void
     {
         $this->getMessageBroker()
-            ->nack($job, true);
+            ->negativeAcknowledge($job, true);
     }
 }

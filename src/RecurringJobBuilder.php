@@ -14,12 +14,7 @@ class RecurringJobBuilder
     protected static $_recurringJobs = [];
 
     /**
-     * @param array $jobInfo
-     * @return void
-     */
-
-    /**
-     * @param array $jobInfo
+     * @param array $jobInfo Job info
      * @return void
      */
     public static function add(array $jobInfo)
@@ -27,9 +22,6 @@ class RecurringJobBuilder
         static::$_recurringJobs[] = $jobInfo;
     }
 
-    /**
-     * @return array
-     */
     /**
      * @return array
      */

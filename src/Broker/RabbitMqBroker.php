@@ -19,6 +19,9 @@ class RabbitMqBroker implements BrokerInterface
 {
     use InstanceConfigTrait;
 
+    /**
+     * @var array
+     */
     protected $_defaultConfig = [
         'driver' => PhpAmqpLibDriver::class,
         'prefix' => '',
@@ -39,10 +42,10 @@ class RabbitMqBroker implements BrokerInterface
     /**
      * RabbitMqBroker constructor.
      *
-     * @param array $config
-     * @param \DelayedJobs\DelayedJob\ManagerInterface $manager
+     * @param array $config array of config
+     * @param \DelayedJobs\DelayedJob\ManagerInterface $manager Job manager interface
      */
-    public function __construct($config = [], ManagerInterface $manager)
+    public function __construct(array $config, ManagerInterface $manager)
     {
         $this->setConfig($config);
 
@@ -65,10 +68,9 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job to publish
-     * @return void
+     * {@inheritDoc}
      */
-    public function publishJob(Job $job)
+    public function publishJob(Job $job): void
     {
         $delay = $job->getRunAt()->isFuture() ? Time::now()->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
@@ -91,38 +93,36 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * @param callable $callback
-     * @param callable $heartbeat
-     * @return void
+     * {@inheritDoc}
      */
-    public function consume(callable $callback, callable $heartbeat)
+    public function consume(callable $callback, callable $heartbeat): void
     {
         $this->getDriver()->consume($callback, $heartbeat);
     }
 
-    public function stopConsuming()
+    /**
+     * {@inheritDoc}
+     */
+    public function stopConsuming(): void
     {
         $this->getDriver()->stopConsuming();
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return void
+     * {@inheritDoc}
      */
-    public function ack(Job $job)
+    public function acknowledge(Job $job): void
     {
-        $this->getDriver()->ack($job);
+        $this->getDriver()->acknowledge($job);
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param bool $requeue
-     * @return void
+     * {@inheritDoc}
      */
-    public function nack(Job $job, $requeue = false)
+    public function negativeAcknowledge(Job $job, bool $requeue = false): void
     {
         $this->getDriver()
-            ->nack($job, $requeue);
+            ->negativeAcknowledge($job, $requeue);
     }
 
     /**
@@ -165,15 +165,15 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * @param string $body Message body
-     * @param string $exchange Exchange to route through
-     * @param string $routing_key Routing key
-     * @param int $priority Priority
-     * @param array $headers Headers
-     * @return void
+     * {@inheritDoc}
      */
-    public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = [])
-    {
+    public function publishBasic(
+        string $body,
+        string $exchange = '',
+        string $routing_key = '',
+        int $priority = 0,
+        array $headers = []
+    ): void {
         $this->getDriver()->publishBasic($body, $exchange, $routing_key, $priority, $headers);
     }
 }

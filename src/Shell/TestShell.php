@@ -21,6 +21,10 @@ class TestShell extends AppShell
 
     public $modelClass = 'DelayedJobs.DelayedJobs';
 
+    /**
+     * @return void
+     * @throws \DelayedJobs\DelayedJob\Exception\JobDataException
+     */
     public function sequencing()
     {
         $this->out('<info>Creating 10 jobs with sequencing, 3 will fail</info>');

@@ -15,10 +15,10 @@ class SparklineHelper extends Helper
     ];
 
     /**
-     * @param array $args
+     * @param array $args Arguments
      * @return void
      */
-    public function output($args = [])
+    public function output($args = []): void
     {
         $default = [
             'data' => [],
@@ -40,7 +40,13 @@ class SparklineHelper extends Helper
         $current = end($args['data']);
         $max = max($args['data']);
         $min = min($args['data']);
-        $output .= sprintf(" Current: <info>{$args['formatter']}</info> :: Min: <info>{$args['formatter']}</info> :: Max: <info>{$args['formatter']}</info>", $current, $min, $max);
+        $output .= sprintf(
+            " Current: <info>{$args['formatter']}</info> :: Min: <info>{$args['formatter']}</info> :: 
+ Max: <info>{$args['formatter']}</info>",
+            $current,
+            $min,
+            $max
+        );
 
         if (!empty($args['instant'])) {
             $current = $args['instant'];
@@ -50,31 +56,31 @@ class SparklineHelper extends Helper
     }
 
     /**
-     * @param $data_points
-     * @param $data_count
+     * @param array $dataPoints Data points
+     * @param array $dataCount Data counts
      * @return array
      */
-    protected function _mapData($data_points, $data_count)
+    protected function _mapData($dataPoints, $dataCount)
     {
-        if (count($data_points) > $data_count) {
-            $data_points = array_slice($data_points, -$data_count);
+        if (count($dataPoints) > $dataCount) {
+            $dataPoints = array_slice($dataPoints, -$dataCount);
         }
-        array_walk($data_points, function (&$data_point) {
+        array_walk($dataPoints, function (&$data_point) {
             $data_point = round($data_point, 2) * 100;
         });
 
-        $max = max($data_points);
-        $min = min($data_points);
+        $max = max($dataPoints);
+        $min = min($dataPoints);
         $per_tick = ($max - $min << 8) / (count(self::TICKS) - 1);
         $per_tick = $per_tick < 1 ? 1 : $per_tick;
         $ticks = [];
-        foreach ($data_points as $data_point) {
+        foreach ($dataPoints as $data_point) {
             $tick_index = ($data_point - $min << 8) / $per_tick;
             $ticks[] = self::TICKS[$tick_index];
         }
 
-        if (count($ticks) < $data_count) {
-            $filler = array_fill(0, $data_count - count($ticks), self::TICKS[0]);
+        if (count($ticks) < $dataCount) {
+            $filler = array_fill(0, $dataCount - count($ticks), self::TICKS[0]);
             $ticks = array_merge($filler, $ticks);
         }
 

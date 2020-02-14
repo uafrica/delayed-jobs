@@ -49,7 +49,7 @@ class WorkerFinder
     }
 
     /**
-     * @param \Cake\Filesystem\Folder $Folder
+     * @param \Cake\Filesystem\Folder $Folder Folder
      *
      * @return array
      */
@@ -66,8 +66,8 @@ class WorkerFinder
     }
 
     /**
-     * @param \Cake\Filesystem\Folder $Folder
-     * @param string $plugin
+     * @param \Cake\Filesystem\Folder $Folder Folder
+     * @param string $plugin Plugin name
      *
      * @return array
      */

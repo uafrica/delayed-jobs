@@ -41,10 +41,9 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return \DelayedJobs\DelayedJob\Job|bool
+     * {@inheritDoc}
      */
-    public function enqueue(Job $job)
+    public function enqueue(Job $job): void
     {
         $jobId = time() + random_int(0, time());
         $job->setId($jobId);
@@ -54,20 +53,17 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * @param int $id The ID to enqueue
-     * @param int $priority The priority of the job
-     * @return void
+     * {@inheritDoc}
      */
-    public function enqueuePersisted($id, $priority)
+    public function enqueuePersisted($id, $priority): void
     {
         static::$_jobs[$id] = new Job(compact('id', 'priority'));
     }
 
     /**
-     * @param array $jobs
-     * @return array
+     * {@inheritDoc}
      */
-    public function enqueueBatch(array $jobs)
+    public function enqueueBatch(array $jobs): void
     {
         foreach ($jobs as $job) {
             $this->enqueue($job);
@@ -77,10 +73,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job that failed
-     * @param string $message Message to store with the jbo
-     * @param bool $burryJob Should the job be burried
-     * @return bool|\DelayedJobs\DelayedJob\Job
+     * {@inheritDoc}
      */
     public function failed(Job $job, $message, $burryJob = false)
     {
@@ -88,11 +81,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job that has been completed
-     * @param null $result
-     * @param int $duration How long execution took
-     * @return bool|\DelayedJobs\DelayedJob\Job
-     * @internal param null|string $message Message to store with job
+     * {@inheritDoc}
      */
     public function completed(Job $job, $result = null, $duration = 0)
     {
@@ -100,11 +89,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * Gets the Job instance for a specific job
-     *
-     * @param int $jobId Job to fetch
-     * @return \DelayedJobs\DelayedJob\Job
-     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
+     * {@inheritDoc}
      */
     public function fetchJob($jobId): Job
     {
@@ -116,10 +101,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * Gets the current status for a requested job
-     *
-     * @param int $jobId Job to get status for
-     * @return int
+     * {@inheritDoc}
      */
     public function getStatus($jobId): int
     {
@@ -127,60 +109,59 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param null $hostname
-     * @return void
+     * {@inheritDoc}
      */
     public function lock(Job $job, $hostname = null)
     {
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param $force
-     * @return \DelayedJobs\DelayedJob\Job
+     * {@inheritDoc}
      */
-    public function execute(Job $job, $force)
+    public function execute(Job $job, bool $force = false): ?\DelayedJobs\Result\ResultInterface
     {
         return $job;
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return null
+     * {@inheritDoc}
      */
-    public function enqueueNextSequence(Job $job)
+    public function enqueueNextSequence(Job $job): void
     {
         return null;
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return bool
+     * {@inheritDoc}
      */
     public function isSimilarJob(Job $job): bool
     {
         return false;
     }
 
-    public function startConsuming()
-    {
-    }
-
-    public function stopConsuming()
-    {
-    }
-
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return void
+     * {@inheritDoc}
      */
-    public function requeueJob(Job $job)
+    public function startConsuming(): void
     {
     }
 
     /**
-     * @return bool
+     * {@inheritDoc}
+     */
+    public function stopConsuming(): void
+    {
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function requeueJob(Job $job): void
+    {
+    }
+
+    /**
+     * {@inheritDoc}
      */
     public function isConsuming(): bool
     {
