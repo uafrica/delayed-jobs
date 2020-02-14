@@ -107,7 +107,7 @@ class TableDatasource extends BaseDatasource
         if ($job->getId() === null) {
             return $job;
         }
-        
+
         $jobEntity = $this->_table()->fetchJobEntity($job->getId());
 
         if ($jobEntity === null) {
