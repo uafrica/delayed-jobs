@@ -27,7 +27,7 @@ class PhpAmqpLibReconnectStrategy implements RetryStrategyInterface
      * passed connection. This reference will be used to automatically
      * reconnect to the server in case of failure.
      *
-     * @param \Cake\Database\Connection $driver The connection to check
+     * @param \DelayedJobs\Broker\Driver\PhpAmqpLibDriver $driver The connection to check
      */
     public function __construct(PhpAmqpLibDriver $driver)
     {

@@ -7,6 +7,7 @@ use Cake\Core\InstanceConfigTrait;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\DelayedJob\ManagerInterface;
+use DelayedJobs\Result\Success;
 
 /**
  * Class TestDelayedJobManager
@@ -48,8 +49,6 @@ class TestManager implements ManagerInterface
         $jobId = time() + random_int(0, time());
         $job->setId($jobId);
         static::$_jobs[$jobId] = $job;
-
-        return $job;
     }
 
     /**
@@ -68,24 +67,6 @@ class TestManager implements ManagerInterface
         foreach ($jobs as $job) {
             $this->enqueue($job);
         }
-
-        return $jobs;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function failed(Job $job, $message, $burryJob = false)
-    {
-        return $job;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function completed(Job $job, $result = null, $duration = 0)
-    {
-        return $job;
     }
 
     /**
@@ -111,16 +92,9 @@ class TestManager implements ManagerInterface
     /**
      * {@inheritDoc}
      */
-    public function lock(Job $job, $hostname = null)
-    {
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     public function execute(Job $job, bool $force = false): ?\DelayedJobs\Result\ResultInterface
     {
-        return $job;
+        return Success::create();
     }
 
     /**
@@ -128,7 +102,6 @@ class TestManager implements ManagerInterface
      */
     public function enqueueNextSequence(Job $job): void
     {
-        return null;
     }
 
     /**
@@ -166,5 +139,13 @@ class TestManager implements ManagerInterface
     public function isConsuming(): bool
     {
         return false;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaximumPriority(): int
+    {
+        return 255;
     }
 }

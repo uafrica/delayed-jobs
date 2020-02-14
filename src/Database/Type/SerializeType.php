@@ -22,7 +22,7 @@ class SerializeType extends TypeFactory
      */
     public function toPHP($value, Driver $driver)
     {
-        if (!is_string($value) || $value === null) {
+        if (!is_string($value)) {
             return null;
         }
 
@@ -47,7 +47,7 @@ class SerializeType extends TypeFactory
      */
     public function marshal($value)
     {
-        if (!is_string($value) || $value === null) {
+        if (!is_string($value)) {
             return $value;
         }
 

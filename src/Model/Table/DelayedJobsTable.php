@@ -7,7 +7,9 @@ use Cake\Database\Schema\TableSchemaInterface;
 use Cake\Datasource\EntityInterface;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\DatastoreInterface;
+use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Traits\DebugLoggerTrait;
 
 /**
@@ -73,10 +75,17 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     public function persistJob(Job $job): Job
     {
         $jobData = $job->getData();
+
         $jobEntity = $job->getEntity();
-        if (!$jobEntity) {
+
+        if ($jobEntity === null) {
             $jobEntity = $this->newEmptyEntity();
         }
+
+        if (!$jobEntity instanceof DelayedJob) {
+            throw new \RuntimeException('Not correct entity type');
+        }
+
         $this->patchEntity($jobEntity, $jobData, [
             'accessibleFields' => [
                 '*' => true,
@@ -91,11 +100,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             'atomic' => !$this->getConnection()->inTransaction(),
         ];
 
-        $result = $this->save($jobEntity, $options);
-
-        if (!$result) {
-            return null;
-        }
+        $this->saveOrFail($jobEntity, $options);
 
         $job->setId($jobEntity->id);
         $job->setEntity($jobEntity);
@@ -162,10 +167,6 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         $connection->getDriver()
             ->enableAutoQuoting($quote);
 
-        if (!$jobs) {
-            throw new EnqueueException('Job batch could not be persisted');
-        }
-
         return $jobs;
     }
 
@@ -190,9 +191,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
      */
     public function fetchJobEntity(int $jobId): ?EntityInterface
     {
-        return $this->find()
-            ->where(['id' => $jobId])
-            ->first();
+        return $this->get($jobId);
     }
 
     /**

@@ -22,9 +22,9 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     /**
      * @param resource|string $stream Stream
      * @param string|null $property Property to set
-     * @return bool|string
+     * @return string
      */
-    protected function _getStream($stream, $property = null)
+    protected function _getStream($stream, $property = null): string
     {
         if (is_resource($stream)) {
             $stream = stream_get_contents($stream);
@@ -33,23 +33,23 @@ class DelayedJob extends Entity implements EventDispatcherInterface
             }
         }
 
-        return $stream;
+        return (string)$stream;
     }
 
     /**
      * @param resource|string $options Options.
      * @return string
      */
-    protected function _getOptions($options)
+    protected function _getOptions($options): string
     {
         return $this->_getStream($options, 'options');
     }
 
     /**
      * @param resource|string $payload Payload
-     * @return bool|string
+     * @return string
      */
-    protected function _getPayload($payload)
+    protected function _getPayload($payload): string
     {
         return $this->_getStream($payload, 'payload');
     }

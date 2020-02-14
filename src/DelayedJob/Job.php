@@ -52,11 +52,11 @@ class Job
      */
     protected $_options = [];
     /**
-     * @var string
+     * @var string|null
      */
     protected $_sequence;
     /**
-     * @var \Cake\I18n\Time
+     * @var \Cake\Chronos\ChronosInterface|null
      */
     protected $_runAt;
     /**
@@ -76,7 +76,7 @@ class Job
      */
     protected $_retries = 0;
     /**
-     * @var \Cake\I18n\Time
+     * @var \Cake\I18n\Time|null
      */
     protected $_timeFailed;
     /**
@@ -84,11 +84,11 @@ class Job
      */
     protected $_lastMessage;
     /**
-     * @var \Cake\I18n\Time
+     * @var \Cake\I18n\Time|null
      */
     protected $_startTime;
     /**
-     * @var \Cake\I18n\Time
+     * @var \Cake\I18n\Time|null
      */
     protected $_endTime;
     /**
@@ -106,7 +106,7 @@ class Job
     /**
      * Internal storage for the broker message object.
      *
-     * @var object
+     * @var object|null
      */
     protected $_brokerMessage;
     /**
@@ -517,9 +517,9 @@ class Job
     }
 
     /**
-     * @return \Cake\I18n\Time
+     * @return \Cake\Chronos\ChronosInterface
      */
-    public function getRunAt(): Time
+    public function getRunAt(): ChronosInterface
     {
         if ($this->_runAt === null) {
             $this->_runAt = new Time();
@@ -726,7 +726,7 @@ class Job
     }
 
     /**
-     * @return object
+     * @return object|null
      */
     public function getBrokerMessage()
     {
@@ -734,7 +734,7 @@ class Job
     }
 
     /**
-     * @param object $brokerMessage The broker message
+     * @param object|null $brokerMessage The broker message
      * @return self
      */
     public function setBrokerMessage($brokerMessage): self

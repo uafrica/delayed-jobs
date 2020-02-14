@@ -12,6 +12,7 @@ use DelayedJobs\Model\Entity\Worker;
 /**
  * DelayedJobs.Workers Model
  *
+ * @method \DelayedJobs\Model\Entity\Worker get($primaryKey, $options = [])
  */
 class WorkersTable extends Table
 {
@@ -49,7 +50,7 @@ class WorkersTable extends Table
     /**
      * @param string $hostName Host name
      * @param string $workerName Worker name
-     * @param string $pid PID
+     * @param int $pid PID
      * @return bool|\Cake\Datasource\EntityInterface|mixed
      */
     public function started($hostName, $workerName, $pid)
@@ -106,10 +107,10 @@ class WorkersTable extends Table
 
     /**
      * @param \DelayedJobs\Model\Entity\Worker $worker Worker instance
-     * @param string $status Status
+     * @param int $status Status
      * @return void
      */
-    public function setStatus(Worker $worker, $status)
+    public function setStatus(Worker $worker, int $status): void
     {
         $worker->status = $status;
         $this->save($worker);

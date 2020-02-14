@@ -107,8 +107,8 @@ class ProcessManager
     /**
      * Register signals and when they are triggered, write a Signal.shutdown property
      *
-     * @param mixed $signal Can be any of the SIG* constants or its human name
-     * @param mixed $callback Can be anything PHP callable
+     * @param string|int $signal Can be any of the SIG* constants or its human name
+     * @param callable $callback Can be anything PHP callable
      * @return void
      * @throws \Exception on invalid (unknown) signals.
      * @throws \Exception if unable to subscribe to signal.
@@ -121,14 +121,14 @@ class ProcessManager
 
         if (is_numeric($signal)) {
             if (!array_key_exists($signal, static::$signals)) {
-                throw new Exception('Unknown signal: %s', $signal);
+                throw new Exception(sprintf('Unknown signal: %s', $signal));
             }
             $signo = $signal;
             $signalName = static::$signals[$signal];
         } else {
             $pos = array_search($signal, static::$signals, true);
             if ($pos === false) {
-                throw new Exception('Unknown signal: %s', $signal);
+                throw new Exception(sprintf('Unknown signal: %s', $signal));
             }
             $signo = $pos;
             $signalName = $signal;
@@ -148,7 +148,7 @@ class ProcessManager
     public function handleKillSignals(): void
     {
         $callback = function ($signo) {
-            $this->log('Got OS signal "' . static::$_signals[$signo] . '"', 'warning');
+            $this->log('Got OS signal "' . static::$signals[$signo] . '"', 'warning');
 
             $event = new Event('CLI.signal', compact('signo'));
             $this->getEventManager()

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace DelayedJobs\Worker;
 
+use Cake\Core\InstanceConfigTrait;
 use Cake\Datasource\ModelAwareTrait;
 use Cake\Event\Event;
 use Cake\Event\EventDispatcherInterface;
@@ -21,11 +22,7 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     use EnqueueTrait;
     use EventDispatcherTrait;
     use ModelAwareTrait;
-
-    /**
-     * @var \Cake\Console\Shell
-     */
-    protected $_shell;
+    use InstanceConfigTrait;
 
     /**
      * @var \DelayedJobs\DelayedJob\Job
@@ -35,18 +32,15 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     /**
      * Construct the listener
      *
-     * @param \DelayedJobs\DelayedJob\Job|null $job The job being executed
-     * @param array $options Allow child listeners to have options
+     * @param \DelayedJobs\DelayedJob\Job $job The job being executed
+     * @param array $config Allow child listeners to have options
      */
-    public function __construct(?Job $job = null, array $options = [])
+    public function __construct(Job $job, array $config = [])
     {
         $this->modelFactory('Table', [TableRegistry::class, 'get']);
 
         $this->job = $job;
-        if (isset($options['shell'])) {
-            $this->_shell = $options['shell'];
-            unset($options['shell']);
-        }
+        $this->setConfig($config);
 
         $this->getEventManager()->on($this);
     }

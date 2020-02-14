@@ -13,7 +13,6 @@ use Cake\Event\EventDispatcherTrait;
 use Cake\Event\EventInterface;
 use Cake\I18n\Time;
 use Cake\Log\Log;
-use DateTimeInterface;
 use DelayedJobs\Broker\BrokerInterface;
 use DelayedJobs\Broker\RabbitMqBroker;
 use DelayedJobs\Datasource\DatasourceInterface;
@@ -53,7 +52,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     /**
      * The singleton instance
      *
-     * @var \DelayedJobs\DelayedJob\ManagerInterface
+     * @var \DelayedJobs\DelayedJob\ManagerInterface|null
      */
     protected static $_instance;
 
@@ -65,7 +64,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     protected $consuming = false;
 
     /**
-     * @var \DelayedJobs\Datasource\DatasourceInterface
+     * @var \DelayedJobs\Datasource\DatasourceInterface|null
      */
     protected $_datastore;
 
@@ -85,13 +84,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     ];
 
     /**
-     * @var \DelayedJobs\Broker\BrokerInterface
+     * @var \DelayedJobs\Broker\BrokerInterface|null
      */
     protected $_messageBroker;
     /**
      * @var null|\DelayedJobs\DelayedJob\Job
      */
-    protected $_currentJob = null;
+    protected $_currentJob;
     /**
      * @var array
      */
@@ -115,7 +114,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     ) {
         $this->_datastore = $datastore;
         $this->_messageBroker = $messageBroker;
-        $this->_hostname = gethostname();
+        $this->_hostname = (string)gethostname();
 
         $this->setConfig($config);
     }
@@ -151,7 +150,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     public function getHostname(): string
     {
         if (empty($this->_hostname)) {
-            $this->_hostname = gethostname();
+            $this->_hostname = (string)gethostname();
         }
 
         return $this->_hostname;
@@ -194,18 +193,20 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
      */
     public function enqueue(Job $job, bool $skipPersist = false): void
     {
-        if ($skipPersist || $this->_persistToDatastore($job)) {
-            $this->_enqueuedJobs[] = (int)$job->getId();
-            if (
-                $job->getSequence() &&
-                $this->getDatasource()->currentlySequenced($job)
-            ) {
-                $this->addHistoryAndPersist($job, 'Not pushed to broker due to sequence.');
-
-                return;
-            }
-            $this->_pushToBroker($job);
+        if (!$skipPersist) {
+            $this->_persistToDatastore($job);
         }
+
+        $this->_enqueuedJobs[] = (int)$job->getId();
+        if (
+            $job->getSequence() &&
+            $this->getDatasource()->currentlySequenced($job)
+        ) {
+            $this->addHistoryAndPersist($job, 'Not pushed to broker due to sequence.');
+
+            return;
+        }
+        $this->_pushToBroker($job);
     }
 
     /**
@@ -320,17 +321,15 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         $job = $this->getDatasource()
             ->fetchJob($jobId);
-        if (!$job) {
-            return Job::STATUS_UNKNOWN;
-        }
 
         return $job->getStatus();
     }
 
     /**
-     * {@inheritDoc}
+     * @param \DelayedJobs\DelayedJob\Job $job Job to lock
+     * @return void
      */
-    public function lock(Job $job)
+    protected function lock(Job $job): void
     {
         $job->setStatus(Job::STATUS_BUSY)
             ->setStartTime(Time::now())
@@ -351,8 +350,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             return $result;
         }
 
-        if ($result instanceof DateTimeInterface) {
-            return Success::create("Reoccur at {$result}")
+        if ($result instanceof ChronosInterface) {
+            return Success::create(sprintf('Reoccur at %s', $result->toDateTimeString()))
                 ->setNextRun($result);
         }
 
@@ -418,7 +417,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
         $this->_persistToDatastore($job);
 
-        if ($result->getNextRun()) {
+        if ($result->getNextRun() !== null) {
             $this->_enqueueRecurring($job, $result->getNextRun());
         }
 
@@ -494,7 +493,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                 $result = $this->_buildResultObject($job, $result);
             }
 
-            $duration = round((microtime(true) - $start) * 1000); //Duration in milliseconds
+            $duration = (int)ceil(round((microtime(true) - $start) * 1000)); //Duration in milliseconds
             $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobExecute', [$job, $result, $duration]);
 
             $this->_handleResult($job, $result, $duration);
@@ -515,7 +514,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         $className = App::className($job->getWorker(), 'Worker', 'Worker');
 
-        if (!class_exists($className)) {
+        if (!$className || !class_exists($className)) {
             throw new JobExecuteException("Worker does not exist ({$className})");
         }
 
@@ -721,5 +720,13 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     {
         $this->getMessageBroker()
             ->negativeAcknowledge($job, true);
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaximumPriority(): int
+    {
+        return (int)$this->getConfig('maximum.priority');
     }
 }

@@ -30,12 +30,12 @@ class ArchiveWorker extends Worker
             $djColumns = $djSchema->columns();
             $columns = [];
             foreach ($djColumns as $djColumn) {
-                $columns[$djColumn] = $djSchema->column($djColumn);
+                $columns[$djColumn] = $djSchema->getColumn($djColumn);
             }
             $columns['payload']['type'] = 'binary';
             $columns['options']['type'] = 'binary';
             $archiveTableSchema = new TableSchema($archiveTable->getTable(), $columns);
-            $archiveTableSchema->addConstraint('primary', $djSchema->getConstraint('primary'));
+            $archiveTableSchema->addConstraint('primary', (array)$djSchema->getConstraint('primary'));
             $createSql = $archiveTableSchema->createSql($archiveTable->getConnection());
             foreach ($createSql as $createSqlQuery) {
                 $archiveTable->getConnection()

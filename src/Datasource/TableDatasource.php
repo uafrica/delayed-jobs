@@ -104,6 +104,10 @@ class TableDatasource extends BaseDatasource
      */
     public function loadJob(Job $job): Job
     {
+        if ($job->getId() === null) {
+            return $job;
+        }
+        
         $jobEntity = $this->_table()->fetchJobEntity($job->getId());
 
         if ($jobEntity === null) {

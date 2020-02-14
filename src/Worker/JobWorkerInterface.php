@@ -12,7 +12,7 @@ interface JobWorkerInterface
 {
     /**
      * @param \DelayedJobs\DelayedJob\Job $job The job that is being run.
-     * @return null|bool|\Cake\I18n\Time|string
+     * @return null|bool|\Cake\I18n\Time|string|\DelayedJobs\Result\ResultInterface
      */
     public function __invoke(Job $job);
 }

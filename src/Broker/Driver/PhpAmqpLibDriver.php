@@ -42,14 +42,14 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     public const HEARTBEAT = 300;
 
     /**
-     * @var \PhpAmqpLib\Connection\AbstractConnection
+     * @var \PhpAmqpLib\Connection\AbstractConnection|null
      */
-    protected $_connection = null;
+    protected $_connection;
 
     /**
-     * @var \PhpAmqpLib\Channel\AMQPChannel
+     * @var \PhpAmqpLib\Channel\AMQPChannel|null
      */
-    protected $_channel = null;
+    protected $_channel;
 
     /**
      * @var array
@@ -242,7 +242,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             $messageProperties['application_headers'] = $headers;
         }
 
-        $message = new AMQPMessage(json_encode($jobData['payload']), $messageProperties);
+        $message = new AMQPMessage((string)json_encode($jobData['payload']), $messageProperties);
 
         $exchange = $prefix . ($jobData['delay'] > 0 ? 'delayed-exchange' : 'direct-exchange');
 
@@ -259,10 +259,10 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     {
         $prefix = $this->getConfig('prefix');
         $channel = $this->getChannel();
-        $channel->basic_qos(null, $this->getConfig('qos'), null);
+        $channel->basic_qos(0, (int)$this->getConfig('qos'), false);
 
         $this->declareExchange();
-        $this->declareQueue($this->_manager->getConfig('maximum.priority'));
+        $this->declareQueue($this->_manager->getMaximumPriority());
         $this->bind();
 
         $tag = $channel->basic_consume(
@@ -341,7 +341,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     {
         $message = $job->getBrokerMessage();
 
-        if ($message === null) {
+        if ($message === null || !$message instanceof AMQPMessage) {
             return;
         }
 
@@ -355,7 +355,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     {
         $message = $job->getBrokerMessage();
 
-        if ($message === null) {
+        if ($message === null || !$message instanceof AMQPMessage) {
             return;
         }
 

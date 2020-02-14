@@ -30,7 +30,7 @@ class RabbitMqBroker implements BrokerInterface
     ];
 
     /**
-     * @var \DelayedJobs\Broker\Driver\RabbitMqDriverInterface
+     * @var \DelayedJobs\Broker\Driver\RabbitMqDriverInterface|null
      */
     protected $_driver;
 
@@ -74,7 +74,7 @@ class RabbitMqBroker implements BrokerInterface
     {
         $delay = $job->getRunAt()->isFuture() ? Time::now()->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
-        $jobPriority = $this->_manager->getConfig('maximum.priority') - $job->getPriority();
+        $jobPriority = $this->_manager->getMaximumPriority() - $job->getPriority();
         if ($jobPriority < 0) {
             $jobPriority = 0;
         } elseif ($jobPriority > 255) {
@@ -123,45 +123,6 @@ class RabbitMqBroker implements BrokerInterface
     {
         $this->getDriver()
             ->negativeAcknowledge($job, $requeue);
-    }
-
-    /**
-     * @return array|null
-     */
-    public function queueStatus()
-    {
-        $config = $this->getConfig('apiServer');
-
-        $client = new Client([
-            'host' => $config['host'],
-            'port' => 15672,
-            'auth' => [
-                'username' => $config['user'],
-                'password' => $config['pass'],
-            ],
-        ]);
-        try {
-            $queue_data = $client->get(sprintf(
-                '/api/queues/%s/%s',
-                urlencode($config['path']),
-                Configure::read('dj.service.name') . '-queue'
-            ), [], [
-                'type' => 'json',
-                ]);
-        } catch (Exception $e) {
-            return [];
-        }
-        $data = $queue_data->json;
-
-        if (!isset($data['messages'])) {
-            return null;
-        }
-
-        return [
-            'messages' => $data['messages'],
-            'messages_ready' => $data['messages_ready'],
-            'messages_unacknowledged' => $data['messages_unacknowledged'],
-        ];
     }
 
     /**

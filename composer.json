@@ -10,8 +10,10 @@
   },
   "require-dev": {
     "cakephp/app": "^4.0",
-    "phpunit/phpunit": "^8.5",
-    "cakephp/cakephp-codesniffer": "^4.0"
+    "cakephp/cakephp-codesniffer": "^4.0",
+    "cakephp/debug_kit": "^4.0",
+    "dereuromark/cakephp-ide-helper": "^1.0",
+    "phpunit/phpunit": "^8.5"
   },
   "suggest": {
     "dereuromark/cakephp-ide-helper": "For maximum IDE support, especially around enqueue() usage."

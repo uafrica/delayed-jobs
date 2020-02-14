@@ -10,6 +10,7 @@ use Cake\Console\ConsoleOptionParser;
 use Cake\Console\Exception\StopException;
 use Cake\Core\Configure;
 use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventInterface;
 use Cake\Event\EventListenerInterface;
 use Cake\I18n\FrozenTime;
@@ -45,7 +46,7 @@ class WorkerCommand extends Command implements EventListenerInterface
     public $modelClass = 'DelayedJobs.Workers';
 
     /**
-     * @var int
+     * @var string
      */
     protected $workerId;
     /**
@@ -57,11 +58,11 @@ class WorkerCommand extends Command implements EventListenerInterface
      */
     protected $hostName;
     /**
-     * @var \DelayedJobs\Model\Entity\Worker
+     * @var \DelayedJobs\Model\Entity\Worker|null
      */
     protected $worker;
     /**
-     * @var \DelayedJobs\DelayedJob\JobManager
+     * @var \DelayedJobs\DelayedJob\ManagerInterface
      */
     protected $manager;
     /**
@@ -87,11 +88,7 @@ class WorkerCommand extends Command implements EventListenerInterface
     /**
      * Should this worker be suicidal
      *
-     * @var array {
-     * @var bool $enabled Should this worker be suicidal
-     * @var int $jobCount After how many jobs should this worker kill itself
-     * @var int $idleTimeout After how many idle seconds should this worker kill itself
-     * }
+     * @var array
      */
     protected $suicideMode = [
         'enabled' => false,
@@ -106,7 +103,7 @@ class WorkerCommand extends Command implements EventListenerInterface
      */
     protected $timeOfLastJob;
     /**
-     * @var int
+     * @var string
      */
     protected $signalReceived;
     /**
@@ -161,7 +158,7 @@ class WorkerCommand extends Command implements EventListenerInterface
         $this->io = $io;
 
         $this->myPID = getmypid();
-        $this->hostName = gethostname();
+        $this->hostName = (string)gethostname();
         $this->startTime = time();
 
         $workerCount = $this->Workers->find()
@@ -192,12 +189,35 @@ class WorkerCommand extends Command implements EventListenerInterface
         $this->heartbeat();
 
         $this->manager = JobManager::getInstance();
-        $this->manager->getEventManager()
-            ->on($this);
+
+        if ($this->manager instanceof EventDispatcherInterface) {
+            $this->manager->getEventManager()
+                ->on($this);
+        }
 
         $this->manager->startConsuming();
 
         $this->stopHammerTime(Worker::SHUTDOWN_LOOP_EXIT);
+    }
+
+    /**
+     * @param string $signal The signal
+     * @return void
+     */
+    protected function _processKillSignal($signal): void
+    {
+        if (!$this->busy) {
+            $this->stopHammerTime($signal);
+        }
+
+        $this->signalReceived = $signal;
+        $this->manager->stopConsuming();
+
+        $this->io->out(
+            '<success>' .
+            __('Received {signal}, will shutdown once current job is completed.', ['signal' => $signal]) .
+            '</success>'
+        );
     }
 
     /**
@@ -250,7 +270,7 @@ class WorkerCommand extends Command implements EventListenerInterface
             return;
         }
 
-        if ($this->worker && $this->worker->status === WorkersTable::STATUS_SHUTDOWN) {
+        if ($this->worker->status === WorkersTable::STATUS_SHUTDOWN) {
             $this->stopHammerTime(Worker::SHUTDOWN_STATUS);
 
             return;
@@ -259,7 +279,7 @@ class WorkerCommand extends Command implements EventListenerInterface
         $this->worker->pulse = new Time();
         $this->worker->job_count = $this->jobCount;
         $this->worker->memory_usage = memory_get_usage(true);
-        $this->worker->idle_time = ceil(microtime(true) - $this->timeOfLastJob);
+        $this->worker->idle_time = (int)ceil(microtime(true) - $this->timeOfLastJob);
         $this->worker->last_job = $this->lastJob;
 
         $this->Workers->save($this->worker);
@@ -277,7 +297,7 @@ class WorkerCommand extends Command implements EventListenerInterface
     {
         $this->io->out('Shutting down...');
 
-        if ($this->manager && $this->manager->isConsuming()) {
+        if ($this->manager->isConsuming()) {
             $this->manager->stopConsuming();
         }
 
@@ -394,7 +414,7 @@ class WorkerCommand extends Command implements EventListenerInterface
      */
     public function afterExecute(EventInterface $event, Job $job, ResultInterface $result, $duration): void
     {
-        $this->lastJob = $job->getId();
+        $this->lastJob = (int)$job->getId();
         $this->jobCount++;
         $this->io->nl();
 
@@ -402,10 +422,9 @@ class WorkerCommand extends Command implements EventListenerInterface
             $this->io->verbose(
                 sprintf('<error> - Execution failed</error> :: <info>%s</info>', $result->getMessage())
             );
-            if ($result->getException()) {
+            if ($result->getException() !== null) {
                 $this->io->verbose(
-                    $result->getException()
-                        ->getTraceAsString()
+                    $result->getException()->getTraceAsString()
                 );
             }
         } elseif ($result instanceof Pause) {

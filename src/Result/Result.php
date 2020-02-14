@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace DelayedJobs\Result;
 
 use Cake\Chronos\ChronosInterface;
-use Cake\Core\App;
-use InvalidArgumentException;
 
 /**
  * Class Result
@@ -34,33 +32,19 @@ abstract class Result implements ResultInterface
      *
      * @param string $message The message
      */
-    public function __construct($message = '')
+    final public function __construct($message = '')
     {
         $this->_message = $message;
     }
 
     /**
      * @param string $message The message
-     * @param string $class Class name to use (Either a FQCN, or a Cake style class)
      *
      * @return static
      */
-    public static function create($message = '', ?string $class = null): ResultInterface
+    public static function create($message = ''): self
     {
-        if ($class) {
-            $className = App::className($class, 'Result');
-            $result = new $className($message);
-        } else {
-            $result = new static($message);
-        }
-
-        if (!$result instanceof ResultInterface) {
-            throw new InvalidArgumentException(
-                sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class)
-            );
-        }
-
-        return $result;
+        return new static($message);
     }
 
     /**
@@ -110,7 +94,7 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @return self
+     * @return static
      */
     public function willRetry(): self
     {

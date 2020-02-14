@@ -49,12 +49,6 @@ interface ManagerInterface
     public function getStatus($jobId): int;
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job
-     * @return mixed
-     */
-    public function lock(Job $job);
-
-    /**
      * @param \DelayedJobs\DelayedJob\Job $job Job to execute
      * @param bool $force Force the job to run regardless of it's status
      * @return \DelayedJobs\Result\ResultInterface|null
@@ -94,4 +88,9 @@ interface ManagerInterface
      * @return void
      */
     public function requeueJob(Job $job): void;
+
+    /**
+     * @return int
+     */
+    public function getMaximumPriority(): int;
 }

@@ -18,7 +18,7 @@ class WorkerTask implements TaskInterface
     /**
      * @return array
      */
-    public function collect()
+    public function collect(): array
     {
         $map = [];
         $workers = $this->collectWorkers();
@@ -36,7 +36,7 @@ class WorkerTask implements TaskInterface
     /**
      * @return string[]
      */
-    protected function collectWorkers()
+    protected function collectWorkers(): array
     {
         $result = [];
         $workerFinder = new WorkerFinder();

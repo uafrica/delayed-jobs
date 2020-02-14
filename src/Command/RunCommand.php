@@ -44,7 +44,7 @@ class RunCommand extends Command
         $this->args = $args;
         $this->io = $io;
 
-        $jobId = $args->getArgument('jobId');
+        $jobId = (int)$args->getArgument('jobId');
 
         $this->io->verbose('<info>Starting Job: ' . $jobId . '</info>');
 
@@ -77,7 +77,7 @@ class RunCommand extends Command
         $start = microtime(true);
 
         $response = JobManager::getInstance()
-            ->execute($job, $this->args->getOption('force'));
+            ->execute($job, (bool)$this->args->getOption('force'));
 
         $this->djLog(__('Done with: {0}', $job->getId()));
 
@@ -104,7 +104,7 @@ class RunCommand extends Command
      */
     protected function failedJob(Job $job, Failed $response): void
     {
-        if ($this->args->getOption('debug')) {
+        if ($this->args->getOption('debug') && $response->getException() !== null) {
             throw $response->getException();
         }
 
@@ -114,7 +114,7 @@ class RunCommand extends Command
                 $response->getMessage()
             )
         );
-        if ($response->getException()) {
+        if ($response->getException() !== null) {
             $this->io->verbose(
                 $response->getException()
                     ->getTraceAsString()

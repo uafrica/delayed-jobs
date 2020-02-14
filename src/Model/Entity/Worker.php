@@ -20,7 +20,8 @@ use Cake\ORM\Entity;
  * @property int $memory_usage
  * @property int $idle_time
  * @property string $shutdown_reason
- * @property \Cake\I18n\Time $shutdown_time
+ * @property \Cake\Chronos\ChronosInterface $shutdown_time
+ * @property int $last_job
  */
 class Worker extends Entity
 {

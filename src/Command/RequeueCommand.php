@@ -36,6 +36,7 @@ class RequeueCommand extends Command
      */
     public function execute(Arguments $args, ConsoleIo $io)
     {
+        /** @var \DelayedJobs\Model\Entity\DelayedJob $job */
         $job = TableRegistry::getTableLocator()
             ->get('DelayedJobs.DelayedJobs')
             ->get($args->getArgument('jobId'));
