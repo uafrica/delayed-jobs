@@ -7,7 +7,6 @@ use Cake\Database\Schema\TableSchemaInterface;
 use Cake\Datasource\EntityInterface;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\DatastoreInterface;
-use DelayedJobs\DelayedJob\Exception\EnqueueException;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Traits\DebugLoggerTrait;

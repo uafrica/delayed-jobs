@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace DelayedJobs\Worker;
 
-use Cake\Console\Shell;
 use Cake\I18n\Time;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Result\Failed;
