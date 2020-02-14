@@ -31,7 +31,8 @@ class DelayedJobsTableTest extends TestCase
         $this->DelayedJobsTable = TableRegistry::get('DelayedJobs.DelayedJobs');
     }
 
-    public function tearDown(): void {
+    public function tearDown(): void
+    {
         parent::tearDown();
         TableRegistry::clear();
     }
