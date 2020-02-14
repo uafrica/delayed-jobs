@@ -21,8 +21,8 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
 {
     use EnqueueTrait;
     use EventDispatcherTrait;
-    use ModelAwareTrait;
     use InstanceConfigTrait;
+    use ModelAwareTrait;
 
     /**
      * @var \DelayedJobs\DelayedJob\Job
