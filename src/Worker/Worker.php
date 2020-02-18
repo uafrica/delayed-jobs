@@ -30,12 +30,17 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     protected $job;
 
     /**
+     * @var array
+     */
+    protected $_defaultConfig = [];
+
+    /**
      * Construct the listener
      *
-     * @param \DelayedJobs\DelayedJob\Job $job The job being executed
+     * @param \DelayedJobs\DelayedJob\Job|null $job The job being executed
      * @param array $config Allow child listeners to have options
      */
-    public function __construct(Job $job, array $config = [])
+    public function __construct(?Job $job = null, array $config = [])
     {
         $this->modelFactory('Table', [TableRegistry::class, 'get']);
 
