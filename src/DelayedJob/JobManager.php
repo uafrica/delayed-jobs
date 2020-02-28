@@ -267,7 +267,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         }
 
         $growthFactorRandom = random_int(1, 2) === 2 ? -1 : + 1;
-        $growthFactorRandom *= ceil(\log($growthFactor + random_int($growthFactor / 2, $growthFactor)));
+        $growthFactorRandom *= ceil(\log($growthFactor + random_int((int)($growthFactor / 2), $growthFactor)));
 
         $growthFactor += $growthFactorRandom;
 

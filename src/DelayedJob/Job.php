@@ -388,14 +388,14 @@ class Job
      */
     public function getPriority(): int
     {
-        return $this->_priority ?? 1;
+        return (int)$this->_priority ?? 1;
     }
 
     /**
      * @param int $priority Job priority
      * @return self
      */
-    public function setPriority($priority): self
+    public function setPriority(int $priority): self
     {
         if ($priority > self::MAX_PRIORITY) {
             $priority = self::MAX_PRIORITY;

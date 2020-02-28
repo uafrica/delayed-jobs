@@ -498,7 +498,7 @@ class WorkerCommand extends Command implements EventListenerInterface
     /**
      * @return void
      */
-    protected function forceShutdown(): void
+    public function forceShutdown(): void
     {
         $this->stopHammerTime(Worker::SHUTDOWN_MANAGER, static::MANAGER_SHUTDOWN);
     }
