@@ -155,7 +155,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             ->enableAutoQuoting();
         $connection->transactional(function () use ($query, &$jobs) {
             $statement = $query->execute();
-            $firstId = $statement->lastInsertId($this->getTable(), 'id');
+            $firstId = (int)$statement->lastInsertId($this->getTable(), 'id');
             foreach ($jobs as $job) {
                 $job->setId($firstId++);
             }
