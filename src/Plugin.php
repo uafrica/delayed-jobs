@@ -46,7 +46,7 @@ class Plugin extends BasePlugin
 
         RecurringJobBuilder::add([
             'worker' => 'DelayedJobs.Archive',
-            'priority' => Configure::read('maximum.priority'),
+            'priority' => (int)Configure::read('maximum.priority'),
         ]);
 
         // For IdeHelper plugin if in use - make sure to run `bin/cake phpstorm generate` then
