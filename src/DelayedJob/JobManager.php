@@ -371,7 +371,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
                 ->setException($result);
         }
 
-        return new Success($result);
+        return new Success((string)$result);
     }
 
     /**

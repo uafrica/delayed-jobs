@@ -17,7 +17,7 @@ abstract class Result implements ResultInterface
     /**
      * @var string
      */
-    private $_message;
+    private $_message = '';
     /**
      * @var \Cake\Chronos\ChronosInterface|null
      */
@@ -32,7 +32,7 @@ abstract class Result implements ResultInterface
      *
      * @param string $message The message
      */
-    final public function __construct($message = '')
+    final public function __construct(string $message = '')
     {
         $this->_message = $message;
     }
@@ -42,7 +42,7 @@ abstract class Result implements ResultInterface
      *
      * @return static
      */
-    public static function create($message = ''): self
+    public static function create(string $message = ''): self
     {
         return new static($message);
     }
