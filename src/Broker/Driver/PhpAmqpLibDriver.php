@@ -284,7 +284,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
                             $body
                         ); //If we're using a correlation id, then the message body is something special, and should be recorded as such.
                 } elseif (isset($body['id'])) {
-                    $job->setId($body['id']);
+                    $job->setId((int)$body['id']);
                 }
 
                 return $callback($job, $message->delivery_info['redelivered']);
