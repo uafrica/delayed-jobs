@@ -54,7 +54,7 @@ class DebugKitJobManager extends JobManager
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueue(Job $job, bool $skipPersist = false): void
     {
@@ -64,7 +64,7 @@ class DebugKitJobManager extends JobManager
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueueBatch(array $jobs): void
     {

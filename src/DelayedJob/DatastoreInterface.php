@@ -30,7 +30,6 @@ interface DatastoreInterface
 
     /**
      * @param int $jobId Job to get
-     *
      * @return \Cake\Datasource\EntityInterface|null
      */
     public function fetchJobEntity(int $jobId): ?EntityInterface;

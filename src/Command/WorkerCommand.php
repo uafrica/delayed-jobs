@@ -150,7 +150,7 @@ class WorkerCommand extends Command implements EventListenerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function execute(Arguments $args, ConsoleIo $io)
     {

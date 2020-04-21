@@ -66,7 +66,7 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function publishJob(Job $job): void
     {
@@ -91,7 +91,7 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function consume(callable $callback, callable $heartbeat): void
     {
@@ -99,7 +99,7 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function stopConsuming(): void
     {
@@ -107,7 +107,7 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function acknowledge(Job $job): void
     {
@@ -115,7 +115,7 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function negativeAcknowledge(Job $job, bool $requeue = false): void
     {
@@ -124,7 +124,7 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function publishBasic(
         string $body,

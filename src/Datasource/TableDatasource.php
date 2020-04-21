@@ -40,7 +40,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function persistJob(Job $job)
     {
@@ -49,7 +49,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function persistJobs(array $jobs): array
     {
@@ -58,7 +58,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function fetchJob(int $jobId): Job
     {
@@ -73,7 +73,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function currentlySequenced(Job $job): bool
     {
@@ -82,7 +82,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function fetchNextSequence(Job $job): ?Job
     {
@@ -91,7 +91,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function isSimilarJob(Job $job): bool
     {
@@ -100,7 +100,7 @@ class TableDatasource extends BaseDatasource
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function loadJob(Job $job): Job
     {

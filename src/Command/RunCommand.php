@@ -37,7 +37,7 @@ class RunCommand extends Command
     protected $io;
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function execute(Arguments $args, ConsoleIo $io)
     {

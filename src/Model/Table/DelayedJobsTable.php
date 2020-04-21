@@ -51,7 +51,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function currentlySequenced(Job $job): bool
     {
@@ -69,7 +69,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function persistJob(Job $job): Job
     {
@@ -108,7 +108,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function persistJobs(array $jobs): array
     {
@@ -170,7 +170,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function fetchJob(int $jobId): ?Job
     {
@@ -186,7 +186,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function fetchJobEntity(int $jobId): ?EntityInterface
     {
@@ -194,7 +194,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function fetchNextSequence(Job $job): ?Job
     {
@@ -226,7 +226,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function isSimilarJob(Job $job): bool
     {

@@ -43,7 +43,6 @@ class JobCallback extends JobConstraintBase
 
     /**
      * @param mixed $other Other arguments
-     *
      * @return bool
      */
     protected function matches($other): bool

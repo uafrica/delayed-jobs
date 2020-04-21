@@ -210,7 +210,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueuePersisted($id, $priority): void
     {
@@ -221,7 +221,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueueBatch(array $jobs): void
     {
@@ -292,7 +292,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function fetchJob($jobId): Job
     {
@@ -315,7 +315,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function getStatus($jobId): int
     {
@@ -508,7 +508,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function execute(Job $job, bool $force = false): ?\DelayedJobs\Result\ResultInterface
     {
@@ -554,7 +554,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueueNextSequence(Job $job): void
     {
@@ -567,7 +567,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function isSimilarJob(Job $job): bool
     {
@@ -652,7 +652,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function startConsuming(): void
     {
@@ -695,7 +695,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function stopConsuming(): void
     {
@@ -706,7 +706,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function isConsuming(): bool
     {
@@ -714,7 +714,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function requeueJob(Job $job): void
     {

@@ -32,7 +32,7 @@ class RequeueCommand extends Command
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function execute(Arguments $args, ConsoleIo $io)
     {

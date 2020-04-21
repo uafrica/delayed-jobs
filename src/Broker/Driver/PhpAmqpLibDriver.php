@@ -224,7 +224,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function publishJob(array $jobData): void
     {
@@ -253,6 +253,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
     /**
      * {@inheritDoc}
+     *
      * @throws \ErrorException
      */
     public function consume(callable $callback, callable $heartbeat): void
@@ -318,7 +319,6 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
     /**
      * @param int $timeout Timeout to wait for
-     *
      * @return bool
      * @throws \ErrorException
      */
@@ -335,7 +335,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function acknowledge(Job $job): void
     {
@@ -349,7 +349,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function negativeAcknowledge(Job $job, bool $requeue = false): void
     {
@@ -363,7 +363,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function publishBasic(
         string $body,

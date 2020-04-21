@@ -42,7 +42,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueue(Job $job): void
     {
@@ -52,7 +52,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueuePersisted($id, $priority): void
     {
@@ -60,7 +60,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueueBatch(array $jobs): void
     {
@@ -70,7 +70,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function fetchJob($jobId): Job
     {
@@ -82,7 +82,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function getStatus($jobId): int
     {
@@ -90,7 +90,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function execute(Job $job, bool $force = false): ?\DelayedJobs\Result\ResultInterface
     {
@@ -98,14 +98,14 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function enqueueNextSequence(Job $job): void
     {
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function isSimilarJob(Job $job): bool
     {
@@ -113,28 +113,28 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function startConsuming(): void
     {
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function stopConsuming(): void
     {
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function requeueJob(Job $job): void
     {
     }
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function isConsuming(): bool
     {
