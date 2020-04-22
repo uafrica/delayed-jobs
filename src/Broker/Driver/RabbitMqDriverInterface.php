@@ -11,9 +11,15 @@ interface RabbitMqDriverInterface
 {
     /**
      * @param array $jobData Job to publish
+     * @param bool $batch Use batch technique to push job
      * @return void
      */
-    public function publishJob(array $jobData);
+    public function publishJob(array $jobData, bool $batch = false);
+
+    /**
+     * @return void
+     */
+    public function finishBatch(): void;
 
     /**
      * @param callable $callback

@@ -2,12 +2,14 @@
 
 namespace DelayedJobs\Model\Table;
 
+use Cake\Collection\Collection;
 use Cake\Database\Schema\TableSchema;
 use Cake\I18n\Time;
 use Cake\ORM\Query;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\DatastoreInterface;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Traits\DebugLoggerTrait;
 
 /**
@@ -66,10 +68,11 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return \DelayedJobs\DelayedJob\Job|null
+     * @param \DelayedJobs\DelayedJob\Job $job The job
+     *
+     * @return \DelayedJobs\Model\Entity\DelayedJob
      */
-    public function persistJob(Job $job)
+    protected function convertJobToEntity(Job $job): DelayedJob
     {
         $jobData = $job->getData();
         $jobEntity = $job->getEntity();
@@ -85,6 +88,17 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         if (!$jobEntity->status) {
             $jobEntity->status = Job::STATUS_NEW;
         }
+
+        return $jobEntity;
+    }
+
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job The job to persist
+     * @return \DelayedJobs\DelayedJob\Job|null
+     */
+    public function persistJob(Job $job)
+    {
+        $jobEntity = $this->convertJobToEntity($job);
 
         $options = [
             'atomic' => !$this->getConnection()->inTransaction()
@@ -103,13 +117,14 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job[] $jobs
-     * @return \DelayedJobs\DelayedJob\Job[]
+     * @param \Cake\Collection\Collection $jobsToInsert Collection of Jobs to insert
+     * @throws \Exception
+     * @return void
      */
-    public function persistJobs(array $jobs): array
+    protected function batchInsertJobs(Collection $jobsToInsert): void
     {
-        if (empty($jobs)) {
-            return [];
+        if ($jobsToInsert->isEmpty()) {
+            return;
         }
 
         $query = $this->query()
@@ -134,37 +149,69 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 'history',
             ]);
 
-        foreach ($jobs as $job) {
-            $jobData = $job->getData();
-            unset($jobData['id']);
-            $jobData['created'] = date('Y-m-d H:i:s');
-            $jobData['modified'] = date('Y-m-d H:i:s');
-            $query->values($jobData);
-        }
+        $jobsToInsert
+            ->each(function (Job $job) use ($query) {
+                $jobData = $job->getData();
+                unset($jobData['id']);
+                $jobData['created'] = date('Y-m-d H:i:s');
+                $jobData['modified'] = date('Y-m-d H:i:s');
+                $query->values($jobData);
+            });
 
         $connection = $this->getConnection();
-        $quote = $connection
-            ->getDriver()
+        $quote = $connection->getDriver()
             ->isAutoQuotingEnabled();
-        $connection
-            ->getDriver()
+        $connection->getDriver()
             ->enableAutoQuoting();
-        $connection->transactional(function () use ($query, &$jobs) {
+        $connection->transactional(function () use ($query, $jobsToInsert) {
             $statement = $query->execute();
             $firstId = $statement->lastInsertId($this->getTable(), 'id');
-            foreach ($jobs as $job) {
+            $jobsToInsert->each(function (Job $job) use (&$firstId) {
                 $job->setId($firstId++);
-            }
+            });
 
             return true;
         });
 
         $connection->getDriver()
             ->enableAutoQuoting($quote);
+    }
 
-        if (!$jobs) {
-            throw new EnqueueException('Job batch could not be persisted');
+    /**
+     * @param \Cake\Collection\Collection $jobsToUpdate Collection of Jobs to update
+     * @throws \Exception
+     * @return void
+     */
+    protected function batchUpdateJobs(Collection $jobsToUpdate): void
+    {
+        $jobEntities = $jobsToUpdate
+            ->map(function (Job $job) {
+                return $this->convertJobToEntity($job);
+            });
+
+        $this->saveMany($jobEntities->toList());
+    }
+
+    /**
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs Array of jobs to persist
+     * @return \DelayedJobs\DelayedJob\Job[]
+     */
+    public function persistJobs(array $jobs): array
+    {
+        if (empty($jobs)) {
+            return [];
         }
+
+        $hasIdFilter = function (Job $job) {
+            return $job->getId();
+        };
+
+        $jobCollection = collection($jobs);
+        $jobsToInsert = $jobCollection->reject($hasIdFilter);
+        $jobsToUpdate = $jobCollection->filter($hasIdFilter);
+
+        $this->batchInsertJobs($jobsToInsert);
+        $this->batchUpdateJobs($jobsToUpdate);
 
         return $jobs;
     }

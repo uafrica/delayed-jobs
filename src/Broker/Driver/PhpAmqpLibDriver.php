@@ -63,7 +63,13 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
      */
     protected $_manager;
 
+    /**
+     * @var
+     */
     protected $_consumeCallback;
+    /**
+     * @var
+     */
     protected $_hearbeatCallback;
 
     /**
@@ -82,6 +88,9 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $this->_manager = $manager;
     }
 
+    /**
+     * @return void
+     */
     public function __destroy()
     {
         if ($this->_channel) {
@@ -147,9 +156,14 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             $this->_channel = $this->getConnection()->channel();
         }
 
+        $this->_channel->confirm_select();
+
         return $this->_channel;
     }
 
+    /**
+     * @return void
+     */
     public function declareExchange()
     {
         $prefix = $this->getConfig('prefix');
@@ -164,6 +178,10 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         ]);
     }
 
+    /**
+     * @param int $maximumPriority Maximum priority
+     * @return void
+     */
     public function declareQueue($maximumPriority)
     {
         $prefix = $this->getConfig('prefix');
@@ -174,6 +192,9 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function bind()
     {
         $prefix = $this->getConfig('prefix');
@@ -184,12 +205,21 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $channel->queue_bind($prefix . 'queue', $prefix . 'direct-exchange', $routingKey);
     }
 
+    /**
+     * @return \Cake\Core\Retry\CommandRetry
+     */
     protected function getIoRetry()
     {
         return new CommandRetry(new PhpAmqpLibReconnectStrategy($this), 2);
     }
 
-    public function publishJob(array $jobData)
+    /**
+     * @param array $jobData Job to publish
+     * @param bool $batch Use batch mode
+     * @throws \Exception
+     * @return void
+     */
+    public function publishJob(array $jobData, bool $batch = false)
     {
         $prefix = $this->getConfig('prefix');
         $routingKey = $this->getConfig('routingKey');
@@ -209,11 +239,38 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
 
         $exchange = $prefix . ($jobData['delay'] > 0 ? 'delayed-exchange' : 'direct-exchange');
 
+        if ($batch) {
+            $channel = $this->getChannel();
+            $channel->batch_basic_publish($message, $exchange, $routingKey);
+
+            return;
+        }
+
         $this->getIoRetry()->run(function () use ($message, $exchange, $routingKey) {
-            $this->getChannel()->basic_publish($message, $exchange, $routingKey);
+            $channel = $this->getChannel();
+
+            $channel->basic_publish($message, $exchange, $routingKey);
+            $channel->wait_for_pending_acks(10);
         });
     }
 
+    /**
+     * @return void
+     */
+    public function finishBatch(): void
+    {
+        $channel = $this->getChannel();
+
+        $channel->publish_batch();
+        $channel->wait_for_pending_acks(10);
+    }
+
+    /**
+     * @param callable $callback Callback for consumer
+     * @param callable $heartbeat Heartbeat callback
+     *
+     * @return mixed|void
+     */
     public function consume(callable $callback, callable $heartbeat)
     {
         $prefix = $this->getConfig('prefix');
@@ -259,12 +316,20 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         }
     }
 
+    /**
+     * @return void
+     */
     public function stopConsuming()
     {
         $channel = $this->getChannel();
         $channel->basic_cancel($this->_tag);
     }
 
+    /**
+     * @param int $timeout Timeout to wait for
+     *
+     * @return bool
+     */
     public function wait($timeout = 1)
     {
         $channel = $this->getChannel();
@@ -277,6 +342,11 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         }
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job Job to ack
+     *
+     * @return mixed|void
+     */
     public function ack(Job $job)
     {
         $message = $job->getBrokerMessage();
@@ -288,6 +358,12 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
         $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
     }
 
+    /**
+     * @param \DelayedJobs\DelayedJob\Job $job Job to nack
+     * @param bool $requeue Should the message be requeued
+     *
+     * @return mixed|void
+     */
     public function nack(Job $job, $requeue = true)
     {
         $message = $job->getBrokerMessage();
@@ -300,11 +376,11 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * @param string $body
-     * @param string $exchange
-     * @param string $routing_key
-     * @param int $priority
-     * @param array $headers
+     * @param string $body Message body
+     * @param string $exchange Exchange to route through
+     * @param string $routing_key Routing key
+     * @param int $priority Priority
+     * @param array $headers Other headers
      * @return void
      */
     public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = [])
