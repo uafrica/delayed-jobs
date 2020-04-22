@@ -426,7 +426,7 @@ class Job
      * @param bool $defaults Use as defaults
      * @return self
      */
-    public function setPayload(array $payload, bool $defaults = false): self
+    public function setPayload(?array $payload, bool $defaults = false): self
     {
         if ($defaults === false) {
             $this->_payload = $payload;
@@ -685,12 +685,12 @@ class Job
     }
 
     /**
-     * @param array $history Array of job history
+     * @param array|null $history Array of job history
      * @return self
      */
-    public function setHistory(array $history): self
+    public function setHistory(?array $history): self
     {
-        $this->_history = $history;
+        $this->_history = (array)$history;
 
         return $this;
     }
