@@ -278,7 +278,7 @@ class Job
      * @param int $id ID for this job
      * @return self
      */
-    public function setId(int $id): self
+    public function setId(?int $id): self
     {
         $this->_id = $id;
 
