@@ -56,7 +56,10 @@ class JobCallback extends JobConstraintBase
                 return true;
             }
 
-            if (($result && $this->matchType === self::MATCH_NONE) || (!$result && $this->matchType === self::MATCH_ALL)) {
+            if (
+                ($result && $this->matchType === self::MATCH_NONE) ||
+                (!$result && $this->matchType === self::MATCH_ALL)
+            ) {
                 return false;
             }
         }

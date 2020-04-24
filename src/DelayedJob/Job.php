@@ -44,7 +44,7 @@ class Job
      */
     protected $_priority = 100;
     /**
-     * @var array
+     * @var array|null
      */
     protected $_payload = [];
     /**
@@ -60,7 +60,7 @@ class Job
      */
     protected $_runAt;
     /**
-     * @var int
+     * @var int|null
      */
     protected $_id;
     /**
@@ -295,7 +295,6 @@ class Job
 
     /**
      * @param int $retries Number of retries this job has done
-     *
      * @return self
      */
     public function setRetries($retries): self
@@ -414,7 +413,7 @@ class Job
      */
     public function getPayload($key = null, $default = null)
     {
-        if ($key === null) {
+        if ($key === null || $this->_payload === null) {
             return $this->_payload;
         }
 
@@ -428,10 +427,10 @@ class Job
      */
     public function setPayload(?array $payload, bool $defaults = false): self
     {
-        if ($defaults === false) {
+        if ($defaults === false || !is_array($this->_payload)) {
             $this->_payload = $payload;
         } else {
-            $this->_payload += $payload;
+            $this->_payload += (array)$payload;
         }
 
         return $this;
@@ -451,7 +450,7 @@ class Job
             return $this;
         }
 
-        $this->_payload = Hash::insert($this->_payload, $key, $value);
+        $this->_payload = Hash::insert((array)$this->_payload, $key, $value);
 
         return $this;
     }

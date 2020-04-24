@@ -39,7 +39,6 @@ abstract class Result implements ResultInterface
 
     /**
      * @param string $message The message
-     *
      * @return static
      */
     public static function create(string $message = ''): self

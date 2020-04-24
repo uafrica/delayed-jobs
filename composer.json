@@ -13,6 +13,7 @@
     "cakephp/cakephp-codesniffer": "^4.0",
     "cakephp/debug_kit": "^4.0",
     "dereuromark/cakephp-ide-helper": "^1.0",
+    "phpstan/phpstan": "^0.12.0",
     "phpunit/phpunit": "^8.5"
   },
   "suggest": {
@@ -20,7 +21,8 @@
   },
   "scripts": {
     "cs-check": "phpcs --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/ tests/",
-    "cs-fix": "phpcbf --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/ tests/"
+    "cs-fix": "phpcbf --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/ tests/",
+    "stan": "phpstan analyse --memory-limit=3G src"
   },
   "license": "MIT",
   "authors": [

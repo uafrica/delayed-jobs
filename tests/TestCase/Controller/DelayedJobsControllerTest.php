@@ -10,6 +10,7 @@ use Fabricate\Fabricate;
 
 /**
  * Class DelayedJobsControllerTest
+ *
  * @coversDefaultClass \DelayedJobs\Controller\DelayedJobsController
  */
 class DelayedJobsControllerTest extends IntegrationTestCase

@@ -11,6 +11,7 @@ use Fabricate\Fabricate;
 
 /**
  * Class DelayedJobsTableTest
+ *
  * @coversDefaultClass \DelayedJobs\Model\Table\DelayedJobsTable
  */
 class DelayedJobsTableTest extends TestCase

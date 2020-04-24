@@ -20,7 +20,7 @@ class RecurringCommand extends Command
     use EnqueueTrait;
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function execute(Arguments $args, ConsoleIo $io)
     {

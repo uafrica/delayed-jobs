@@ -5,7 +5,6 @@ use Cake\TestSuite\Fixture\TestFixture;
 
 /**
  * DelayedJobsFixture
- *
  */
 class DelayedJobsFixture extends TestFixture
 {

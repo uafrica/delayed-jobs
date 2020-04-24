@@ -8,6 +8,7 @@ use Cake\TestSuite\TestCase;
 
 /**
  * Class LockTest
+ *
  * @coversDefaultClass \DelayedJobs\Lock
  */
 class LockTest extends TestCase

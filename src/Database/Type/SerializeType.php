@@ -6,7 +6,6 @@ namespace DelayedJobs\Database\Type;
 use Cake\Database\DriverInterface;
 use Cake\Database\Type\BaseType;
 use Cake\Log\Log;
-use PDO;
 
 /**
  * Class JsonType

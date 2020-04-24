@@ -577,7 +577,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
     /**
      * @param \DelayedJobs\DelayedJob\Job $job The job instance
      * @param mixed $message Message to add to history
-     *
      * @return \DelayedJobs\DelayedJob\Job
      */
     public function addHistoryAndPersist(Job $job, $message): Job

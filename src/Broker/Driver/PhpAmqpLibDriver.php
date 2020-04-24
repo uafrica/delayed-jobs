@@ -309,7 +309,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * {@inheritDoc}}
+     * @inheritDoc
      */
     public function stopConsuming(): void
     {

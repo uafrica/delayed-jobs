@@ -17,7 +17,7 @@ use DelayedJobs\Generator\Task\WorkerTask;
 class Plugin extends BasePlugin
 {
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function bootstrap(PluginApplicationInterface $app): void
     {

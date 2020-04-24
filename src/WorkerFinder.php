@@ -50,7 +50,6 @@ class WorkerFinder
 
     /**
      * @param \Cake\Filesystem\Folder $Folder Folder
-     *
      * @return array
      */
     protected function getAppPaths(Folder $Folder)
@@ -68,7 +67,6 @@ class WorkerFinder
     /**
      * @param \Cake\Filesystem\Folder $Folder Folder
      * @param string $plugin Plugin name
-     *
      * @return array
      */
     protected function getPluginPaths(Folder $Folder, $plugin)

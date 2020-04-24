@@ -25,7 +25,7 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     use ModelAwareTrait;
 
     /**
-     * @var \DelayedJobs\DelayedJob\Job
+     * @var \DelayedJobs\DelayedJob\Job|null
      */
     protected $job;
 
@@ -81,7 +81,7 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     /**
      * @return \DelayedJobs\DelayedJob\Job
      */
-    public function getJob(): Job
+    public function getJob(): ?Job
     {
         return $this->job;
     }
