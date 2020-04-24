@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Test\TestCase;
 
@@ -7,11 +8,11 @@ use Cake\TestSuite\TestCase;
 
 /**
  * Class LockTest
+ *
  * @coversDefaultClass \DelayedJobs\Lock
  */
 class LockTest extends TestCase
 {
-
     /**
      * @var \DelayedJobs\Lock
      */
@@ -20,7 +21,7 @@ class LockTest extends TestCase
     /**
      * @return void
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->Lock = $this->getMock('\\DelayedJobs\\Lock', ['running']);
@@ -29,7 +30,7 @@ class LockTest extends TestCase
     /**
      * @return void
      */
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         $dir = new Folder(TMP . 'lock');

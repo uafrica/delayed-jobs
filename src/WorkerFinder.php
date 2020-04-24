@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs;
 
@@ -12,9 +13,9 @@ use Cake\Filesystem\Folder;
 class WorkerFinder
 {
     /**
-     * @var array|null
+     * @var array
      */
-    protected $workers;
+    protected $workers = [];
 
     /**
      * Returns all possible workers.
@@ -48,15 +49,14 @@ class WorkerFinder
     }
 
     /**
-     * @param \Cake\Filesystem\Folder $Folder
-     *
+     * @param \Cake\Filesystem\Folder $Folder Folder
      * @return array
      */
     protected function getAppPaths(Folder $Folder)
     {
-        $res = array_merge($this->workers, $Folder->findRecursive('.+Worker\.php', true));
+        $res = array_merge((array)$this->workers, $Folder->findRecursive('.+Worker\.php', true));
         $basePath = $Folder->pwd();
-        $quotedBasePath = preg_quote($basePath, '#');
+        $quotedBasePath = preg_quote((string)$basePath, '#');
         array_walk($res, function (&$r) use ($quotedBasePath) {
             $r = preg_replace("#^{$quotedBasePath}(.+)Worker\.php$#", '$1', $r);
         });
@@ -65,19 +65,18 @@ class WorkerFinder
     }
 
     /**
-     * @param \Cake\Filesystem\Folder $Folder
-     * @param string $plugin
-     *
+     * @param \Cake\Filesystem\Folder $Folder Folder
+     * @param string $plugin Plugin name
      * @return array
      */
     protected function getPluginPaths(Folder $Folder, $plugin)
     {
         $res = $Folder->findRecursive('.+Worker\.php', true);
         $basePath = $Folder->pwd();
-        $quotedBasePath = preg_quote($basePath, '#');
+        $quotedBasePath = preg_quote((string)$basePath, '#');
         foreach ($res as $key => $r) {
             $name = preg_replace("#^{$quotedBasePath}(.+)Worker\.php$#", '$1', $r);
-            if (in_array($name, $this->workers)) {
+            if (in_array($name, (array)$this->workers)) {
                 unset($res[$key]);
                 continue;
             }

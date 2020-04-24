@@ -1,13 +1,14 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Model\Table;
 
-use Cake\Database\Schema\TableSchema;
-use Cake\I18n\Time;
-use Cake\ORM\Query;
+use Cake\Database\Schema\TableSchemaInterface;
+use Cake\Datasource\EntityInterface;
 use Cake\ORM\Table;
 use DelayedJobs\DelayedJob\DatastoreInterface;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\Model\Entity\DelayedJob;
 use DelayedJobs\Traits\DebugLoggerTrait;
 
 /**
@@ -20,11 +21,16 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     use DebugLoggerTrait;
 
     /**
+     * @var bool
+     */
+    protected $_quote;
+
+    /**
      * @param array $config Config array.
      * @return void
      * @codeCoverageIgnore
      */
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
         $this->addBehavior('Timestamp');
 
@@ -32,10 +38,10 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * @param \Cake\Database\Schema\TableSchema $table Table schema
-     * @return \Cake\Database\Schema\TableSchema
+     * @param \Cake\Database\Schema\TableSchemaInterface $table Table schema
+     * @return \Cake\Database\Schema\TableSchemaInterface
      */
-    protected function _initializeSchema(TableSchema $table)
+    protected function _initializeSchema(TableSchemaInterface $table): TableSchemaInterface
     {
         $table->setColumnType('payload', 'serialize');
         $table->setColumnType('options', 'serialize');
@@ -45,10 +51,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * Returns true if a job of the same sequence is already persisted and waiting execution.
-     *
-     * @param \DelayedJobs\DelayedJob\Job $job The job to check for
-     * @return bool
+     * @inheritDoc
      */
     public function currentlySequenced(Job $job): bool
     {
@@ -60,26 +63,32 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 Job::STATUS_BUSY,
                 Job::STATUS_FAILED,
                 Job::STATUS_UNKNOWN,
-                Job::STATUS_PAUSED
-            ]
+                Job::STATUS_PAUSED,
+            ],
         ]);
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return \DelayedJobs\DelayedJob\Job|null
+     * @inheritDoc
      */
-    public function persistJob(Job $job)
+    public function persistJob(Job $job): Job
     {
         $jobData = $job->getData();
+
         $jobEntity = $job->getEntity();
-        if (!$jobEntity) {
-            $jobEntity = $this->newEntity();
+
+        if ($jobEntity === null) {
+            $jobEntity = $this->newEmptyEntity();
         }
+
+        if (!$jobEntity instanceof DelayedJob) {
+            throw new \RuntimeException('Not correct entity type');
+        }
+
         $this->patchEntity($jobEntity, $jobData, [
             'accessibleFields' => [
-                '*' => true
-            ]
+                '*' => true,
+            ],
         ]);
 
         if (!$jobEntity->status) {
@@ -87,14 +96,10 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         }
 
         $options = [
-            'atomic' => !$this->getConnection()->inTransaction()
+            'atomic' => !$this->getConnection()->inTransaction(),
         ];
 
-        $result = $this->save($jobEntity, $options);
-
-        if (!$result) {
-            return null;
-        }
+        $this->saveOrFail($jobEntity, $options);
 
         $job->setId($jobEntity->id);
         $job->setEntity($jobEntity);
@@ -103,8 +108,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job[] $jobs
-     * @return \DelayedJobs\DelayedJob\Job[]
+     * @inheritDoc
      */
     public function persistJobs(array $jobs): array
     {
@@ -151,7 +155,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
             ->enableAutoQuoting();
         $connection->transactional(function () use ($query, &$jobs) {
             $statement = $query->execute();
-            $firstId = $statement->lastInsertId($this->getTable(), 'id');
+            $firstId = (int)$statement->lastInsertId($this->getTable(), 'id');
             foreach ($jobs as $job) {
                 $job->setId($firstId++);
             }
@@ -162,18 +166,13 @@ class DelayedJobsTable extends Table implements DatastoreInterface
         $connection->getDriver()
             ->enableAutoQuoting($quote);
 
-        if (!$jobs) {
-            throw new EnqueueException('Job batch could not be persisted');
-        }
-
         return $jobs;
     }
 
     /**
-     * @param int $jobId
-     * @return \DelayedJobs\DelayedJob\Job|null
+     * @inheritDoc
      */
-    public function fetchJob($jobId)
+    public function fetchJob(int $jobId): ?Job
     {
         $jobEntity = $this->find()
             ->where(['id' => $jobId])
@@ -187,10 +186,17 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job The job to fetch next sequence for
-     * @return \DelayedJobs\DelayedJob\Job|null
+     * @inheritDoc
      */
-    public function fetchNextSequence(Job $job)
+    public function fetchJobEntity(int $jobId): ?EntityInterface
+    {
+        return $this->get($jobId);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function fetchNextSequence(Job $job): ?Job
     {
         if ($job->getSequence() === null) {
             return null;
@@ -220,10 +226,7 @@ class DelayedJobsTable extends Table implements DatastoreInterface
     }
 
     /**
-     * Checks if there already is a job with the same worker waiting
-     *
-     * @param \DelayedJobs\DelayedJob\Job $job Job to check
-     * @return bool
+     * @inheritDoc
      */
     public function isSimilarJob(Job $job): bool
     {
@@ -242,11 +245,11 @@ class DelayedJobsTable extends Table implements DatastoreInterface
                 Job::STATUS_NEW,
                 Job::STATUS_PAUSED,
                 Job::STATUS_FAILED,
-                Job::STATUS_UNKNOWN
-            ]
+                Job::STATUS_UNKNOWN,
+            ],
         ];
 
-        if (!empty($job->getId())) {
+        if ($job->getId() !== null) {
             $conditions['id !='] = $job->getId();
         }
 

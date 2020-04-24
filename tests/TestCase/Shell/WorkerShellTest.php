@@ -1,7 +1,8 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Test\TestCase\Shell;
 
-use Cake\Core\Configure;
 use Cake\ORM\Entity;
 use Cake\TestSuite\TestCase;
 use DelayedJobs\Model\Table\DelayedJobsTable;
@@ -117,7 +118,7 @@ class WorkerShellTest extends TestCase
     {
         return [
             [DelayedJobsTable::STATUS_SUCCESS, 'Job previously completed'],
-            [DelayedJobsTable::STATUS_BURRIED, 'Job Failed too many times']
+            [DelayedJobsTable::STATUS_BURRIED, 'Job Failed too many times'],
         ];
     }
 
@@ -135,7 +136,7 @@ class WorkerShellTest extends TestCase
         })[0];
 
         $this->Shell->DelayedJobs = $this->getMockForModel('DelayedJobs.DelayedJobs', ['failed'], [
-            'table' => 'delayed_jobs'
+            'table' => 'delayed_jobs',
         ]);
 
         $this->Shell->Lock
@@ -167,7 +168,7 @@ class WorkerShellTest extends TestCase
         $job = $this->getMock('\\DelayedJobs\\Model\\Entity\\DelayedJob', ['execute'], [$job_data]);
 
         $this->Shell->DelayedJobs = $this->getMockForModel('DelayedJobs.DelayedJobs', ['failed', 'completed', 'get'], [
-            'table' => 'delayed_jobs'
+            'table' => 'delayed_jobs',
         ]);
 
         $this->Shell->Lock

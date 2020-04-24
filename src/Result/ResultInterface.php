@@ -1,9 +1,14 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Result;
+
+use Cake\Chronos\ChronosInterface;
+
 /**
  * Interface ResultInterface
  */
+
 interface ResultInterface
 {
     /**
@@ -17,9 +22,9 @@ interface ResultInterface
     public function getMessage(): string;
 
     /**
-     * @return \DateTimeInterface|null
+     * @return \Cake\Chronos\ChronosInterface|null
      */
-    public function getRecur(): ?\DateTimeInterface;
+    public function getNextRun(): ?ChronosInterface;
 
     /**
      * @return bool
@@ -27,10 +32,14 @@ interface ResultInterface
     public function getRetry(): bool;
 
     /**
-     * @param bool $retry
      * @return self
      */
-    public function willRetry(bool $retry = true);
+    public function willRetry();
+
+    /**
+     * @return self
+     */
+    public function wontRetry();
 
     /**
      * @param string $message The message for this result.
@@ -39,8 +48,8 @@ interface ResultInterface
     public function setMessage(string $message = '');
 
     /**
-     * @param \DateTimeInterface|null $recur When to re-queue the job for.
+     * @param \Cake\Chronos\ChronosInterface|null $recur When to re-queue the job for.
      * @return self
      */
-    public function willRecur(?\DateTimeInterface $recur);
+    public function setNextRun(?ChronosInterface $recur);
 }

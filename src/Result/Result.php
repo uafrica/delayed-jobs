@@ -1,64 +1,56 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Result;
 
-use Cake\Core\App;
+use Cake\Chronos\ChronosInterface;
 
 /**
  * Class Result
  */
 abstract class Result implements ResultInterface
 {
-    const TYPE_FAILED = Failed::class;
-    const TYPE_SUCCESS = Success::class;
-    const TYPE_PAUSE = Pause::class;
+    public const TYPE_FAILED = Failed::class;
+    public const TYPE_SUCCESS = Success::class;
+    public const TYPE_PAUSE = Pause::class;
 
     /**
      * @var string
      */
-    private $_message;
+    private $_message = '';
     /**
-     * @var \DateTimeInterface|null
+     * @var \Cake\Chronos\ChronosInterface|null
      */
-    private $_recur;
+    private $_nextRun;
+    /**
+     * @var bool
+     */
+    private $_retry = true;
 
     /**
      * Result constructor.
      *
      * @param string $message The message
      */
-    public function __construct($message = '')
+    final public function __construct(string $message = '')
     {
         $this->_message = $message;
     }
 
     /**
      * @param string $message The message
-     * @param string $class Class name to use (Either a FQCN, or a Cake style class)
-     *
      * @return static
      */
-    public static function create($message = '', ?string $class = null): ResultInterface
+    public static function create(string $message = ''): self
     {
-        if ($class) {
-            $className = App::className($class, 'Result');
-            $result = new $className($message);
-        } else {
-            $result = new static($message);
-        }
-
-        if (!$result instanceof ResultInterface) {
-            throw new \InvalidArgumentException(sprintf('Class "%s" is not a valid %s instance.', $class, ResultInterface::class));
-        }
-
-        return $result;
+        return new static($message);
     }
 
     /**
      * @param string $message The message
      * @return self
      */
-    public function setMessage(string $message = ''): Result
+    public function setMessage(string $message = ''): self
     {
         $this->_message = $message;
 
@@ -74,40 +66,49 @@ abstract class Result implements ResultInterface
     }
 
     /**
-     * @return \DateTimeInterface|null
+     * @return \Cake\Chronos\ChronosInterface|null
      */
-    public function getRecur(): ?\DateTimeInterface
+    public function getNextRun(): ?ChronosInterface
     {
-        return $this->_recur;
+        return $this->_nextRun;
     }
 
     /**
-     * @param \DateTimeInterface|null $recur When to re-queue the job for.
+     * @param \Cake\Chronos\ChronosInterface|null $recur When to re-queue the job for.
      * @return static
      */
-    public function willRecur(?\DateTimeInterface $recur)
+    public function setNextRun(?ChronosInterface $recur): self
     {
-        $this->_recur = $recur;
+        $this->_nextRun = $recur;
 
         return $this;
     }
 
     /**
-     * Most results will not retry
-     *
      * @return bool
      */
     public function getRetry(): bool
     {
-        return false;
+        return $this->_retry ? true : false;
     }
 
     /**
-     * @param bool $retry
+     * @return static
+     */
+    public function willRetry(): self
+    {
+        $this->_retry = true;
+
+        return $this;
+    }
+
+    /**
      * @return self
      */
-    public function willRetry(bool $retry = true)
+    public function wontRetry(): self
     {
+        $this->_retry = false;
+
         return $this;
     }
 }

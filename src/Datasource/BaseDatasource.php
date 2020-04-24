@@ -1,9 +1,9 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Datasource;
 
 use Cake\Core\InstanceConfigTrait;
-use DelayedJobs\DelayedJob\Job;
 
 /**
  * Abstract class BaseDatasource
@@ -20,7 +20,7 @@ abstract class BaseDatasource implements DatasourceInterface
     /**
      * BaseDatasource constructor.
      *
-     * @param array $config
+     * @param array $config Config array
      */
     public function __construct($config = [])
     {

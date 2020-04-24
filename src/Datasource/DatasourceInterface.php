@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Datasource;
 
@@ -16,16 +17,17 @@ interface DatasourceInterface
     public function persistJob(Job $job);
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job[] $jobs
+     * @param \DelayedJobs\DelayedJob\Job[] $jobs Array of jobs
      * @return array
      */
     public function persistJobs(array $jobs): array;
 
     /**
      * @param int $jobId The job to get
-     * @return \DelayedJobs\DelayedJob\Job|null
+     * @return \DelayedJobs\DelayedJob\Job
+     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
-    public function fetchJob($jobId);
+    public function fetchJob(int $jobId): Job;
 
     /**
      * Returns true if a job of the same sequence is already persisted and waiting execution.
@@ -41,7 +43,7 @@ interface DatasourceInterface
      * @param \DelayedJobs\DelayedJob\Job $job Job to get next sequence for
      * @return \DelayedJobs\DelayedJob\Job|null
      */
-    public function fetchNextSequence(Job $job);
+    public function fetchNextSequence(Job $job): ?Job;
 
     /**
      * Checks if there already is a job with the same class waiting
@@ -52,12 +54,9 @@ interface DatasourceInterface
     public function isSimilarJob(Job $job): bool;
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return void
+     * @param \DelayedJobs\DelayedJob\Job $job Job instance
+     * @return \DelayedJobs\DelayedJob\Job
+     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
      */
-    /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return mixed
-     */
-    public function loadJob(Job $job);
+    public function loadJob(Job $job): Job;
 }

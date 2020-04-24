@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Model\Entity;
 
 use Cake\Event\EventDispatcherInterface;
@@ -10,7 +12,6 @@ use Cake\ORM\Entity;
  *
  * @property int $status
  * @property \Cake\I18n\Time $run_at
- *
  * @internal
  */
 class DelayedJob extends Entity implements EventDispatcherInterface
@@ -18,9 +19,9 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     use EventDispatcherTrait;
 
     /**
-     * @param $stream
-     * @param null $property
-     * @return bool|string
+     * @param resource|string|array $stream Stream
+     * @param string|null $property Property to set
+     * @return string|array|false
      */
     protected function _getStream($stream, $property = null)
     {
@@ -35,8 +36,8 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     }
 
     /**
-     * @param $options Options.
-     * @return string
+     * @param resource|array|string $options Options.
+     * @return string|array|false
      */
     protected function _getOptions($options)
     {
@@ -44,8 +45,8 @@ class DelayedJob extends Entity implements EventDispatcherInterface
     }
 
     /**
-     * @param $payload
-     * @return bool|string
+     * @param resource|array|string $payload Payload
+     * @return string|array|false
      */
     protected function _getPayload($payload)
     {

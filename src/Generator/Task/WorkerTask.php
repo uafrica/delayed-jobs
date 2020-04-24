@@ -1,8 +1,8 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Generator\Task;
 
-use Cake\Core\App;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\WorkerFinder;
 use IdeHelper\Generator\Directive\Override;
@@ -13,12 +13,12 @@ use IdeHelper\Generator\Task\TaskInterface;
  */
 class WorkerTask implements TaskInterface
 {
-    const CLASS_JOB = Job::class;
+    public const CLASS_JOB = Job::class;
 
     /**
      * @return array
      */
-    public function collect()
+    public function collect(): array
     {
         $map = [];
         $workers = $this->collectWorkers();
@@ -36,7 +36,7 @@ class WorkerTask implements TaskInterface
     /**
      * @return string[]
      */
-    protected function collectWorkers()
+    protected function collectWorkers(): array
     {
         $result = [];
         $workerFinder = new WorkerFinder();

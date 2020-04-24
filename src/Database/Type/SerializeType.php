@@ -1,28 +1,27 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Database\Type;
 
-use Cake\Database\Driver;
-use Cake\Database\Type;
+use Cake\Database\DriverInterface;
+use Cake\Database\Type\BaseType;
 use Cake\Log\Log;
-use PDO;
 
 /**
  * Class JsonType
  */
-class SerializeType extends Type
+class SerializeType extends BaseType
 {
-
     /**
      * Casts given value from a database type to PHP equivalent
      *
      * @param mixed $value value to be converted to PHP equivalent
-     * @param Driver $driver object from which database preferences and configuration will be extracted
+     * @param \Cake\Database\DriverInterface $driver object from which database preferences and configuration will be extracted
      * @return mixed
      */
-    public function toPHP($value, Driver $driver)
+    public function toPHP($value, DriverInterface $driver)
     {
-        if (!is_string($value) || $value === null) {
+        if (!is_string($value)) {
             return null;
         }
 
@@ -47,7 +46,7 @@ class SerializeType extends Type
      */
     public function marshal($value)
     {
-        if (!is_string($value) || $value === null) {
+        if (!is_string($value)) {
             return $value;
         }
 
@@ -58,27 +57,11 @@ class SerializeType extends Type
      * Casts given value from a PHP type to one acceptable by database
      *
      * @param mixed $value value to be converted to database equivalent
-     * @param Driver $driver object from which database preferences and configuration will be extracted
+     * @param \Cake\Database\DriverInterface $driver object from which database preferences and configuration will be extracted
      * @return mixed
      */
-    public function toDatabase($value, Driver $driver)
+    public function toDatabase($value, DriverInterface $driver)
     {
         return serialize($value);
-    }
-
-    /**
-     * Casts give value to Statement equivalent
-     *
-     * @param mixed $value value to be converted to PHP equivalent
-     * @param Driver $driver object from which database preferences and configuration will be extracted
-     * @return mixed
-     */
-    public function toStatement($value, Driver $driver)
-    {
-        if ($value === null) {
-            return PDO::PARAM_NULL;
-        }
-
-        return PDO::PARAM_STR;
     }
 }

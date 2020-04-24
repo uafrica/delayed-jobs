@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Test\TestCase\Model\Table;
 
@@ -10,13 +11,13 @@ use Fabricate\Fabricate;
 
 /**
  * Class DelayedJobsTableTest
+ *
  * @coversDefaultClass \DelayedJobs\Model\Table\DelayedJobsTable
  */
 class DelayedJobsTableTest extends TestCase
 {
-
     public $fixtures = [
-        'plugin.DelayedJobs.DelayedJobs'
+        'plugin.DelayedJobs.DelayedJobs',
     ];
 
     /**
@@ -24,14 +25,15 @@ class DelayedJobsTableTest extends TestCase
      */
     public $DelayedJobsTable;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         TableRegistry::clear();
         $this->DelayedJobsTable = TableRegistry::get('DelayedJobs.DelayedJobs');
     }
 
-    public function tearDown() {
+    public function tearDown(): void
+    {
         parent::tearDown();
         TableRegistry::clear();
     }
@@ -45,7 +47,7 @@ class DelayedJobsTableTest extends TestCase
         $options_array = ['test' => 1];
         $payload_array = ['test' => 2];
         $entity = Fabricate::build('DelayedJobs.DelayedJobs', function () use ($options_array, $payload_array) {
-           return ['options' => $options_array, 'payload' => $payload_array];
+            return ['options' => $options_array, 'payload' => $payload_array];
         });
 
         $this->assertSame($options_array, $entity->options);
@@ -76,7 +78,8 @@ class DelayedJobsTableTest extends TestCase
      * @return void
      * @covers ::getRunningByHost
      */
-    public function testGetRunningByHost() {
+    public function testGetRunningByHost()
+    {
         Fabricate::create('DelayedJobs.DelayedJobs', 3, function ($data, $world) {
             return ['id' => $world->sequence('id'), 'status' => DelayedJobsTable::STATUS_BUSY, 'locked_by' => '1'];
         });

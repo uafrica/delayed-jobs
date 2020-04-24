@@ -1,13 +1,13 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\TestSuite;
 
 use Cake\Core\InstanceConfigTrait;
-use Cake\Utility\Text;
-use Cake\Console\Shell;
-use DelayedJobs\DelayedJob\ManagerInterface;
 use DelayedJobs\DelayedJob\Exception\JobNotFoundException;
 use DelayedJobs\DelayedJob\Job;
+use DelayedJobs\DelayedJob\ManagerInterface;
+use DelayedJobs\Result\Success;
 
 /**
  * Class TestDelayedJobManager
@@ -42,72 +42,37 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return \DelayedJobs\DelayedJob\Job|bool
+     * @inheritDoc
      */
-    public function enqueue(Job $job)
+    public function enqueue(Job $job): void
     {
         $jobId = time() + random_int(0, time());
         $job->setId($jobId);
         static::$_jobs[$jobId] = $job;
-
-        return $job;
     }
 
     /**
-     * @param int $id The ID to enqueue
-     * @param int $priority The priority of the job
-     * @return void
+     * @inheritDoc
      */
-    public function enqueuePersisted($id, $priority)
+    public function enqueuePersisted($id, $priority): void
     {
         static::$_jobs[$id] = new Job(compact('id', 'priority'));
     }
 
     /**
-     * @param array $jobs
-     * @return array
+     * @inheritDoc
      */
-    public function enqueueBatch(array $jobs)
+    public function enqueueBatch(array $jobs): void
     {
         foreach ($jobs as $job) {
             $this->enqueue($job);
         }
-
-        return $jobs;
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job that failed
-     * @param string $message Message to store with the jbo
-     * @param bool $burryJob Should the job be burried
-     * @return bool|\DelayedJobs\DelayedJob\Job
+     * @inheritDoc
      */
-    public function failed(Job $job, $message, $burryJob = false)
-    {
-        return $job;
-    }
-
-    /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job that has been completed
-     * @param null $result
-     * @param int $duration How long execution took
-     * @return bool|\DelayedJobs\DelayedJob\Job
-     * @internal param null|string $message Message to store with job
-     */
-    public function completed(Job $job, $result = null, $duration = 0)
-    {
-        return $job;
-    }
-
-    /**
-     * Gets the Job instance for a specific job
-     *
-     * @param int $jobId Job to fetch
-     * @return \DelayedJobs\DelayedJob\Job
-     * @throws \DelayedJobs\DelayedJob\Exception\JobNotFoundException
-     */
-    public function fetchJob($jobId): \DelayedJobs\DelayedJob\Job
+    public function fetchJob($jobId): Job
     {
         if (isset(static::$_jobs[$jobId])) {
             return static::$_jobs[$jobId];
@@ -117,10 +82,7 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * Gets the current status for a requested job
-     *
-     * @param int $jobId Job to get status for
-     * @return int
+     * @inheritDoc
      */
     public function getStatus($jobId): int
     {
@@ -128,63 +90,62 @@ class TestManager implements ManagerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param null $hostname
-     * @return void
+     * @inheritDoc
      */
-    public function lock(Job $job, $hostname = null)
+    public function execute(Job $job, bool $force = false): ?\DelayedJobs\Result\ResultInterface
+    {
+        return Success::create();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function enqueueNextSequence(Job $job): void
     {
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param $force
-     * @return \DelayedJobs\DelayedJob\Job
-     */
-    public function execute(Job $job, $force)
-    {
-        return $job;
-    }
-
-    /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return null
-     */
-    public function enqueueNextSequence(Job $job)
-    {
-        return null;
-    }
-
-    /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return bool
+     * @inheritDoc
      */
     public function isSimilarJob(Job $job): bool
     {
         return false;
     }
 
-    public function startConsuming()
-    {
-    }
-
-    public function stopConsuming()
-    {
-    }
-
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return void
+     * @inheritDoc
      */
-    public function requeueJob(Job $job)
+    public function startConsuming(): void
     {
     }
 
     /**
-     * @return bool
+     * @inheritDoc
+     */
+    public function stopConsuming(): void
+    {
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function requeueJob(Job $job): void
+    {
+    }
+
+    /**
+     * @inheritDoc
      */
     public function isConsuming(): bool
     {
         return false;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaximumPriority(): int
+    {
+        return 255;
     }
 }

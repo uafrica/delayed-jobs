@@ -1,10 +1,9 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Broker;
 
-use Cake\Core\Configure;
 use Cake\Core\InstanceConfigTrait;
-use Cake\Http\Client;
 use Cake\I18n\Time;
 use DelayedJobs\Broker\Driver\PhpAmqpLibDriver;
 use DelayedJobs\Broker\Driver\RabbitMqDriverInterface;
@@ -18,15 +17,18 @@ class RabbitMqBroker implements BrokerInterface
 {
     use InstanceConfigTrait;
 
+    /**
+     * @var array
+     */
     protected $_defaultConfig = [
         'driver' => PhpAmqpLibDriver::class,
         'prefix' => '',
         'routingKey' => '',
-        'qos' => 1
+        'qos' => 1,
     ];
 
     /**
-     * @var \DelayedJobs\Broker\Driver\RabbitMqDriverInterface
+     * @var \DelayedJobs\Broker\Driver\RabbitMqDriverInterface|null
      */
     protected $_driver;
 
@@ -38,10 +40,10 @@ class RabbitMqBroker implements BrokerInterface
     /**
      * RabbitMqBroker constructor.
      *
-     * @param array $config
-     * @param \DelayedJobs\DelayedJob\ManagerInterface $manager
+     * @param array $config array of config
+     * @param \DelayedJobs\DelayedJob\ManagerInterface $manager Job manager interface
      */
-    public function __construct($config = [], ManagerInterface $manager)
+    public function __construct(array $config, ManagerInterface $manager)
     {
         $this->setConfig($config);
 
@@ -64,14 +66,13 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job Job to publish
-     * @return void
+     * @inheritDoc
      */
-    public function publishJob(Job $job)
+    public function publishJob(Job $job): void
     {
         $delay = $job->getRunAt()->isFuture() ? Time::now()->diffInSeconds($job->getRunAt(), false) * 1000 : 0;
 
-        $jobPriority = $this->_manager->getConfig('maximum.priority') - $job->getPriority();
+        $jobPriority = $this->_manager->getMaximumPriority() - $job->getPriority();
         if ($jobPriority < 0) {
             $jobPriority = 0;
         } elseif ($jobPriority > 255) {
@@ -82,7 +83,7 @@ class RabbitMqBroker implements BrokerInterface
         $jobData = [
             'priority' => $jobPriority,
             'delay' => $delay,
-            'payload' => ['id' => $job->getId()]
+            'payload' => ['id' => $job->getId()],
         ];
 
         $this->getDriver()->publishJob($jobData);
@@ -90,89 +91,48 @@ class RabbitMqBroker implements BrokerInterface
     }
 
     /**
-     * @param callable $callback
-     * @param callable $heartbeat
-     * @return void
+     * @inheritDoc
      */
-    public function consume(callable $callback, callable $heartbeat)
+    public function consume(callable $callback, callable $heartbeat): void
     {
         $this->getDriver()->consume($callback, $heartbeat);
     }
 
-    public function stopConsuming()
+    /**
+     * @inheritDoc
+     */
+    public function stopConsuming(): void
     {
         $this->getDriver()->stopConsuming();
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @return void
+     * @inheritDoc
      */
-    public function ack(Job $job)
+    public function acknowledge(Job $job): void
     {
-        $this->getDriver()->ack($job);
+        $this->getDriver()->acknowledge($job);
     }
 
     /**
-     * @param \DelayedJobs\DelayedJob\Job $job
-     * @param bool $requeue
-     * @return void
+     * @inheritDoc
      */
-    public function nack(Job $job, $requeue = false)
+    public function negativeAcknowledge(Job $job, bool $requeue = false): void
     {
         $this->getDriver()
-            ->nack($job, $requeue);
+            ->negativeAcknowledge($job, $requeue);
     }
 
     /**
-     * @return array|null
+     * @inheritDoc
      */
-    public function queueStatus()
-    {
-        $config = $this->getConfig('apiServer');
-
-        $client = new Client([
-            'host' => $config['host'],
-            'port' => 15672,
-            'auth' => [
-                'username' => $config['user'],
-                'password' => $config['pass']
-            ]
-        ]);
-        try {
-            $queue_data = $client->get(sprintf(
-                '/api/queues/%s/%s',
-                urlencode($config['path']),
-                Configure::read('dj.service.name') . '-queue'
-            ), [], [
-                'type' => 'json'
-                ]);
-        } catch (Exception $e) {
-            return [];
-        }
-        $data = $queue_data->json;
-
-        if (!isset($data['messages'])) {
-            return null;
-        }
-
-        return [
-            'messages' => $data['messages'],
-            'messages_ready' => $data['messages_ready'],
-            'messages_unacknowledged' => $data['messages_unacknowledged']
-        ];
-    }
-
-    /**
-     * @param string $body Message body
-     * @param string $exchange Exchange to route through
-     * @param string $routing_key Routing key
-     * @param int $priority Priority
-     * @param array $headers Headers
-     * @return void
-     */
-    public function publishBasic(string $body, $exchange = '', $routing_key = '', int $priority = 0, array $headers = [])
-    {
+    public function publishBasic(
+        string $body,
+        string $exchange = '',
+        string $routing_key = '',
+        int $priority = 0,
+        array $headers = []
+    ): void {
         $this->getDriver()->publishBasic($body, $exchange, $routing_key, $priority, $headers);
     }
 }

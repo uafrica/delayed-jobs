@@ -1,14 +1,14 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Worker;
 
 use Cake\Core\Configure;
 use Cake\Database\Exception;
-use Cake\Database\Query;
-use Cake\Database\Schema\Table;
-use Cake\Datasource\ConnectionManager;
+use Cake\Database\Schema\TableSchema;
 use Cake\I18n\Time;
 use Cake\Log\Log;
+use Cake\ORM\Table;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\Job;
 
@@ -18,10 +18,10 @@ use DelayedJobs\DelayedJob\Job;
 class ArchiveWorker extends Worker
 {
     /**
-     * @param $archiveTable
+     * @param \Cake\ORM\Table $archiveTable Archive table instance
      * @return void
      */
-    protected function _ensureTable($archiveTable)
+    protected function _ensureTable(Table $archiveTable)
     {
         try {
             $archiveTable->getSchema();
@@ -30,15 +30,15 @@ class ArchiveWorker extends Worker
             $djColumns = $djSchema->columns();
             $columns = [];
             foreach ($djColumns as $djColumn) {
-                $columns[$djColumn] = $djSchema->column($djColumn);
+                $columns[$djColumn] = $djSchema->getColumn($djColumn);
             }
             $columns['payload']['type'] = 'binary';
             $columns['options']['type'] = 'binary';
-            $archiveTableSchema = new Table($archiveTable->table(), $columns);
-            $archiveTableSchema->addConstraint('primary', $djSchema->constraint('primary'));
-            $createSql = $archiveTableSchema->createSql($archiveTable->connection());
+            $archiveTableSchema = new TableSchema($archiveTable->getTable(), $columns);
+            $archiveTableSchema->addConstraint('primary', (array)$djSchema->getConstraint('primary'));
+            $createSql = $archiveTableSchema->createSql($archiveTable->getConnection());
             foreach ($createSql as $createSqlQuery) {
-                $archiveTable->connection()
+                $archiveTable->getConnection()
                     ->query($createSqlQuery);
             }
         }
@@ -56,7 +56,7 @@ class ArchiveWorker extends Worker
 
         $delayedJobsTable = TableRegistry::getTableLocator()->get('DelayedJobs.DelayedJobs');
         $archiveTable = TableRegistry::getTableLocator()->get('Archive', [
-            'table' => Configure::read('DelayedJobs.archive.tableName')
+            'table' => Configure::read('DelayedJobs.archive.tableName'),
         ]);
 
         $this->_ensureTable($archiveTable);
@@ -86,7 +86,7 @@ class ArchiveWorker extends Worker
             $time = new Time('-' . Configure::read('DelayedJobs.archive.timeLimit'));
             Log::debug('Cleaning archive. All jobs older than ' . $time);
             $archiveTable->deleteAll([
-                'created <=' => $time
+                'created <=' => $time,
             ]);
             Log::debug('Archive cleaned.');
         }

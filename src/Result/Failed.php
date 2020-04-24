@@ -1,8 +1,10 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Result;
 
 use DelayedJobs\DelayedJob\Job;
+use Throwable;
 
 /**
  * Class Failed
@@ -27,39 +29,18 @@ class Failed extends Result
     }
 
     /**
-     * Most results will not retry
-     *
-     * @return bool
-     */
-    public function getRetry(): bool
-    {
-        return $this->_retry;
-    }
-
-    /**
-     * @param bool $retry
-     * @return self
-     */
-    public function willRetry(bool $retry = true)
-    {
-        $this->_retry = $retry;
-
-        return parent::willRetry($retry);
-    }
-
-    /**
      * @return null|\Throwable
      */
-    public function getException()
+    public function getException(): ?Throwable
     {
         return $this->_exception;
     }
 
     /**
-     * @param null|\Throwable $exception
+     * @param null|\Throwable $exception The exception
      * @return self
      */
-    public function setException(\Throwable $exception = null)
+    public function setException(?Throwable $exception = null): self
     {
         $this->_exception = $exception;
 

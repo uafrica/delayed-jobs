@@ -1,13 +1,11 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Command;
 
 use Cake\Console\Arguments;
 use Cake\Console\Command;
 use Cake\Console\ConsoleIo;
-use Cake\Console\Shell;
-use Cake\Event\Event;
-use Cake\Event\EventManager;
 use Cake\I18n\Time;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
@@ -22,27 +20,23 @@ class RecurringCommand extends Command
     use EnqueueTrait;
 
     /**
-     * {@inheritDoc}
+     * @inheritDoc
      */
     public function execute(Arguments $args, ConsoleIo $io)
     {
         $io->out('Locating recurring jobs.');
 
-        //Event is deprecated
-        $event = new Event('DelayedJobs.recurring', $this);
-        $event->result = RecurringJobBuilder::retrieve();
-        EventManager::instance()
-            ->dispatch($event);
+        $recuringJobs = RecurringJobBuilder::retrieve();
 
-        $io->verbose(__('{0} recurring jobs to queue', count($event->result)));
+        $io->verbose(__('{0} recurring jobs to queue', count($recuringJobs)));
         $queueCount = 0;
-        foreach ($event->result as $job) {
+        foreach ($recuringJobs as $job) {
             if (!$job instanceof Job) {
                 $job = new Job($job + [
                         'group' => 'Recurring',
                         'priority' => 100,
                         'maxRetries' => 5,
-                        'runAt' => new Time('+30 seconds')
+                        'runAt' => new Time('+30 seconds'),
                     ]);
             }
 
@@ -59,5 +53,4 @@ class RecurringCommand extends Command
 
         $io->success(__('{0} recurring jobs queued', $queueCount));
     }
-
 }

@@ -1,13 +1,15 @@
 <?php
+declare(strict_types=1);
+
 namespace DelayedJobs\Worker;
 
+use Cake\Core\InstanceConfigTrait;
 use Cake\Datasource\ModelAwareTrait;
 use Cake\Event\Event;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
 use Cake\Event\EventListenerInterface;
 use Cake\ORM\TableRegistry;
-use DelayedJobs\DelayedJob\DelayedJobInterface;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
 use DelayedJobs\Result\ResultInterface;
@@ -19,33 +21,31 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
 {
     use EnqueueTrait;
     use EventDispatcherTrait;
+    use InstanceConfigTrait;
     use ModelAwareTrait;
 
     /**
-     * @var \Cake\Console\Shell
-     */
-    protected $_shell;
-
-    /**
-     * @var \DelayedJobs\DelayedJob\Job
+     * @var \DelayedJobs\DelayedJob\Job|null
      */
     protected $job;
+
+    /**
+     * @var array
+     */
+    protected $_defaultConfig = [];
 
     /**
      * Construct the listener
      *
      * @param \DelayedJobs\DelayedJob\Job|null $job The job being executed
-     * @param array $options Allow child listeners to have options
+     * @param array $config Allow child listeners to have options
      */
-    public function __construct(Job $job = null, array $options = [])
+    public function __construct(?Job $job = null, array $config = [])
     {
         $this->modelFactory('Table', [TableRegistry::class, 'get']);
 
         $this->job = $job;
-        if (isset($options['shell'])) {
-            $this->_shell = $options['shell'];
-            unset($options['shell']);
-        }
+        $this->setConfig($config);
 
         $this->getEventManager()->on($this);
     }
@@ -74,11 +74,14 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
     {
         return [
             'DelayedJob.beforeJobExecute' => 'beforeExecute',
-            'DelayedJob.afterJobExecute' => 'afterExecute'
+            'DelayedJob.afterJobExecute' => 'afterExecute',
         ];
     }
 
-    public function getJob(): Job
+    /**
+     * @return \DelayedJobs\DelayedJob\Job
+     */
+    public function getJob(): ?Job
     {
         return $this->job;
     }
