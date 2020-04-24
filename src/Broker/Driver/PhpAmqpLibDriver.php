@@ -252,9 +252,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * @throws \ErrorException
+     * @inheritDoc
      */
     public function consume(callable $callback, callable $heartbeat): void
     {
