@@ -361,7 +361,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
         if ($result instanceof Error || $result instanceof NonRetryableException) {
             return Failed::create($result->getMessage())
-                ->willRetry()
+                ->wontRetry()
                 ->setException($result);
         }
 
