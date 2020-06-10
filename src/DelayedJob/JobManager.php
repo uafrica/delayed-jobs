@@ -231,6 +231,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             ]);
         }
         $this->getDatasource()->persistJobs($jobs);
+        Log::debug(sprintf('[DJ] %d batch persisted.', count($jobs)), ['scope' => 'DJ']);
 
         collection($jobs)
             ->filter(function (Job $job) {
@@ -477,11 +478,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             //## Job Failed badly
             $result = $error;
             Log::emergency(sprintf(
-                "Delayed job %d failed due to a fatal PHP error.\n%s\n%s",
+                "[DJ] Delayed job %d failed due to a fatal PHP error.\n%s\n%s",
                 $job->getId(),
                 $error->getMessage(),
                 $error->getTraceAsString()
-            ));
+            ), ['scope' => 'DJ']);
         } catch (Exception $exc) {
             //## Job Failed
             $result = $exc;
@@ -542,8 +543,9 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         $jobWorker = new $className($job);
 
         if (!$jobWorker instanceof JobWorkerInterface) {
-            Log::emergency("Worker class {$className} for job {$job->getId()} must be an instance of " .
-                JobWorkerInterface::class);
+            Log::emergency("[DJ] Worker class {$className} for job {$job->getId()} must be an instance of " .
+                JobWorkerInterface::class,
+                ['scope' => 'DJ']);
             $this->getMessageBroker()
                 ->acknowledge($job);
 
@@ -609,6 +611,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             throw new EnqueueException('Job could not be persisted');
         }
 
+        Log::debug(sprintf('[DJ] Job %s persisted.', $job->getId()), ['scope' => 'DJ']);
+
         $this->dispatchEvent('DelayedJobs.afterPersist', [$job]);
 
         return $job;
@@ -631,18 +635,20 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
         try {
             $this->getMessageBroker()->publishJob($job);
+            Log::debug(sprintf('[DJ] Job %s pushed to broker.', $job->getId()), ['scope' => 'DJ']);
             $this->addHistoryAndPersist($job, 'Pushed to broker');
         } catch (Exception $e) {
             $this->addHistoryAndPersist($job, $e);
             Log::emergency(__(
-                'Could not push job to broker. Response was: {0} with exception {1}. ' .
+                '[DJ] Could not push job to broker. Response was: {0} with exception {1}. ' .
                 'Job #{2} has not been queued. Hostname: {3}, Current job: {4}',
                 $e->getMessage(),
                 get_class($e),
                 $job->getId(),
                 gethostname(),
                 $this->_currentJob ? $this->_currentJob->getId() : null
-            ));
+            ),
+                ['scope' => 'DJ']);
 
             throw new EnqueueException('Could not push job to broker.');
         }
