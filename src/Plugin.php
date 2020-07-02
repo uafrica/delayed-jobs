@@ -42,7 +42,9 @@ class Plugin extends BasePlugin
 
         Configure::write('DelayedJobs', Hash::merge($defaultConfig, $delayedJobsConfig));
 
-        TypeFactory::map('serialize', SerializeType::class);
+        if (!TypeFactory::getMap('serialize')) {
+            TypeFactory::map('serialize', SerializeType::class);
+        }
 
         RecurringJobBuilder::add([
             'worker' => 'DelayedJobs.Archive',
