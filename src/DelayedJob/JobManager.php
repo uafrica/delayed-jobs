@@ -543,9 +543,11 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
         $jobWorker = new $className($job);
 
         if (!$jobWorker instanceof JobWorkerInterface) {
-            Log::emergency("[DJ] Worker class {$className} for job {$job->getId()} must be an instance of " .
+            Log::emergency(
+                "[DJ] Worker class {$className} for job {$job->getId()} must be an instance of " .
                 JobWorkerInterface::class,
-                ['scope' => 'DJ']);
+                ['scope' => 'DJ']
+            );
             $this->getMessageBroker()
                 ->acknowledge($job);
 
@@ -639,16 +641,18 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->addHistoryAndPersist($job, 'Pushed to broker');
         } catch (Exception $e) {
             $this->addHistoryAndPersist($job, $e);
-            Log::emergency(__(
-                '[DJ] Could not push job to broker. Response was: {0} with exception {1}. ' .
-                'Job #{2} has not been queued. Hostname: {3}, Current job: {4}',
-                $e->getMessage(),
-                get_class($e),
-                $job->getId(),
-                gethostname(),
-                $this->_currentJob ? $this->_currentJob->getId() : null
-            ),
-                ['scope' => 'DJ']);
+            Log::emergency(
+                __(
+                    '[DJ] Could not push job to broker. Response was: {0} with exception {1}. ' .
+                    'Job #{2} has not been queued. Hostname: {3}, Current job: {4}',
+                    $e->getMessage(),
+                    get_class($e),
+                    $job->getId(),
+                    gethostname(),
+                    $this->_currentJob ? $this->_currentJob->getId() : null
+                ),
+                ['scope' => 'DJ']
+            );
 
             throw new EnqueueException('Could not push job to broker.');
         }

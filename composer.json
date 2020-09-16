@@ -18,7 +18,7 @@
   },
   "suggest": {
     "dereuromark/cakephp-ide-helper": "For maximum IDE support, especially around enqueue() usage.",
-    "lampager/lampager-cakephp": "To support paged archiving",
+    "lampager/lampager-cakephp": "To support paged archiving"
   },
   "scripts": {
     "cs-check": "phpcs --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/ tests/",
