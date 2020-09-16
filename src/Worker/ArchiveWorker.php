@@ -15,6 +15,7 @@ use Lampager\Cake\ORM\Query;
 
 /**
  * Class ArchiveWorker
+ *
  * @property \DelayedJobs\Model\Table\DelayedJobsTable $DelayedJobs
  * @property \Cake\ORM\Table $Archive
  */
