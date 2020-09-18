@@ -9,6 +9,7 @@ use Cake\Event\Event;
 use Cake\Event\EventDispatcherInterface;
 use Cake\Event\EventDispatcherTrait;
 use Cake\Event\EventListenerInterface;
+use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\EnqueueTrait;
 use DelayedJobs\DelayedJob\Job;
@@ -21,6 +22,7 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
 {
     use EnqueueTrait;
     use EventDispatcherTrait;
+    use LocatorAwareTrait;
     use InstanceConfigTrait;
     use ModelAwareTrait;
 
@@ -42,8 +44,6 @@ abstract class Worker implements JobWorkerInterface, EventDispatcherInterface, E
      */
     public function __construct(?Job $job = null, array $config = [])
     {
-        $this->modelFactory('Table', [TableRegistry::class, 'get']);
-
         $this->job = $job;
         $this->setConfig($config);
 
