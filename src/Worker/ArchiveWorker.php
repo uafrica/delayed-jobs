@@ -29,7 +29,7 @@ class ArchiveWorker extends Worker
         try {
             $archiveTable->getSchema();
         } catch (Exception $e) {
-            $djSchema = TableRegistry::getTableLocator()->get('DelayedJobs.DelayedJobs')->getSchema();
+            $djSchema = $this->DelayedJobs->getSchema();
             $djColumns = $djSchema->columns();
             $columns = [];
             foreach ($djColumns as $djColumn) {
@@ -147,7 +147,9 @@ class ArchiveWorker extends Worker
         }
 
         $this->loadModel('DelayedJobs.DelayedJobs');
-        $this->Archive = TableRegistry::getTableLocator()->get('Archive', [
+
+        // We need to use the TableLocator, and not loadModel here because we need to set the custom table name
+        $this->Archive = $this->getTableLocator()->get('Archive', [
             'table' => Configure::read('DelayedJobs.archive.tableName'),
         ]);
 
