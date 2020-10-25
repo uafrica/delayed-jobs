@@ -54,7 +54,7 @@ class ArchiveWorker extends Worker
      */
     protected function doCursorPagination(\Cake\ORM\Query $baseQuery, ?int $total = null): \Generator
     {
-        if (!class_exists('Lampager\Cake\Datasource\Paginator')) {
+        if (!class_exists('Lampager\Cake\ORM\Query')) {
             yield $baseQuery;
 
             return;
@@ -86,7 +86,7 @@ class ArchiveWorker extends Worker
     }
 
     /**
-     * @return \Generator|void
+     * @return \Generator
      */
     protected function getJobsToArchive(): \Generator
     {
@@ -98,7 +98,9 @@ class ArchiveWorker extends Worker
         if ($total === 0) {
             Log::debug('No jobs to be archived.');
 
+            // phpcs:disable
             return;
+            // phpcs:enable
         }
 
         Log::debug($total . ' jobs to be archived.');
@@ -108,7 +110,7 @@ class ArchiveWorker extends Worker
 
     /**
      * @param \Cake\I18n\Time $time Time up to which to delete
-     * @return \Generator|void
+     * @return \Generator
      */
     protected function getJobsToDelete(Time $time): \Generator
     {
@@ -122,7 +124,9 @@ class ArchiveWorker extends Worker
         if (!$lastIdToDelete) {
             Log::debug('No jobs to be deleted.');
 
+            // phpcs:disable
             return;
+            // phpcs:enable
         }
 
         $baseQuery = $this->Archive->query()
