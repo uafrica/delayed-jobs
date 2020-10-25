@@ -9,7 +9,6 @@ use Cake\Database\Schema\TableSchema;
 use Cake\I18n\Time;
 use Cake\Log\Log;
 use Cake\ORM\Table;
-use Cake\ORM\TableRegistry;
 use DelayedJobs\DelayedJob\Job;
 use Lampager\Cake\ORM\Query;
 
