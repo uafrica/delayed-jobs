@@ -134,7 +134,7 @@ class ProcessManager
             $signalName = $signal;
         }
 
-        if (!pcntl_signal($signo, $callback)) {
+        if (!pcntl_signal((int)$signo, $callback)) {
             throw new Exception(sprintf('Could not subscribe to signal %s (%d)', $signalName, $signo));
         }
 
