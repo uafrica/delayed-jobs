@@ -41,14 +41,6 @@ define('CAKE', CORE_PATH . 'src' . DS);
 require ROOT . '/vendor/autoload.php';
 require CORE_PATH . 'config/bootstrap.php';
 
-Cake\Core\Configure::write(
-    'App',
-    [
-        'namespace' => 'CrudJsonApi\Test\App',
-        'encoding' => 'UTF-8',
-        'fullBaseUrl' => 'http://localhost'
-    ]
-);
 Cake\Core\Configure::write('debug', true);
 
 $TMP = new \Cake\Filesystem\Folder(TMP);
