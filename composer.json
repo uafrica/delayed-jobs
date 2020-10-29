@@ -23,7 +23,8 @@
   "scripts": {
     "cs-check": "phpcs --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/ tests/",
     "cs-fix": "phpcbf --colors -p -s --extensions=php,ctp --standard=vendor/cakephp/cakephp-codesniffer/CakePHP  src/ tests/",
-    "stan": "phpstan analyse --memory-limit=3G src"
+    "stan": "phpstan analyse --memory-limit=3G src",
+    "test": "phpunit"
   },
   "license": "MIT",
   "authors": [
