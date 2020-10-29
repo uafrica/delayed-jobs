@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace DelayedJobs\Test\TestCase\DelayedJob;
 
@@ -15,8 +16,8 @@ class JobTest extends TestCase
         $newJob = new Job([
             'id' => 1,
             'payload' => [
-                'test' => 'test'
-            ]
+                'test' => 'test',
+            ],
         ]);
 
         $this->assertSame(1, $newJob->getId());
