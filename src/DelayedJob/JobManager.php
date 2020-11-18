@@ -491,9 +491,6 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             //## Job Failed
             $result = $exc;
         } finally {
-            $this->getMessageBroker()
-                ->acknowledge($job);
-
             if (!$result instanceof ResultInterface) {
                 $result = $this->_buildResultObject($job, $result);
             }
@@ -504,6 +501,8 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
             $this->_handleResult($job, $result, $duration);
 
             $this->_dispatchWorkerEvent($jobWorker, 'DelayedJob.afterJobCompleted', [$job, $result]);
+
+            $this->getMessageBroker()->acknowledge($job);
 
             $this->_currentJob = null;
             $this->_enqueuedJobs = [];
