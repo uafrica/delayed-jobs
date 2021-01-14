@@ -10,10 +10,10 @@ the job queue.
 Requirements
 ------------
 
-* PHP 7.1+
-* CakePHP 3.6+
+* PHP 7.2+
+* CakePHP 4.0+
 * A database supported by CakePHP
-* A RabbitMQ instance with the [delayed message exchange](https://github.com/rabbitmq/rabbitmq-delayed-message-exchange)
+* A RabbitMQ instance with the [delayed message exchange](https://github.com/rabbitmq/rabbitmq-delayed-message-exchange) plugin
 
 Installation
 ------------
