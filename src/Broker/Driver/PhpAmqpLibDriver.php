@@ -147,7 +147,7 @@ class PhpAmqpLibDriver implements RabbitMqDriverInterface
             $this->_channel = $this->getConnection()->channel();
         } catch (Throwable $e) {
             //If something went wrong, catch it, disconnect and try again.
-            unset($this->_connection);
+            $this->_connection = null;
             $this->_channel = $this->getConnection()->channel();
         }
 
