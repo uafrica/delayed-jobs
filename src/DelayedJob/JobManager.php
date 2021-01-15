@@ -370,7 +370,7 @@ class JobManager implements EventDispatcherInterface, ManagerInterface
 
         if ($result instanceof Exception) {
             /** @var \DelayedJobs\Result\Failed $failed */
-            $failed = Failed::create($result->getMessage())->wontRetry();
+            $failed = Failed::create($result->getMessage())->willRetry();
             $failed->setException($result);
 
             return $failed;
