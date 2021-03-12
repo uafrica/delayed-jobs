@@ -86,7 +86,7 @@ class ArchiveWorker extends Worker
     }
 
     /**
-     * @param \Cake\I18n\Time Time from which to archive
+     * @param \Cake\I18n\Time $time Time from which to archive
      * @return \Generator
      */
     protected function getJobsToArchive(Time $time): \Generator
