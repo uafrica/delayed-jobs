@@ -94,7 +94,7 @@ class ArchiveWorker extends Worker
         $baseQuery = $this->DelayedJobs->query()
             ->where([
                 'status IN' => [Job::STATUS_BURIED, Job::STATUS_SUCCESS],
-                'modified <=' => $time
+                'modified <=' => $time,
             ])
             ->order(['id' => 'ASC']);
 
