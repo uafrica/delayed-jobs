@@ -86,12 +86,16 @@ class ArchiveWorker extends Worker
     }
 
     /**
+     * @param \Cake\I18n\Time $time Time from which to archive
      * @return \Generator
      */
-    protected function getJobsToArchive(): \Generator
+    protected function getJobsToArchive(Time $time): \Generator
     {
         $baseQuery = $this->DelayedJobs->query()
-            ->where(['status IN' => [Job::STATUS_BURIED, Job::STATUS_SUCCESS]])
+            ->where([
+                'status IN' => [Job::STATUS_BURIED, Job::STATUS_SUCCESS],
+                'modified <=' => $time,
+            ])
             ->order(['id' => 'ASC']);
 
         $total = $baseQuery->count();
@@ -168,7 +172,10 @@ class ArchiveWorker extends Worker
         $columns = $this->DelayedJobs->getSchema()
             ->columns();
         $pageNumber = 1;
-        foreach ($this->getJobsToArchive() as $toArchiveQuery) {
+        $archiveOlderThan = Configure::read('DelayedJobs.archive.archiveOlderThan', '1 second');
+        $time = new Time('-' . $archiveOlderThan);
+        Log::debug('Archiving all buried and successful jobs older than ' . $time);
+        foreach ($this->getJobsToArchive($time) as $toArchiveQuery) {
             Log::debug('Archiving page ' . $pageNumber++);
             $clonedQuery = clone $toArchiveQuery;
 

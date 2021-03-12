@@ -33,7 +33,8 @@ class Plugin extends BasePlugin
             'archive' => [
                 'enabled' => false,
                 'tableName' => 'delayed_jobs_archive',
-                'timeLimit' => '90 days',
+                'archiveOlderThan' => '1 second', // How long before we archive jobs.
+                'timeLimit' => '90 days', // How long jobs can live in the archive table.
                 'recurring' => 'tomorrow 00:30',
             ],
         ];
