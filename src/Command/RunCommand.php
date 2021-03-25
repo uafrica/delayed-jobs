@@ -98,7 +98,7 @@ class RunCommand extends Command
         $memUsage = ($endMem - $startMem) / 1000;
         $this->io->verbose(sprintf(' - Took: %.2f seconds', $end - $start));
         $this->io->verbose(sprintf(' - Memory usage: %u KB', $memUsage));
-        $this->io->verbose(sprintf(' - Peak memory usage: %u KB', (int)memory_get_peak_usage()/1000));
+        $this->io->verbose(sprintf(' - Peak memory usage: %u KB', (int)memory_get_peak_usage() / 1000));
     }
 
     /**
