@@ -68,6 +68,7 @@ class RunCommand extends Command
      */
     public function executeJob(Job $job): void
     {
+        $startMem = (int)memory_get_usage();
         $this->io->verbose(sprintf(' - <info>%s</info>', $job->getWorker()));
         $this->io->verbose(' - Executing job');
         $this->djLog(__('Executing: {0}', $job->getId()));
@@ -93,7 +94,11 @@ class RunCommand extends Command
             );
         }
         $end = microtime(true);
+        $endMem = (int)memory_get_usage();
+        $memUsage = ($endMem - $startMem) / 1000;
         $this->io->verbose(sprintf(' - Took: %.2f seconds', $end - $start));
+        $this->io->verbose(sprintf(' - Memory usage: %u KB', $memUsage));
+        $this->io->verbose(sprintf(' - Peak memory usage: %u KB', (int)memory_get_peak_usage()/1000));
     }
 
     /**
