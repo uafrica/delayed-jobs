@@ -94,6 +94,7 @@ class RunCommand extends Command
         }
         $end = microtime(true);
         $this->io->verbose(sprintf(' - Took: %.2f seconds', $end - $start));
+        $this->io->verbose(sprintf(' - Peak memory usage: %u KB', (int)memory_get_peak_usage() / 1000));
     }
 
     /**
