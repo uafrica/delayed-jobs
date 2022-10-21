@@ -10,7 +10,7 @@
   },
   "require-dev": {
     "cakephp/app": "^4.0",
-    "cakephp/cakephp-codesniffer": "^4.0",
+    "cakephp/cakephp-codesniffer": "^5.0",
     "cakephp/debug_kit": "^4.0",
     "dereuromark/cakephp-ide-helper": "^1.0",
     "phpstan/phpstan": "^0.12.0",
